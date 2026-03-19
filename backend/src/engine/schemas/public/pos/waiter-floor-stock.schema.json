@@ -1,0 +1,28 @@
+{
+    "id": "waiter_floor_stock",
+    "name": "Waiter Floor Stock",
+    "description": "Stock de insumos disponibles en la locación de piso (LOC-PISO). Consumido por el micrositio de meseros para cruzar disponibilidad de platillos en tiempo real.",
+    "api": {
+        "method": "GET",
+        "path": "/waiters/floor-stock",
+        "auth": "pin"
+    },
+    "startAt": "get_stock",
+    "nodes": {
+        "get_stock": {
+            "type": "action",
+            "handler": "getWaiterFloorStock",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "stock": "{{state.data.stock}}"
+                }
+            }
+        }
+    }
+}

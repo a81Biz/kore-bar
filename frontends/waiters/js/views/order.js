@@ -32,7 +32,6 @@ export async function mount(container, data = {}) {
     const notificationBanner = container.querySelector('#notification-banner');
     const orderWaiterLabel = container.querySelector('.col-order-waiter');
 
-    // ✅ Datos de sesión con textContent
     if (cartTableLabel) cartTableLabel.textContent = tableCode ? `Mesa ${tableCode}` : 'Nueva Orden';
     if (cartTime) cartTime.textContent = new Date().toLocaleTimeString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
     if (orderWaiterLabel && authData?.name) orderWaiterLabel.textContent = authData.name;
@@ -50,35 +49,50 @@ export async function mount(container, data = {}) {
     ensureTableSession();
 
     // ── Carga de datos ────────────────────────────────────────────────────
+    // FIX #15: Reemplazar ENDPOINTS.admin.get.menuCategories + ENDPOINTS.admin.get.menuDishes
+    // por ENDPOINTS.menu.get.public — el micrositio de meseros no debe depender del dominio Admin.
+    // ENDPOINTS.waiters.get.floorStock apunta al nuevo endpoint propio de meseros (/waiters/floor-stock)
+    // que no expone el dominio de inventario admin.
     const loadMenuData = async () => {
         try {
-            const [catRes, stockRes, dishRes] = await Promise.all([
-                fetchData(ENDPOINTS.admin.get.menuCategories),
-                // ✅ ENDPOINTS.inventory.get.floorStock ya incluye ?location=LOC-PISO
-                fetchData(ENDPOINTS.inventory.get.floorStock),
-                fetchData(ENDPOINTS.admin.get.menuDishes)
+            const [menuRes, stockRes] = await Promise.all([
+                fetchData(ENDPOINTS.menu.get.public),
+                fetchData(ENDPOINTS.waiters.get.floorStock)
             ]);
 
-            if (catRes.success) {
-                CATEGORIES = catRes.data.map(c => ({ id: c.name, icon: 'restaurant_menu' }));
-                activeCategory = CATEGORIES[0]?.id || null;
-            }
-
-            const stockMap = {};
-            if (stockRes.success && stockRes.data?.stock) {
-                stockRes.data.stock.forEach(s => { stockMap[s.item_code] = parseFloat(s.stock_available); });
-            }
-
-            if (dishRes.success) {
-                MENU_ITEMS = dishRes.data.filter(d => d.is_active).map(d => ({
-                    id: d.code,
-                    dishCode: d.code,
-                    name: d.name,
-                    price: parseFloat(d.price),
-                    category: d.category_name,
-                    location: d.has_recipe ? 'Cocina' : 'Piso',
-                    stock: stockMap[d.code] ?? 99
+            // menu.get.public devuelve [{categoryCode, categoryName, dishes:[{dishCode, name, price, ...}]}]
+            if (menuRes.success && Array.isArray(menuRes.data)) {
+                CATEGORIES = menuRes.data.map(cat => ({
+                    id: cat.categoryName,
+                    code: cat.categoryCode,
+                    icon: 'restaurant_menu'
                 }));
+                activeCategory = CATEGORIES[0]?.id || null;
+
+                // Construir stockMap para cruzar con inventario de piso
+                const stockMap = {};
+                if (stockRes.success) {
+                    const stockArray = stockRes.data?.stock || stockRes.data || [];
+                    stockArray.forEach(s => {
+                        stockMap[s.item_code || s.code] = parseFloat(s.stock_available ?? s.stock ?? 99);
+                    });
+                }
+
+                // Aplanar categorías → platillos activos con stock de piso
+                MENU_ITEMS = menuRes.data.flatMap(cat =>
+                    (cat.dishes || [])
+                        .filter(d => d.isActive !== false)
+                        .map(d => ({
+                            id: d.dishCode,
+                            dishCode: d.dishCode,
+                            name: d.name,
+                            price: parseFloat(d.price),
+                            category: cat.categoryName,
+                            location: d.hasRecipe ? 'Cocina' : 'Piso',
+                            stock: stockMap[d.dishCode] ?? 99,
+                            img: d.imageUrl || ''
+                        }))
+                );
             }
 
             renderCategories();
@@ -105,7 +119,6 @@ export async function mount(container, data = {}) {
             iconSpan.className = 'material-symbols-outlined text-lg';
             iconSpan.textContent = cat.icon;
 
-            // ✅ nombre de categoría con textContent
             btn.appendChild(iconSpan);
             btn.appendChild(document.createTextNode(` ${cat.id}`));
 
@@ -125,16 +138,13 @@ export async function mount(container, data = {}) {
             const el = document.createElement('div');
             el.className = 'group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 flex flex-col';
 
-            // Imagen de fondo
             const imgDiv = document.createElement('div');
             imgDiv.className = 'relative h-32 w-full bg-slate-200 dark:bg-slate-700 shrink-0';
 
             const bgDiv = document.createElement('div');
             bgDiv.className = 'absolute inset-0 bg-cover bg-center';
-            // ✅ backgroundImage via style property — no interpolado en innerHTML
             bgDiv.style.backgroundImage = `url(${item.img || ''})`;
 
-            // Badge de ubicación
             const badge = document.createElement('div');
             badge.className = `absolute top-2 right-2 p-1 rounded-lg ${item.location === 'Cocina' ? 'bg-primary/90' : 'bg-blue-500/90'} text-white`;
             const badgeIcon = document.createElement('span');
@@ -145,13 +155,12 @@ export async function mount(container, data = {}) {
             imgDiv.appendChild(bgDiv);
             imgDiv.appendChild(badge);
 
-            // Info
             const infoDiv = document.createElement('div');
             infoDiv.className = 'p-3 flex flex-col justify-between flex-1';
 
             const nameEl = document.createElement('h3');
             nameEl.className = 'font-bold text-sm leading-tight group-hover:text-primary transition-colors';
-            nameEl.textContent = item.name;    // ✅
+            nameEl.textContent = item.name;
 
             const footerDiv = document.createElement('div');
             footerDiv.className = 'flex items-center justify-between mt-2';
@@ -160,14 +169,13 @@ export async function mount(container, data = {}) {
             priceSpan.className = 'text-primary font-bold';
             priceSpan.textContent = formatCurrency(item.price);
 
-            // Badge de stock bajo o código del platillo
             const rightSpan = document.createElement('span');
             if (item.stock <= 5) {
                 rightSpan.className = 'bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold animate-pulse';
-                rightSpan.textContent = `STOCK: ${item.stock}`; // ✅ número, no dato arbitrario
+                rightSpan.textContent = `STOCK: ${item.stock}`;
             } else {
                 rightSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
-                rightSpan.textContent = item.id;  // ✅
+                rightSpan.textContent = item.id;
             }
 
             footerDiv.appendChild(priceSpan);
@@ -217,7 +225,6 @@ export async function mount(container, data = {}) {
     const renderCart = () => {
         cartItemsContainer.innerHTML = '';
 
-        // Sección 1 — Items enviados (seguimiento)
         if (sentItems.length > 0) {
             const header = document.createElement('div');
             header.className = 'text-[10px] uppercase font-bold text-slate-400 mb-3 tracking-wider border-b border-slate-100 pb-1';
@@ -236,9 +243,8 @@ export async function mount(container, data = {}) {
                 const topRow = document.createElement('div');
                 topRow.className = 'flex justify-between items-center font-medium text-xs';
 
-                // ✅ nombre e ítem con textContent
                 const itemLabel = document.createElement('span');
-                itemLabel.textContent = `${item.quantity}x ${item.name}`; // ✅
+                itemLabel.textContent = `${item.quantity}x ${item.name}`;
 
                 const badge = document.createElement('span');
                 badge.className = `px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cfg.cls}`;
@@ -273,7 +279,6 @@ export async function mount(container, data = {}) {
             });
         }
 
-        // Sección 2 — Nueva canasta
         if (cart.length > 0) {
             const header = document.createElement('div');
             header.className = 'text-[10px] uppercase font-bold text-slate-400 mt-6 mb-3 tracking-wider border-b border-slate-100 pb-1';
@@ -284,7 +289,6 @@ export async function mount(container, data = {}) {
                 const el = document.createElement('div');
                 el.className = 'flex items-start gap-4 fade-in py-2';
 
-                // Controles de cantidad
                 const qtyCol = document.createElement('div');
                 qtyCol.className = 'flex flex-col items-center';
 
@@ -310,14 +314,13 @@ export async function mount(container, data = {}) {
                 qtyCol.appendChild(qtySpan);
                 qtyCol.appendChild(btnMinus);
 
-                // Info del ítem
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-1';
 
                 const topRow = document.createElement('div');
                 topRow.className = 'flex justify-between font-medium text-sm';
                 const nameEl = document.createElement('span');
-                nameEl.textContent = item.name;      // ✅
+                nameEl.textContent = item.name;
                 const priceEl = document.createElement('span');
                 priceEl.textContent = formatCurrency(item.price * item.qty);
                 topRow.appendChild(nameEl);
@@ -325,11 +328,10 @@ export async function mount(container, data = {}) {
 
                 const codeEl = document.createElement('p');
                 codeEl.className = 'text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold';
-                codeEl.textContent = item.id;        // ✅
+                codeEl.textContent = item.id;
                 infoDiv.appendChild(topRow);
                 infoDiv.appendChild(codeEl);
 
-                // Botón eliminar
                 const btnRemove = document.createElement('button');
                 btnRemove.className = 'text-slate-300 hover:text-red-500';
                 const removeIcon = document.createElement('span');
@@ -354,7 +356,6 @@ export async function mount(container, data = {}) {
             btnSendKitchen.className = 'w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 mt-4 active:scale-[0.98] transition-all bg-slate-100 text-slate-300 cursor-not-allowed';
         }
 
-        // Estado vacío
         if (cart.length === 0 && sentItems.length === 0) {
             const emptyWrap = document.createElement('div');
             emptyWrap.className = 'h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 italic text-center py-20';
@@ -368,7 +369,6 @@ export async function mount(container, data = {}) {
             cartItemsContainer.appendChild(emptyWrap);
         }
 
-        // Totales
         const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
         const tax = subtotal * 0.16;
         cartSubtotal.textContent = formatCurrency(subtotal);
@@ -408,15 +408,14 @@ export async function mount(container, data = {}) {
             notificationBanner.classList.remove('hidden');
             setTimeout(() => notificationBanner.classList.add('hidden'), 2000);
         } catch (error) {
-            // ✅ showErrorModal en lugar de alert()
             showErrorModal('Error enviando la orden: ' + error.message, 'Error de Envío');
         }
     };
 
     // ── Recoger ítem ──────────────────────────────────────────────────────
+    // FIX #12-collect: collect SÍ envía employeeNumber (lo requiere sp_pos_collect_item)
     const collectItem = async (itemId) => {
         try {
-            // ✅ putData en lugar de postData — endpoint es PUT
             const res = await putData(
                 ENDPOINTS.waiters.put.collectItem,
                 { employeeNumber },
@@ -429,12 +428,13 @@ export async function mount(container, data = {}) {
     };
 
     // ── Entregar ítem ─────────────────────────────────────────────────────
+    // FIX #12-deliver: deliver NO envía body — el SP no requiere identificación adicional.
+    // El Gatekeeper Zero Trust rechaza cualquier payload no declarado en el schema.
     const deliverItem = async (itemId) => {
         try {
-            // ✅ putData en lugar de postData — endpoint es PUT
             const res = await putData(
                 ENDPOINTS.waiters.put.deliverItem,
-                { employeeNumber },
+                {},
                 { tableCode, itemId }
             );
             if (res.success) await syncOrderStatus();
@@ -446,13 +446,8 @@ export async function mount(container, data = {}) {
     // ── Cobrar y cerrar mesa ──────────────────────────────────────────────
     const closeTable = async () => {
         if (!employeeNumber || !tableCode) return;
-
-        // ✅ confirmAction en lugar de confirm() nativo
-        const confirmed = await confirmAction(
-            `¿Desea cobrar y CERRAR la mesa ${tableCode}?`
-        );
+        const confirmed = await confirmAction(`¿Desea cobrar y CERRAR la mesa ${tableCode}?`);
         if (!confirmed) return;
-
         try {
             await postData(
                 ENDPOINTS.waiters.post.closeTable,

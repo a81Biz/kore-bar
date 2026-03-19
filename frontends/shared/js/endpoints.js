@@ -10,7 +10,12 @@ export const ENDPOINTS = {
     waiters: {
         get: {
             layout: '/waiters/layout',
-            orderStatus: '/waiters/tables/:tableCode/order'
+            orderStatus: '/waiters/tables/:tableCode/order',
+            // FIX #15: Endpoint propio de meseros para stock de piso.
+            // Apunta al nuevo schema waiter-floor-stock.schema.json (GET /waiters/floor-stock).
+            // Reemplaza ENDPOINTS.inventory.get.floorStock en order.js para que el micrositio
+            // de meseros no dependa del dominio de inventario admin.
+            floorStock: '/waiters/floor-stock'
         },
         post: {
             login: '/waiters/login',
@@ -74,34 +79,27 @@ export const ENDPOINTS = {
     // ──────────────────────────────────────────────────────────────────────────
     cashier: {
         get: {
-            // Lista de empleados con acceso a caja (can_access_cashier = true)
             employees: '/cashier/employees',
-            // Tablero: mesas en AWAITING_PAYMENT
             board: '/cashier/board',
-            // Resumen del día — Corte Z
             corte: '/cashier/corte',
-            // Ticket por folio (también consumido por invoice.localhost)
             ticket: '/cashier/tickets/:folio'
         },
         post: {
-            // Autenticar cajero con PIN
             login: '/cashier/login',
-            // Procesar cobro mixto de una mesa → devuelve folio TKT-
             pay: '/cashier/tables/:tableCode/pay'
         }
     },
 
     // ──────────────────────────────────────────────────────────────────────────
-    // FACTURACION (invoice.localhost)
+    // FACTURACIÓN (invoice.localhost)
+    // ──────────────────────────────────────────────────────────────────────────
     invoice: {
-        // GET /cashier/tickets/:folio se reutiliza desde ENDPOINTS.cashier.get.ticket
         post: {
-            // Registrar solicitud de CFDI — guarda datos fiscales en invoice_data (JSONB)
-            // Integracion con el PAC (timbrado SAT) queda como fase futura.
             request: '/cashier/tickets/:folio/invoice'
         }
     },
 
+    // ──────────────────────────────────────────────────────────────────────────
     // COCINA (kitchen.localhost)
     // ──────────────────────────────────────────────────────────────────────────
     kitchen: {
@@ -111,7 +109,6 @@ export const ENDPOINTS = {
             finishedDishes: '/kitchen/dishes/finished',
             ingredients: '/kitchen/ingredients',
             recipeBOM: '/kitchen/recipes/:dishCode/bom',
-            // Stock filtrado por locacion de cocina
             kitchenStock: '/inventory/stock?location=LOC-COCINA'
         },
         post: {
@@ -131,7 +128,8 @@ export const ENDPOINTS = {
         get: {
             suppliers: '/inventory/suppliers',
             stock: '/inventory/stock',
-            // Stock filtrado por locacion de piso (meseros) — query param incluida
+            // Stock de piso referenciado únicamente desde admin-inventario.
+            // El micrositio de meseros usa ENDPOINTS.waiters.get.floorStock.
             floorStock: '/inventory/stock?location=LOC-PISO',
             kardex: '/inventory/kardex'
         },
@@ -142,17 +140,16 @@ export const ENDPOINTS = {
             adjustments: '/inventory/adjustments',
             sync: '/inventory/sync'
         }
-    }
-    ,
+    },
 
-    // MENU DIGITAL (menu.localhost — portal público de QR, sin autenticación)
+    // ──────────────────────────────────────────────────────────────────────────
+    // MENÚ DIGITAL (menu.localhost — portal público de QR, sin autenticación)
+    // ──────────────────────────────────────────────────────────────────────────
     menu: {
         get: {
-            // Catálogo completo agrupado por categoría (solo platillos habilitados)
             public: '/menu/public'
         },
         post: {
-            // Notificación al mesero desde la mesa del cliente
             callWaiter: '/tables/:tableCode/call-waiter'
         }
     }

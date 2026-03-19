@@ -147,3 +147,25 @@ export const setOrderAwaitingPayment = async (c, orderCode) =>
         SET status = 'AWAITING_PAYMENT', updated_at = CURRENT_TIMESTAMP
         WHERE code = $1 AND status = 'OPEN'
     `, [orderCode]);
+
+// ── STOCK DE PISO ─────────────────────────────────────────────
+// Devuelve el stock disponible en LOC-PISO para que el frontend
+// de meseros cruce disponibilidad de platillos en tiempo real.
+// Reutiliza las mismas tablas que admin-inventory pero filtra por
+// la locación de piso — sin exponer el dominio de inventario admin.
+export const getFloorStock = async (c) =>
+    await executeQuery(c, `
+        SELECT  ii.code                     AS item_code,
+                ii.name,
+                ii.recipe_unit              AS unit,
+                COALESCE(SUM(iss.quantity), 0)::numeric AS stock_available
+        FROM    inventory_items ii
+        LEFT JOIN inventory_stock iss
+               ON iss.item_id = ii.id
+        LEFT JOIN inventory_locations il
+               ON il.id = iss.location_id
+        WHERE   il.code = 'LOC-PISO'
+          AND   ii.is_active = true
+        GROUP BY ii.code, ii.name, ii.recipe_unit
+        ORDER BY ii.name ASC
+    `);

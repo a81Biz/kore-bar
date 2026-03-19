@@ -169,6 +169,20 @@ export const deliverItemHandler = async (state, c) => {
 export const waiterDeliverItem = deliverItemHandler;
 export const deliverItem = deliverItemHandler;
 
+// ── STOCK DE PISO ─────────────────────────────────────────────
+// Handler para GET /waiters/floor-stock.
+// Devuelve el inventario de LOC-PISO para que order.js cruce
+// disponibilidad sin depender del dominio de inventario admin.
+export const getWaiterFloorStock = async (state, c) => {
+    try {
+        const rows = await waiterModel.getFloorStock(c);
+        state.stock = rows;
+    } catch (error) {
+        if (error.isOperational) throw error;
+        throw new AppError('Error obteniendo stock de piso', 500);
+    }
+};
+
 export const getWaiterOrderStatus = async (state, c) => {
     const { params = {} } = state;
     const { tableCode } = params;
