@@ -35,18 +35,42 @@ export const processPayment = async (c, payload) =>
 
 export const markTicketInvoiced = async (c, folio, invoiceData) =>
     await executeStoredProcedure(c, 'sp_mark_ticket_invoiced', {
-        p_folio:        folio,
+        p_folio: folio,
         p_invoice_data: invoiceData
     }, { p_invoice_data: 'JSONB' });
 
-// ── VERIFICAR SI TICKET YA FUE FACTURADO ─────────────────────
+// ── TICKET POR FOLIO ──────────────────────────────────────────
+// Incluye todos los campos que el helper y los tests necesitan.
 
 export const getTicketByFolio = async (c, folio) => {
     const res = await executeQuery(c, `
-        SELECT folio, is_invoiced AS "isInvoiced", invoice_data AS "invoiceData"
+        SELECT folio,
+               is_invoiced  AS "isInvoiced",
+               invoice_data AS "invoiceData",
+               subtotal,
+               tax,
+               tip_total    AS "tipTotal",
+               total
         FROM tickets
         WHERE folio = $1
         LIMIT 1
     `, [folio]);
+    return res[0] ?? null;
+};
+
+// ── ÚLTIMO TICKET GENERADO PARA UNA MESA ─────────────────────
+// Usado después de sp_cashier_process_payment para obtener el folio,
+// ya que el SP no lo devuelve como valor de retorno.
+
+export const getLastTicketByTableCode = async (c, tableCode) => {
+    const res = await executeQuery(c, `
+        SELECT t.folio, oh.total
+        FROM tickets t
+        JOIN order_headers oh      ON oh.id  = t.order_id
+        JOIN restaurant_tables rt  ON rt.id  = oh.table_id
+        WHERE rt.code = $1
+        ORDER BY t.created_at DESC
+        LIMIT 1
+    `, [tableCode]);
     return res[0] ?? null;
 };

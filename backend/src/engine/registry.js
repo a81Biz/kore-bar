@@ -1,92 +1,13 @@
 // ============================================================
 // registry.js
 // Mapa central de handlers del Workflow Engine.
-// Cada entrada conecta un nombre de handler (usado en los schemas JSON)
-// con su función de implementación (helper).
 //
-// CONVENCIÓN: El nombre del handler debe ser camelCase y corresponder
-// exactamente al valor del campo "handler" en los nodos de tipo "action"
-// dentro de los schemas JSON.
+// CONVENCIÓN:
+//   - La KEY izquierda es el valor exacto del campo "handler"
+//     en el schema JSON.
+//   - El VALOR derecho es la función exportada real del helper.
+//   - Nunca inventar nombres: si no existe el export, no va aquí.
 // ============================================================
-
-// ── RRHH ─────────────────────────────────────────────────────
-import {
-    syncHrCatalogs,
-    saveEmployee,
-    updateEmployee,
-    deactivateEmployeeData,
-    createArea,
-    updateArea,
-    deactivateArea,
-    bulkDeactivateAreas,
-    createJobTitle,
-    updateJobTitle,
-    deactivateJobTitle,
-    bulkDeactivateJobTitles
-} from '../helpers/admin-employee.helper.js';
-
-// ── LAYOUT ────────────────────────────────────────────────────
-import {
-    getFloorLayout,
-    saveZone,
-    updateZoneHandler,
-    deleteZoneHandler,
-    saveTable,
-    updateTableHandler,
-    deleteTableHandler,
-    createAssignmentRangeHandler,
-    deleteAssignmentHandler
-} from '../helpers/admin-floor.helper.js';
-
-// ── MENÚ ─────────────────────────────────────────────────────
-import {
-    getMenuDishes,
-    createCategoryHandler,
-    updateCategoryHandler,
-    deleteCategoryHandler,
-    createDishHandler,
-    updateDishHandler,
-    deleteDishHandler
-} from '../helpers/admin-menu.helper.js';
-
-// ── INVENTARIO ────────────────────────────────────────────────
-import {
-    getStockHandler,
-    getSuppliersHandler,
-    createSupplier,
-    upsertSupplierPriceHandler,
-    syncPurchasesHandler,
-    transferStockHandler
-} from '../helpers/admin-inventory.helper.js';
-
-// ── COCINA ────────────────────────────────────────────────────
-import {
-    getRecipesHandler,
-    getIngredientsHandler,
-    addRecipeItemHandler,
-    updateTechSheetHandler,
-    getKdsItems,
-    setPreparingHandler,
-    setReadyHandler
-} from '../helpers/kitchen.helper.js';
-
-// ── MESEROS ───────────────────────────────────────────────────
-import {
-    getWaiterLayout,
-    openTableHandler,
-    closeTableHandler,
-    submitOrderHandler,
-    deliverItemHandler
-} from '../helpers/waiter.helper.js';
-
-// ── CAJA ─────────────────────────────────────────────────────
-import {
-    getBoard,
-    getCorte,
-    getEmployees,
-    submitPayment,
-    requestInvoice          // ← NUEVO (crítico #3)
-} from '../helpers/cashier.helper.js';
 
 // ── AUTH ──────────────────────────────────────────────────────
 import {
@@ -94,11 +15,119 @@ import {
     validatePinHandler
 } from '../helpers/auth.helper.js';
 
+// ── RRHH — EMPLEADOS ──────────────────────────────────────────
+import {
+    syncHrCatalogs,
+    processHrWebhook,
+    getEmployees,
+    validateEmployeeExists,
+    saveEmployee,
+    updateEmployee,
+    deactivateEmployeeData,
+    bulkSaveEmployees,
+    getAreas,
+    createArea,
+    updateArea,
+    deactivateArea,
+    bulkUpdateAreas,
+    bulkDeactivateAreas,
+    getJobTitles,
+    createJobTitle,
+    updateJobTitle,
+    deactivateJobTitle,
+    bulkUpdateJobTitles,
+    bulkDeactivateJobTitles
+} from '../helpers/admin-employee.helper.js';
+
+// ── LAYOUT — PISO ─────────────────────────────────────────────
+import {
+    saveZone,
+    updateZone,
+    getZones,
+    deleteZone,
+    saveTable,
+    updateTable,
+    getTables,
+    deleteTable,
+    createAssignmentRangeHandler,
+    getAssignments,
+    deleteAssignment
+} from '../helpers/admin-floor.helper.js';
+
+// ── MENÚ ─────────────────────────────────────────────────────
+import {
+    createCategoryHandler,
+    updateCategory,
+    getCategories,
+    deleteCategory,
+    createDishHandler,
+    updateDishHandler,
+    getDishes,
+    deleteDishHandler
+} from '../helpers/admin-menu.helper.js';
+
+// ── INVENTARIO ────────────────────────────────────────────────
+import {
+    getSuppliers,
+    createSupplier,
+    getInventoryStock,
+    getKardex,
+    saveSupplierPrice
+} from '../helpers/admin-inventory.helper.js';
+
+import {
+    saveKardexTransfer,
+    syncPurchasesToKardex,
+    saveKardexAdjustment
+} from '../helpers/inventory-transfers.helper.js';
+
+// ── COCINA / RECETARIO / KDS ──────────────────────────────────
+import {
+    getPendingDishes,
+    createIngredient,
+    getIngredients,
+    addRecipeItemHandler,
+    getFinishedDishes,
+    getRecipeBOM,
+    updateTechSheet,
+    getKitchenBoard,
+    updateKitchenItemStatus
+} from '../helpers/kitchen.helper.js';
+
+// ── MESEROS ───────────────────────────────────────────────────
+import {
+    validateWaiterPin,
+    getWaiterLayout,
+    openTable,
+    submitOrder,
+    closeTableHandler,
+    waiterCollectItem,
+    waiterDeliverItem,
+    getWaiterOrderStatus
+} from '../helpers/waiter.helper.js';
+
+// ── CAJA ─────────────────────────────────────────────────────
+import {
+    getBoard,
+    getCorte,
+    getEmployees as getCashierEmployeesHandler,
+    getTicketByFolio,
+    validateCashierPin,
+    submitPayment,
+    requestInvoice
+} from '../helpers/cashier.helper.js';
+
+// ── MENÚ PÚBLICO ──────────────────────────────────────────────
+import {
+    getPublicMenu,
+    registerWaiterCall
+} from '../helpers/public-menu.helper.js';
+
 
 // ============================================================
-// MAPA CENTRAL
+// MAPA CENTRAL — KEY = handler en schema JSON
 // ============================================================
-export const handlerRegistry = {
+export const ActionRegistry = {
 
     // Auth
     login: loginHandler,
@@ -106,66 +135,104 @@ export const handlerRegistry = {
 
     // Empleados
     syncHrCatalogs,
+    processHrWebhook,
+    getEmployees,
+    validateEmployeeExists,
     saveEmployee,
     updateEmployee,
-    deactivateEmployee: deactivateEmployeeData,
+    deactivateEmployeeData,
+    bulkSaveEmployees,
+
+    // Catálogos — Áreas
+    getAreas,
     createArea,
     updateArea,
     deactivateArea,
+    bulkUpdateAreas,
     bulkDeactivateAreas,
+
+    // Catálogos — Puestos
+    getJobTitles,
     createJobTitle,
     updateJobTitle,
     deactivateJobTitle,
+    bulkUpdateJobTitles,
     bulkDeactivateJobTitles,
 
-    // Layout
-    getFloorLayout,
-    createZone: saveZone,
-    updateZone: updateZoneHandler,
-    deleteZone: deleteZoneHandler,
-    createTable: saveTable,
-    updateTable: updateTableHandler,
-    deleteTable: deleteTableHandler,
-    createAssignmentRange: createAssignmentRangeHandler,
-    deleteAssignment: deleteAssignmentHandler,
+    // Layout — Zonas
+    saveZone,
+    updateZone,
+    getZones,
+    deleteZone,
 
-    // Menú
-    getMenuDishes,
-    createCategory: createCategoryHandler,
-    updateCategory: updateCategoryHandler,
-    deleteCategory: deleteCategoryHandler,
-    createDish: createDishHandler,
+    // Layout — Mesas
+    saveTable,
+    updateTable,
+    getTables,
+    deleteTable,
+
+    // Layout — Asignaciones
+    saveAssignment: createAssignmentRangeHandler,
+    getAssignments,
+    deleteAssignment,
+
+    // Menú — Categorías
+    saveCategory: createCategoryHandler,
+    updateCategory,
+    getCategories,
+    deleteCategory,
+
+    // Menú — Platillos
+    saveDish: createDishHandler,
     updateDish: updateDishHandler,
+    getDishes,
     deleteDish: deleteDishHandler,
 
-    // Inventario
-    getStock: getStockHandler,
-    getSuppliers: getSuppliersHandler,
-    createSupplier: createSupplier,
-    upsertSupplierPrice: upsertSupplierPriceHandler,
-    syncPurchases: syncPurchasesHandler,
-    transferStock: transferStockHandler,
+    // Inventario — Proveedores y stock
+    getSuppliers,
+    createSupplier,
+    getInventoryStock,
+    getKardex,
+    saveSupplierPrice,
 
-    // Cocina / KDS
-    getRecipes: getRecipesHandler,
-    getIngredients: getIngredientsHandler,
+    // Inventario — Traspasos, compras, ajustes
+    saveKardexTransfer,
+    syncPurchasesToKardex,
+    saveKardexAdjustment,
+
+    // Cocina — Recetario
+    getPendingDishes,
+    createIngredient,
+    getIngredients,
     addRecipeItem: addRecipeItemHandler,
-    updateTechSheet: updateTechSheetHandler,
-    getKdsItems,
-    setItemPreparing: setPreparingHandler,
-    setItemReady: setReadyHandler,
+    getFinishedDishes,
+    getRecipeBOM,
+    updateTechSheet,
+
+    // Cocina — KDS
+    getKitchenBoard,
+    updateKitchenItemStatus,
 
     // Meseros
+    validateWaiterPin,
     getWaiterLayout,
-    openTable: openTableHandler,
+    openTable,
+    submitOrder,
     closeTable: closeTableHandler,
-    submitOrder: submitOrderHandler,
-    deliverItem: deliverItemHandler,
+    waiterCollectItem,
+    waiterDeliverItem,
+    getWaiterOrderStatus,
 
     // Caja
     getCashierBoard: getBoard,
     getCashierCorte: getCorte,
-    getCashierEmployees: getEmployees,
+    getCashierEmployees: getCashierEmployeesHandler,
+    getTicketByFolio,
+    validateCashierPin,
     processPayment: submitPayment,
-    requestInvoice                          // ← NUEVO (crítico #3)
+    requestInvoice,
+
+    // Menú público
+    getPublicMenu,
+    registerWaiterCall
 };

@@ -27,6 +27,7 @@
 \ir procedures/sp_menu.sql
 \ir procedures/sp_orders.sql
 \ir procedures/sp_cashier.sql
+\ir procedures/sp_auth.sql
 
 \echo '── [3/4] Views ───────────────────────────────────────────'
 \ir views/views.sql

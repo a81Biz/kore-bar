@@ -81,7 +81,74 @@ export const setItemReady = async (c, itemId) =>
         p_item_id: itemId
     }, { p_item_id: 'UUID' });
 
-// ── KDS — LECTURA ─────────────────────────────────────────────
+// ── FUNCIONES REQUERIDAS POR kitchen.helper.js ───────────────
+
+// Platillos sin receta (has_recipe = false) — bandeja de pendientes
+export const getPendingDishes = async (c) =>
+    await executeQuery(c, `
+        SELECT d.code AS "dishCode", d.name, d.price,
+               c.code AS "categoryCode", c.name AS "categoryName"
+        FROM menu_dishes d
+        JOIN menu_categories c ON c.id = d.category_id
+        WHERE d.is_active = true AND d.has_recipe = false
+        ORDER BY c.name, d.name
+    `);
+
+// Alias para kitchen.helper — addIngredient ya existe pero el helper llama createIngredient
+export const createIngredient = async (c, code, name, unit) =>
+    await executeStoredProcedure(c, 'sp_create_ingredient', {
+        p_code: code,
+        p_name: name,
+        p_unit: unit
+    });
+
+// Platillos con receta completa (has_recipe = true) — catálogo del recetario
+export const getFinishedDishes = async (c) =>
+    await executeQuery(c, `
+        SELECT d.code AS "dishCode", d.name, d.price,
+               d.image_url AS "imageUrl",
+               d.preparation_method AS "preparationMethod",
+               c.code AS "categoryCode", c.name AS "categoryName"
+        FROM menu_dishes d
+        JOIN menu_categories c ON c.id = d.category_id
+        WHERE d.is_active = true AND d.has_recipe = true
+        ORDER BY c.name, d.name
+    `);
+
+// BOM de un platillo — ingredientes + cantidades
+export const getRecipeBOM = async (c, dishCode) =>
+    await executeQuery(c, `
+        SELECT i.code, i.name, dr.quantity_required AS qty, i.recipe_unit AS unit
+        FROM dish_recipes dr
+        JOIN inventory_items i ON i.id = dr.item_id
+        JOIN menu_dishes d     ON d.id = dr.dish_id
+        WHERE d.code = $1
+        ORDER BY i.name
+    `, [dishCode]);
+
+// Tablero KDS completo (PENDING_KITCHEN + PREPARING)
+export const getKitchenBoard = async (c) =>
+    await executeQuery(c, `
+        SELECT oi.id        AS item_id,
+               md.name      AS dish_name,
+               oi.quantity,
+               oi.notes,
+               oi.status,
+               oi.started_at,
+               oi.created_at,
+               oh.code      AS order_code,
+               rt.code      AS table_code,
+               e.first_name AS waiter_name
+        FROM order_items oi
+        JOIN order_headers oh    ON oh.id = oi.order_id
+        JOIN restaurant_tables rt ON rt.id = oh.table_id
+        JOIN menu_dishes md      ON md.id = oi.dish_id
+        JOIN employees e         ON e.id  = oh.waiter_id
+        WHERE oi.status IN ('PENDING_KITCHEN', 'PREPARING')
+        ORDER BY oi.created_at ASC
+    `);
+
+// ── KDS — LECTURA (existente, renombrado para no romper) ──────
 
 export const getPendingKdsItems = async (c) =>
     await executeQuery(c, `

@@ -10,12 +10,12 @@
 // ============================================================
 
 import bcrypt from 'bcrypt';
-import jwt    from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { getUserForLogin, getUserForPin } from '../models/auth.model.js';
 
-const JWT_SECRET      = process.env.JWT_SECRET      || 'kore_dev_secret_change_in_prod';
-const JWT_EXPIRES_WEB = process.env.JWT_EXPIRES_WEB  || '8h';   // turno admin
-const JWT_EXPIRES_POS = process.env.JWT_EXPIRES_POS  || '12h';  // turno POS
+const JWT_SECRET = process.env.JWT_SECRET || 'kore_dev_secret_change_in_prod';
+const JWT_EXPIRES_WEB = process.env.JWT_EXPIRES_WEB || '8h';   // turno admin
+const JWT_EXPIRES_POS = process.env.JWT_EXPIRES_POS || '12h';  // turno POS
 
 
 // ── UTILIDAD INTERNA ──────────────────────────────────────────
@@ -57,11 +57,11 @@ export const loginHandler = async (state, c) => {
     // 3. Construir payload del token
     const tokenPayload = {
         employeeNumber: user.employeeNumber,
-        firstName:      user.firstName,
-        lastName:       user.lastName,
-        roleCode:       user.roleCode,
-        areaCode:       user.areaCode,
-        type:           'session'
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleCode: user.roleCode,
+        areaCode: user.areaCode,
+        type: 'session'
     };
 
     // 4. Firmar JWT
@@ -80,10 +80,10 @@ export const loginHandler = async (state, c) => {
         ...state,
         data: {
             employeeNumber: user.employeeNumber,
-            firstName:      user.firstName,
-            lastName:       user.lastName,
-            roleCode:       user.roleCode,
-            areaCode:       user.areaCode
+            firstName: user.firstName,
+            lastName: user.lastName,
+            roleCode: user.roleCode,
+            areaCode: user.areaCode
         },
         message: `Bienvenido, ${user.firstName}`
     };
@@ -108,13 +108,13 @@ export const validatePinHandler = async (state, c) => {
 
     // 2. Construir payload del token POS
     const tokenPayload = {
-        employeeNumber:   user.employeeNumber,
-        firstName:        user.firstName,
-        lastName:         user.lastName,
-        roleCode:         user.roleCode ?? 'POS',
-        areaCode:         user.areaCode,
+        employeeNumber: user.employeeNumber,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleCode: user.roleCode ?? 'POS',
+        areaCode: user.areaCode,
         canAccessCashier: user.canAccessCashier ?? false,
-        type:             'pin'
+        type: 'pin'
     };
 
     // 3. Firmar JWT — el POS lo guarda en memoria y lo envía
@@ -125,10 +125,10 @@ export const validatePinHandler = async (state, c) => {
         ...state,
         data: {
             token,
-            employeeNumber:   user.employeeNumber,
-            firstName:        user.firstName,
-            lastName:         user.lastName,
-            areaCode:         user.areaCode,
+            employeeNumber: user.employeeNumber,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            areaCode: user.areaCode,
             canAccessCashier: user.canAccessCashier ?? false
         },
         message: `PIN válido — ${user.firstName}`
