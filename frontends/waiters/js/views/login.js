@@ -1,62 +1,62 @@
 // waiters/js/views/login.js
 import { PubSub } from '/shared/js/pubsub.js';
-import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
+import { fetchData, postData } from '/shared/js/http.client.js';
+import { ENDPOINTS } from '/shared/js/endpoints.js';
+import { showErrorModal } from '/shared/js/ui.js';
 
-/**
- * Controller mapping behaviors onto the `tpl-login` context logic.
- */
 export async function mount(container) {
-    let pin = "";
+    let pin = '';
     let selectedEmployee = null;
 
-    // Load necessary dependencies
-    const { ENDPOINTS } = await import('/shared/js/endpoints.js');
-    const { fetchData, postData } = await import('/shared/js/http.client.js');
-
-    // HTML Targets
     const employeeSelect = container.querySelector('#employee-select');
     const pinPadButtons = container.querySelectorAll('#pin-pad button');
     const pinDots = container.querySelectorAll('.pin-dot');
 
-    // 1. Fetch available employees natively
+    // ── Cargar empleados elegibles para el POS ────────────────────────────
     try {
         const res = await fetchData(ENDPOINTS.admin.get.employees);
         if (res.success && res.data) {
             res.data.forEach(emp => {
-                if (emp.is_active && emp.system_role === 'Mesero' || emp.system_role === 'Administrador') { // Waiters or admins can login
-                    const option = document.createElement('option');
-                    option.value = emp.employee_number;
-                    option.textContent = `${emp.first_name} ${emp.last_name || ''}`;
-                    employeeSelect.appendChild(option);
-                }
+                // ✅ Bug de precedencia corregido:
+                // Antes: emp.is_active && role==='Mesero' || role==='Administrador'
+                // → los admins pasaban SIN verificar is_active
+                // Ahora: is_active verificado para ambos roles
+                const isEligible = emp.is_active &&
+                    (emp.system_role === 'Mesero' || emp.system_role === 'Administrador');
+                if (!isEligible) return;
+
+                const option = document.createElement('option');
+                option.value = emp.employee_number;
+                option.textContent = `${emp.first_name} ${emp.last_name || ''}`.trim();
+                employeeSelect.appendChild(option);
             });
         }
     } catch (err) {
-        console.error("Failed loading employees for POS login:", err);
+        console.error('[Login] Error cargando empleados:', err);
     }
 
+    // ── Control del PIN ───────────────────────────────────────────────────
     employeeSelect.addEventListener('change', (e) => {
         selectedEmployee = e.target.value;
-        pin = ""; // reset PIN
+        pin = '';
         updateDots();
     });
 
     const updateDots = () => {
-        pinDots.forEach((dot, index) => {
-            if (index < pin.length) {
-                dot.classList.add('bg-primary', 'border-primary');
-                dot.classList.remove('bg-transparent', 'border-slate-300', 'dark:border-slate-600');
-            } else {
-                dot.classList.remove('bg-primary', 'border-primary');
-                dot.classList.add('bg-transparent', 'border-slate-300', 'dark:border-slate-600');
-            }
+        pinDots.forEach((dot, i) => {
+            const filled = i < pin.length;
+            dot.classList.toggle('bg-primary', filled);
+            dot.classList.toggle('border-primary', filled);
+            dot.classList.toggle('bg-transparent', !filled);
+            dot.classList.toggle('border-slate-300', !filled);
+            dot.classList.toggle('dark:border-slate-600', !filled);
         });
     };
 
     pinPadButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
             if (!selectedEmployee) {
-                showErrorModal("Por favor, seleccione su nombre primero.");
+                showErrorModal('Por favor, seleccione su nombre primero.');
                 return;
             }
 
@@ -65,30 +65,31 @@ export async function mount(container) {
             if (val === 'del') {
                 pin = pin.slice(0, -1);
                 updateDots();
-            } else if (pin.length < 4) {
-                pin += val;
-                updateDots();
+                return;
+            }
 
-                if (pin.length === 4) {
-                    try {
-                        const payload = {
-                            employeeNumber: selectedEmployee,
-                            pin: pin
-                        };
-                        const res = await postData(ENDPOINTS.waiters.post.login, payload);
+            if (pin.length >= 4) return;
+            pin += val;
+            updateDots();
 
-                        if (res.success) {
-                            PubSub.publish('AUTH_SUCCESS', {
-                                employeeNumber: res.data.body.employeeNumber,
-                                name: res.data.body.name,
-                                role: res.data.body.role
-                            });
-                        }
-                    } catch (err) {
-                        showErrorModal(err.message || 'Código PIN incorrecto o inválido.');
-                        pin = "";
-                        updateDots();
+            if (pin.length === 4) {
+                try {
+                    const res = await postData(ENDPOINTS.waiters.post.login, {
+                        employeeNumber: selectedEmployee,
+                        pin
+                    });
+
+                    if (res.success) {
+                        PubSub.publish('AUTH_SUCCESS', {
+                            employeeNumber: res.data.body.employeeNumber,
+                            name: res.data.body.name,
+                            role: res.data.body.role
+                        });
                     }
+                } catch (err) {
+                    showErrorModal(err.message || 'Código PIN incorrecto o inválido.');
+                    pin = '';
+                    updateDots();
                 }
             }
         });

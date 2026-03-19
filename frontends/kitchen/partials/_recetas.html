@@ -26,21 +26,20 @@
                         <div
                             class="text-right bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 text-amber-800 flex flex-col justify-center min-w-[140px]">
                             <div class="text-[10px] font-bold uppercase tracking-widest opacity-80">Faltan Insumos</div>
-                            <div id="counter-missing-bom" class="text-2xl font-black tabular-nums leading-none mt-1">0
-                            </div>
+                            <div id="counter-missing-bom" class="text-2xl font-black tabular-nums leading-none mt-1">0</div>
                         </div>
 
                         <div
                             class="text-right bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 text-orange-800 flex flex-col justify-center min-w-[140px]">
                             <div class="text-[10px] font-bold uppercase tracking-widest opacity-80">Falta Ficha</div>
-                            <div id="counter-missing-tech" class="text-2xl font-black tabular-nums leading-none mt-1">0
-                            </div>
+                            <div id="counter-missing-tech" class="text-2xl font-black tabular-nums leading-none mt-1">0</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
+                    <!-- Columna 1: Listas de platillos -->
                     <div
                         class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[750px]">
                         <div class="flex border-b border-slate-200 bg-slate-50">
@@ -62,16 +61,17 @@
                         </div>
                     </div>
 
+                    <!-- Columna 2: Vista BOM Builder + Ficha Técnica -->
                     <div
                         class="lg:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[750px] relative">
 
+                        <!-- Vista A: BOM Builder -->
                         <div id="view-bom-builder" class="absolute inset-0 flex flex-col bg-white">
                             <div
                                 class="p-4 border-b border-slate-200 bg-indigo-50 flex justify-between items-center gap-4">
                                 <div>
                                     <h3 class="font-bold text-indigo-900">Calculadora de Insumos (BOM)</h3>
-                                    <p id="active-dish-name" class="text-sm text-indigo-700 font-medium">Ningún platillo
-                                        seleccionado</p>
+                                    <p id="active-dish-name" class="text-sm text-indigo-700 font-medium">Ningún platillo seleccionado</p>
                                 </div>
                             </div>
 
@@ -86,6 +86,7 @@
                                         class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                                         placeholder="Nombre (Ej. Sal)" required disabled autocomplete="off">
                                     <datalist id="datalist-names"></datalist>
+
                                     <select id="ing-unit"
                                         class="w-28 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                                         required disabled>
@@ -129,14 +130,14 @@
                             </div>
                         </div>
 
+                        <!-- Vista B: Ficha Técnica -->
                         <div id="view-tech-sheet" class="absolute inset-0 flex flex-col bg-slate-50 hidden">
                             <form id="form-tech-sheet" class="flex flex-col h-full">
                                 <div
                                     class="p-4 border-b border-slate-200 bg-emerald-50 flex justify-between items-center gap-4 shrink-0">
                                     <div>
                                         <h3 class="font-bold text-emerald-900">Ficha Técnica de Preparación</h3>
-                                        <p id="tech-dish-name" class="text-sm text-emerald-700 font-medium">Selecciona
-                                            un platillo del recetario</p>
+                                        <p id="tech-dish-name" class="text-sm text-emerald-700 font-medium">Selecciona un platillo del recetario</p>
                                     </div>
                                     <button type="submit" id="btn-save-tech"
                                         class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold transition-colors disabled:opacity-50">
@@ -147,36 +148,28 @@
                                 <div class="flex-1 overflow-y-auto p-6 grid grid-cols-2 gap-8">
                                     <div class="space-y-6">
                                         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                                                Foto del Emplatado</h4>
+                                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Foto del Emplatado</h4>
                                             <label
                                                 class="relative flex flex-col items-center justify-center w-full h-48 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 overflow-hidden group">
                                                 <div class="flex flex-col items-center justify-center pt-5 pb-6 z-10"
                                                     id="tech-img-placeholder">
-                                                    <span
-                                                        class="material-symbols-outlined text-slate-400 text-4xl mb-2">add_a_photo</span>
-                                                    <p class="text-sm text-slate-500 font-medium">Clic para subir foto
-                                                    </p>
+                                                    <span class="material-symbols-outlined text-slate-400 text-4xl mb-2">add_a_photo</span>
+                                                    <p class="text-sm text-slate-500 font-medium">Clic para subir foto</p>
                                                 </div>
-                                                <img id="tech-img-preview" src=""
-                                                    class="absolute inset-0 w-full h-full object-cover hidden">
-                                                <input id="tech-img-upload" type="file" class="hidden"
-                                                    accept="image/*" />
+                                                <img id="tech-img-preview" src="" class="absolute inset-0 w-full h-full object-cover hidden">
+                                                <input id="tech-img-upload" type="file" class="hidden" accept="image/*" />
                                             </label>
                                         </div>
 
                                         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                                                Insumos (Solo Lectura)</h4>
-                                            <ul id="tech-bom-list" class="space-y-2 text-sm text-slate-600">
-                                            </ul>
+                                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Insumos (Solo Lectura)</h4>
+                                            <!-- Filas llenadas con tpl-bom-row -->
+                                            <ul id="tech-bom-list" class="space-y-2 text-sm text-slate-600"></ul>
                                         </div>
                                     </div>
 
-                                    <div
-                                        class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                                            Método de Preparación</h4>
+                                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Método de Preparación</h4>
                                         <textarea id="tech-prep-method"
                                             class="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                                             placeholder="1. Calentar el sartén...&#10;2. Sellar la carne...&#10;3. Emplatar adornando con..."
@@ -194,12 +187,11 @@
     </div>
 </template>
 
+<!-- Tarjeta de platillo pendiente (también reutilizada para terminados) -->
 <template id="tpl-item-pending">
-    <li
-        class="p-3 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-400 transition-all cursor-pointer group relative">
+    <li class="p-3 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-400 transition-all cursor-pointer group relative">
         <div class="flex justify-between items-start mb-1">
-            <span
-                class="col-categoria bg-slate-100 text-slate-600 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded uppercase"></span>
+            <span class="col-categoria bg-slate-100 text-slate-600 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded uppercase"></span>
             <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded">Pendiente</span>
         </div>
         <p class="col-nombre font-bold text-slate-800 text-sm leading-tight mb-1 truncate"></p>
@@ -207,6 +199,7 @@
     </li>
 </template>
 
+<!-- Fila de insumo en la tabla BOM del constructor -->
 <template id="tpl-row-recipe">
     <tr class="border-b border-slate-100 hover:bg-white transition-colors group">
         <td class="px-4 py-3 font-mono text-xs text-indigo-600 font-bold col-code"></td>
@@ -218,4 +211,13 @@
             </button>
         </td>
     </tr>
+</template>
+
+<!-- Fila de insumo en la Ficha Técnica (BOM de solo lectura) -->
+<template id="tpl-bom-row">
+    <li class="flex justify-between border-b border-slate-100 py-1.5">
+        <!-- Inyectados con textContent -->
+        <span class="col-bom-name text-slate-600"></span>
+        <span class="col-bom-qty font-bold text-slate-800"></span>
+    </li>
 </template>

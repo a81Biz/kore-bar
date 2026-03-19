@@ -1,0 +1,83 @@
+<!-- ============================================================
+     cashier/partials/_corte.html
+     Templates: tpl-cashier-corte | tpl-cashier-corte-row | tpl-cashier-corte-empty
+     ============================================================ -->
+
+<!-- Modal completo del Corte Z -->
+<template id="tpl-cashier-corte">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center">
+                        <span class="material-symbols-outlined text-blue-600">account_balance_wallet</span>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-slate-900 dark:text-white">Corte Z</h2>
+                        <!-- Fecha inyectada con textContent -->
+                        <p class="col-corte-date text-xs text-slate-500"></p>
+                    </div>
+                </div>
+                <button id="btn-close-corte"
+                    class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                    <span class="material-symbols-outlined text-slate-500">close</span>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+
+                <!-- KPIs del día -->
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-3">
+                        <p class="text-xs text-slate-400 uppercase tracking-widest">Tickets</p>
+                        <p class="col-corte-tickets text-2xl font-black text-slate-900 dark:text-white"></p>
+                    </div>
+                    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+                        <p class="text-xs text-amber-600 uppercase tracking-widest">Total</p>
+                        <p class="col-corte-total text-xl font-black text-amber-600"></p>
+                    </div>
+                    <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
+                        <p class="text-xs text-green-600 uppercase tracking-widest">Propinas</p>
+                        <p class="col-corte-tips text-xl font-black text-green-600"></p>
+                    </div>
+                </div>
+
+                <!-- Tabla por método de pago -->
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 dark:bg-slate-700">
+                            <tr class="text-xs uppercase text-slate-400">
+                                <th class="px-4 py-2 text-left">Método</th>
+                                <th class="px-4 py-2 text-right">Transacciones</th>
+                                <th class="px-4 py-2 text-right">Total</th>
+                                <th class="px-4 py-2 text-right">Propinas</th>
+                            </tr>
+                        </thead>
+                        <!-- Filas: tpl-cashier-corte-row x N  o  tpl-cashier-corte-empty -->
+                        <tbody id="corte-body" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Fila de un método de pago en el resumen del Corte Z -->
+<template id="tpl-cashier-corte-row">
+    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+        <td class="col-method px-4 py-3 font-semibold text-slate-800 dark:text-slate-200"></td>
+        <td class="col-transactions px-4 py-3 text-right text-slate-600 dark:text-slate-400"></td>
+        <td class="col-total-collected px-4 py-3 text-right font-bold text-slate-900 dark:text-white"></td>
+        <td class="col-total-tips px-4 py-3 text-right text-green-600"></td>
+    </tr>
+</template>
+
+<!-- Estado vacío del Corte Z -->
+<template id="tpl-cashier-corte-empty">
+    <tr>
+        <td colspan="4" class="px-4 py-6 text-center text-slate-400">Sin movimientos hoy</td>
+    </tr>
+</template>

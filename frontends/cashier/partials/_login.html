@@ -1,0 +1,78 @@
+<!-- ============================================================
+     cashier/partials/_login.html
+     Templates: tpl-cashier-login | tpl-cashier-emp-option | tpl-cashier-pin-btn
+     ============================================================ -->
+
+<!-- Pantalla completa de login -->
+<template id="tpl-cashier-login">
+    <div
+        class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div class="w-full max-w-sm">
+
+            <div class="text-center mb-8">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 bg-amber-500 rounded-2xl shadow-lg shadow-amber-500/30 mb-4">
+                    <span class="material-symbols-outlined text-3xl text-white">point_of_sale</span>
+                </div>
+                <h1 class="text-2xl font-black text-white tracking-tight">Kore Bar — Caja</h1>
+                <p class="text-slate-400 text-sm mt-1">Selecciona tu nombre e ingresa tu PIN</p>
+            </div>
+
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6 space-y-5">
+
+                <!-- Selector de empleado -->
+                <div>
+                    <label
+                        class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Empleado</label>
+                    <div class="relative">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">person</span>
+                        <select id="sel-employee"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white font-semibold focus:ring-2 focus:ring-amber-500 outline-none appearance-none">
+                            <option value="">— Seleccionar empleado —</option>
+                            <!-- Las opciones se inyectan dinámicamente con tpl-cashier-emp-option -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campo PIN -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">PIN de
+                        acceso</label>
+                    <div class="relative">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">lock</span>
+                        <input id="inp-pin" type="password" maxlength="6" placeholder="••••••"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white font-bold text-lg tracking-[0.3em] focus:ring-2 focus:ring-amber-500 outline-none"
+                            autocomplete="off" inputmode="numeric" />
+                    </div>
+                </div>
+
+                <!-- Teclado PIN (los botones se clonan con tpl-cashier-pin-btn) -->
+                <div id="pin-keyboard" class="grid grid-cols-3 gap-2">
+                    <!-- Botones inyectados dinámicamente -->
+                </div>
+
+                <button id="btn-login"
+                    class="w-full flex items-center justify-center gap-3 py-4 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white font-bold text-lg rounded-xl shadow-lg shadow-amber-500/30 transition-all">
+                    <span class="material-symbols-outlined">login</span>
+                    Ingresar a Caja
+                </button>
+            </div>
+
+            <p class="text-center text-slate-600 text-xs mt-6">Kore Bar POS · v2.0 · Cashier Module</p>
+        </div>
+    </div>
+</template>
+
+<!-- Opción del select de empleados (una por empleado) -->
+<template id="tpl-cashier-emp-option">
+    <option class="col-emp-value col-emp-label"></option>
+</template>
+
+<!-- Botón del teclado PIN -->
+<template id="tpl-cashier-pin-btn">
+    <button class="pin-btn py-4 rounded-xl font-bold text-lg transition-all col-pin-key">
+        <!-- texto inyectado con textContent -->
+    </button>
+</template>

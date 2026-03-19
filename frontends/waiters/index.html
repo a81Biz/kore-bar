@@ -4,14 +4,13 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>SIR Mexican - Sistema de Punto de Venta</title>
-    <!-- Tailwind CSS v3 CDN with Plugins -->
+    <title>Kore Bar - Sistema de Punto de Venta</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
+    <!-- ✅ waiters.css incluido — estaba en el directorio pero no referenciado -->
     <link rel="stylesheet" href="./css/waiters.css">
 
     <script>
@@ -37,8 +36,8 @@
                         "xl": "0.75rem",
                         "full": "9999px"
                     },
-                },
-            },
+                }
+            }
         }
     </script>
 </head>
@@ -46,14 +45,14 @@
 <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen overflow-hidden select-none">
 
-    <!-- ViewManager Root Constraint -->
+    <!-- ViewManager Root -->
     <div id="app-root" class="h-screen w-full flex flex-col"></div>
 
-    <!-- ========================================== -->
-    <!-- TEMPLATES: UI "Lego Pieces"                -->
-    <!-- ========================================== -->
+    <!-- ============================================================
+         TEMPLATES — "Lego Pieces" del módulo de Meseros
+         ============================================================ -->
 
-    <!-- Template: Login Screen -->
+    <!-- Login -->
     <template id="tpl-login">
         <section
             class="h-full w-full flex flex-col items-center justify-center mexican-pattern bg-white dark:bg-background-dark fade-in">
@@ -61,12 +60,13 @@
                 <div class="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <span class="material-symbols-outlined text-white text-5xl">restaurant</span>
                 </div>
-                <h1 class="text-3xl font-bold text-slate-800 dark:text-white">waiters</h1>
+                <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Kore Bar</h1>
                 <p class="text-slate-500 dark:text-slate-400">Ingrese su PIN de empleado</p>
             </div>
 
             <div class="w-full max-w-xs mb-6">
-                <select id="employee-select" class="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
+                <select id="employee-select"
+                    class="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
                     <option value="" disabled selected>Seleccione su nombre...</option>
                 </select>
             </div>
@@ -116,7 +116,7 @@
         </section>
     </template>
 
-    <!-- Template: Dashboard Screen -->
+    <!-- Dashboard -->
     <template id="tpl-dashboard">
         <div class="flex-1 overflow-y-auto fade-in">
             <div class="max-w-7xl mx-auto px-4 md:px-8 py-6">
@@ -126,20 +126,15 @@
                             <span class="material-symbols-outlined text-3xl">restaurant</span>
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold tracking-tight">SIR Mexican</h1>
+                            <h1 class="text-2xl font-bold tracking-tight">Kore Bar</h1>
                             <p class="text-primary font-medium">Dashboard de Servicio</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-6">
                         <div class="text-right hidden sm:block">
                             <p class="text-sm text-slate-500 dark:text-slate-400">Mesero</p>
-                            <p class="font-bold text-lg">Juan P.</p>
-                        </div>
-                        <div class="relative group">
-                            <img alt="Perfil" class="size-12 rounded-full border-2 border-primary object-cover"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdmE9FK6cGkIt86DBTuDCJOs1IefDT_4MbGKGOBWyKCZImAPZsuXesyOwsBzt0n0HCGuLHxem-9r0win176uPRuuddlD3rXoVpZaPXbT80kvuMonHsvFJ6Cpw4EoqNKSr7SU-mtrb4sBRwDTcTb_ppOJyFYO9fRPxa94MXC1caHBAl54sICtdRsSOzyjXxP_JDZQw1h9QaAgSraKRAkl22EmkTSECxWyMvWyAxFLcMgV34zahWwiHCiHlAUxYQMQguAqIYA90XuMnh" />
-                            <span
-                                class="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                            <!-- Nombre inyectado con textContent desde dashboard.js -->
+                            <p class="col-waiter-name font-bold text-lg"></p>
                         </div>
                         <button id="btn-logout"
                             class="bg-slate-200 dark:bg-slate-800 p-3 rounded-xl hover:bg-primary/10 transition-colors">
@@ -151,18 +146,9 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
                     <div class="space-y-1">
                         <h2 class="text-3xl font-bold">Gestión de Mesas</h2>
-                        <p class="text-slate-500 dark:text-slate-400">Actualizado en tiempo real • <span
-                                id="clock-display"></span></p>
-                    </div>
-                    <div
-                        class="flex bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <button
-                            class="px-6 py-2.5 rounded-lg bg-primary text-white font-bold text-sm shadow-md">Todas</button>
-                        <button
-                            class="px-6 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Mis
-                            Mesas</button>
-                        <button
-                            class="px-6 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Zonas</button>
+                        <p class="text-slate-500 dark:text-slate-400">Actualizado en tiempo real ·
+                            <span id="clock-display"></span>
+                        </p>
                     </div>
                 </div>
 
@@ -184,10 +170,8 @@
                     </div>
                 </div>
 
-                <!-- Dynamic Render Box -->
-                <div id="tables-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12">
-                    <!-- Populated via Javascript -->
-                </div>
+                <!-- Grid de mesas — llenado por dashboard.js -->
+                <div id="tables-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12"></div>
 
                 <section
                     class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-200 dark:border-slate-700">
@@ -218,7 +202,7 @@
         </div>
     </template>
 
-    <!-- Template: POS Order Screen -->
+    <!-- POS Order Screen -->
     <template id="tpl-order">
         <div class="flex h-screen w-full flex-col overflow-hidden fade-in relative">
 
@@ -233,7 +217,7 @@
                 <div class="flex items-center gap-6">
                     <div class="flex items-center gap-3 text-primary cursor-pointer" id="btn-home">
                         <span class="material-symbols-outlined text-3xl">restaurant_menu</span>
-                        <h2 class="text-xl font-bold leading-tight tracking-tight hidden md:block">SIR Mexican</h2>
+                        <h2 class="text-xl font-bold leading-tight tracking-tight hidden md:block">Kore Bar</h2>
                     </div>
                     <div class="relative w-64">
                         <span
@@ -246,7 +230,8 @@
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl">
                         <span class="material-symbols-outlined text-primary text-sm">person</span>
-                        <span class="text-sm font-medium">Juan P.</span>
+                        <!-- Nombre inyectado con textContent desde order.js -->
+                        <span class="col-order-waiter text-sm font-medium"></span>
                     </div>
                     <button id="btn-close-order"
                         class="flex items-center justify-center rounded-xl h-10 w-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -258,20 +243,16 @@
             <main class="flex flex-1 overflow-hidden">
                 <section
                     class="flex flex-[0.7] flex-col bg-background-light dark:bg-background-dark p-6 overflow-y-auto w-full max-w-[70%]">
-                    <div class="flex gap-3 mb-6 shrink-0 overflow-x-auto pb-2" id="category-tabs">
-                        <!-- Filled by JS -->
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="menu-grid">
-                        <!-- Filled by JS -->
-                    </div>
+                    <div class="flex gap-3 mb-6 shrink-0 overflow-x-auto pb-2" id="category-tabs"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="menu-grid"></div>
                 </section>
 
                 <aside
                     class="flex-[0.3] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 overflow-hidden min-w-[30%]">
                     <div class="p-6 border-b border-slate-100 dark:border-slate-800">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-xl font-bold" id="cart-table-label">Mesa</h2>
+                            <!-- Mesa inyectada con textContent desde order.js -->
+                            <h2 class="text-xl font-bold col-cart-table"></h2>
                             <span
                                 class="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase">Nueva
                                 Comanda</span>
@@ -279,28 +260,18 @@
                         <p class="text-xs text-slate-500 dark:text-slate-400" id="cart-time"></p>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto p-6 space-y-4" id="cart-items-container">
-                        <!-- Repainted per state map -->
-                        <div class="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 italic text-center"
-                            id="empty-cart-state">
-                            <span class="material-symbols-outlined text-6xl mb-2">shopping_basket</span>
-                            <p>La orden está vacía</p>
-                        </div>
-                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 space-y-4" id="cart-items-container"></div>
 
                     <div class="p-6 bg-slate-50 dark:bg-slate-800/50 space-y-3">
                         <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                            <span>Subtotal</span>
-                            <span id="cart-subtotal">$0.00</span>
+                            <span>Subtotal</span><span id="cart-subtotal">$0.00</span>
                         </div>
                         <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                            <span>IVA (16%)</span>
-                            <span id="cart-tax">$0.00</span>
+                            <span>IVA (16%)</span><span id="cart-tax">$0.00</span>
                         </div>
                         <div
                             class="flex justify-between text-xl font-bold pt-2 border-t border-slate-200 dark:border-slate-700">
-                            <span>Total</span>
-                            <span class="text-primary" id="cart-total">$0.00</span>
+                            <span>Total</span><span class="text-primary" id="cart-total">$0.00</span>
                         </div>
                         <button id="btn-send-kitchen" disabled
                             class="w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 mt-4 active:scale-[0.98] transition-all bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed">
@@ -316,9 +287,12 @@
         </div>
     </template>
 
-    <!-- ES6 Modules Entry Point -->
+    <!--
+        ✅ app.js se auto-arranca con initApp() al cargar el módulo ES6.
+        Este micrositio tiene su propio bootstrap completo (PubSub + viewManager).
+        kore.core.js eliminado — causaba doble mount del login.
+    -->
     <script type="module" src="./js/app.js"></script>
-    <script type="module" src="/core/js/kore.core.js"></script>
 </body>
 
 </html>

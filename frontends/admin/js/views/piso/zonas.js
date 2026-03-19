@@ -1,22 +1,39 @@
+// frontends/admin/js/views/piso/zonas.js
+
+// ==========================================================================
+// 1. DEPENDENCIAS
+// ==========================================================================
 import { fetchData, postData, deleteData } from '/shared/js/http.client.js';
-import { ENDPOINTS } from '/shared/js/endpoints.js'; // 🟢 USO ESTRICTO
+import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { bindForm } from '/shared/js/formEngine.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
 import { PubSub } from '/shared/js/pubsub.js';
 
-// 🟢 ESTANDARIZACIÓN DE OBJETOS AL PATRÓN EMPLEADOS
+// ==========================================================================
+// 2. ESTADO PRIVADO
+// ==========================================================================
 const state = {
     datos: { lista: [] },
     dom: {}
 };
 
+// ==========================================================================
+// 3. CACHÉ DEL DOM
+// ==========================================================================
 const render = {
     cacheDOM: (container) => {
         state.dom.root = container;
         state.dom.form = container.querySelector('#form-piso-zona');
         state.dom.list = container.querySelector('#list-zonas');
         state.dom.template = document.querySelector('#tpl-item-zona');
+        // ✅ Cacheamos los inputs del formulario UNA SOLA VEZ
+        state.dom.inputCode = container.querySelector('#zona-code');
+        state.dom.inputNombre = container.querySelector('#zona-nombre');
     },
+
+    // =========================================================================
+    // 4. LÓGICA DE VISTA / RENDERIZADO
+    // =========================================================================
     lista: () => {
         if (!state.dom.list || !state.dom.template) return;
         state.dom.list.innerHTML = '';
@@ -38,11 +55,13 @@ const render = {
     }
 };
 
+// ==========================================================================
+// 5. LÓGICA DE NEGOCIO / DATOS
+// ==========================================================================
 const logic = {
     cargarDatos: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.zones).catch(() => null);
-            // BLINDAJE: Si res.data existe y es array lo usamos, si no, array vacío estricto.
             const dataRaw = res?.data || res || [];
             state.datos.lista = Array.isArray(dataRaw) ? dataRaw : [];
 
@@ -52,26 +71,22 @@ const logic = {
             showErrorModal('No se pudieron cargar las zonas.');
         }
     },
-    crearZona: async () => {
-        const inputCode = state.dom.form.querySelector('#zona-code');
-        const inputName = state.dom.form.querySelector('#zona-nombre');
 
+    crearZona: async () => {
+        // ✅ Lee desde los refs cacheados, no con form.querySelector directamente
         const payload = {
-            zoneCode: inputCode.value.trim().toUpperCase(),
-            name: inputName.value.trim()
+            zoneCode: state.dom.inputCode.value.trim().toUpperCase(),
+            name: state.dom.inputNombre.value.trim()
         };
 
-        // 🟢 CONSUMO DE ENDPOINTS
         await postData(ENDPOINTS.admin.post.zone, payload);
         showSuccessModal('Zona creada exitosamente.');
-
-        inputCode.value = ''; inputName.value = ''; inputCode.focus();
         await logic.cargarDatos();
     },
+
     eliminarZona: async (code, name) => {
         if (!await confirmAction(`¿Borrar la zona "${name}"?`)) return;
         try {
-            // 🟢 REEMPLAZO DINÁMICO DE RUTA
             const url = ENDPOINTS.admin.delete.zone.replace(':code', code);
             await deleteData(url);
             showSuccessModal('Zona eliminada.');
@@ -82,8 +97,12 @@ const logic = {
     }
 };
 
+// ==========================================================================
+// 6. EVENTOS
+// ==========================================================================
 const bindEvents = () => {
     if (state.dom.form) bindForm('form-piso-zona', logic.crearZona);
+
     if (state.dom.list) {
         state.dom.list.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-action="delete-zona"]');
@@ -92,6 +111,9 @@ const bindEvents = () => {
     }
 };
 
+// ==========================================================================
+// 7. API PÚBLICA
+// ==========================================================================
 export const ZonasController = {
     mount: async (container) => {
         render.cacheDOM(container);

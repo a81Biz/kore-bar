@@ -1,0 +1,97 @@
+<!-- ============================================================
+     cashier/partials/_board.html
+     Templates: tpl-cashier-board | tpl-cashier-board-item | tpl-cashier-board-empty
+     ============================================================ -->
+
+<!-- Layout completo del tablero: header + aside (lista) + panel detalle -->
+<template id="tpl-cashier-board">
+    <div class="min-h-screen bg-slate-100 dark:bg-slate-900 flex flex-col">
+
+        <!-- Header -->
+        <header
+            class="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-xl">point_of_sale</span>
+                </div>
+                <div>
+                    <h1 class="font-black text-slate-900 dark:text-white text-lg leading-none">Kore Bar — Caja</h1>
+                    <!-- Nombre del cajero se inyecta con textContent -->
+                    <p class="text-xs text-slate-500 dark:text-slate-400 col-cashier-name"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-corte"
+                    class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-amber-50 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600">
+                    <span class="material-symbols-outlined text-base">account_balance_wallet</span>
+                    <span class="hidden sm:inline">Corte Z</span>
+                </button>
+                <button id="btn-logout"
+                    class="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 transition-colors border border-red-100 dark:border-red-800">
+                    <span class="material-symbols-outlined text-base">logout</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main (2 columnas) -->
+        <main class="flex flex-col lg:flex-row flex-1 gap-0 overflow-hidden h-[calc(100vh-64px)]">
+
+            <!-- Columna izquierda: lista de mesas -->
+            <aside
+                class="w-full lg:w-96 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+                <div
+                    class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                    <h2 class="font-bold text-slate-900 dark:text-white">Esperando Pago</h2>
+                    <!-- Badge inyectado con textContent -->
+                    <span
+                        class="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1 rounded-full col-board-count"></span>
+                </div>
+                <!-- Lista de tarjetas de mesas (se llena con tpl-cashier-board-item o tpl-cashier-board-empty) -->
+                <div id="board-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            </aside>
+
+            <!-- Columna derecha: detalle de la mesa seleccionada -->
+            <section id="detail-panel" class="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+                <!-- Placeholder inicial — se reemplaza con tpl-cashier-detail al seleccionar mesa -->
+                <div id="detail-placeholder" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+                    <span
+                        class="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">touch_app</span>
+                    <h3 class="text-xl font-bold text-slate-400 dark:text-slate-600">Selecciona una mesa</h3>
+                    <p class="text-slate-400 dark:text-slate-600 text-sm mt-2">Haz clic en una mesa para ver su detalle
+                    </p>
+                </div>
+            </section>
+        </main>
+    </div>
+</template>
+
+<!-- Tarjeta de una mesa en la lista lateral -->
+<template id="tpl-cashier-board-item">
+    <button class="board-item w-full text-left p-4 rounded-xl border-2 transition-all shadow-sm
+                   border-transparent bg-slate-50 dark:bg-slate-700 hover:border-amber-300">
+        <div class="flex items-center gap-3">
+            <div
+                class="col-icon w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-200 dark:bg-slate-600">
+                <span class="material-symbols-outlined text-slate-500">table_restaurant</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <!-- Se inyectan con textContent -->
+                <p class="col-table-code font-bold text-slate-900 dark:text-white truncate"></p>
+                <p class="col-table-meta text-xs text-slate-500 dark:text-slate-400 truncate"></p>
+            </div>
+            <div class="text-right flex-shrink-0">
+                <p class="col-total font-black text-slate-900 dark:text-white"></p>
+                <p class="col-time text-[11px] text-amber-600 dark:text-amber-400 font-medium"></p>
+            </div>
+        </div>
+    </button>
+</template>
+
+<!-- Estado vacío de la lista de mesas -->
+<template id="tpl-cashier-board-empty">
+    <div class="flex flex-col items-center justify-center h-full py-16 text-center">
+        <span class="material-symbols-outlined text-5xl text-slate-300 mb-3">table_restaurant</span>
+        <p class="text-slate-500 font-medium">Sin mesas pendientes</p>
+        <p class="text-slate-400 text-sm mt-1">Las mesas aparecen aquí cuando el mesero solicita la cuenta</p>
+    </div>
+</template>

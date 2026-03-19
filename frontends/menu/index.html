@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>Menú Digital - SIR Mexican</title>
+    <title>Menú Digital - Kore Bar</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -31,47 +31,58 @@
                         "xl": "0.75rem",
                         "full": "9999px"
                     },
-                },
-            },
+                }
+            }
         }
     </script>
     <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        html { scroll-behavior: smooth; }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
     </style>
     <link href="css/menu.css" rel="stylesheet">
 </head>
 
-<body class="bg-background-light dark:bg-mexi-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 font-display">
-    
-    <!-- Top Nav / Sticky Header -->
+<body
+    class="bg-background-light dark:bg-mexi-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen pb-24 font-display">
+
+    <!-- Header fijo — sin datos dinámicos -->
     <header class="sticky top-0 z-50 bg-terracotta shadow-md transition-all duration-300" id="mainHeader">
         <div class="flex items-center p-4 justify-between">
-            <div class="flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+            <div class="flex items-center gap-2 cursor-pointer" id="logoArea">
                 <span class="material-symbols-outlined text-white text-3xl">restaurant_menu</span>
                 <h1 class="text-white text-xl font-bold tracking-tight">Kore Menu</h1>
             </div>
-            <div class="bg-white/20 px-3 py-1 rounded-full border border-white/30" id="tableIndicatorContainer">
+            <div class="bg-white/20 px-3 py-1 rounded-full border border-white/30">
                 <p class="text-white text-sm font-bold flex items-center gap-1">
                     <span class="material-symbols-outlined text-xs">location_on</span>
                     <span id="tableIndicator">Mesa...</span>
                 </p>
             </div>
         </div>
-        <!-- Categories Horizontal Scroll -->
+        <!-- Tabs de categoría inyectados dinámicamente -->
         <div class="flex gap-3 px-4 pb-4 overflow-x-auto hide-scrollbar snap-x" id="categoryTabs">
-            <!-- Dynamically injected category tabs -->
-            <div class="h-10 px-5 flex items-center justify-center text-white/50 animate-pulse">Cargando categorías...</div>
+            <div class="h-10 px-5 flex items-center justify-center text-white/50 animate-pulse">Cargando categorías...
+            </div>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- SPA Mount -->
     <main class="p-4 space-y-8 max-w-2xl mx-auto" id="menuContainer">
-        <!-- Initial Skeleton Loading -->
+        <!-- Skeleton inicial -->
         <div class="flex flex-col gap-6 py-8 animate-pulse">
             <div class="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
-            <div class="flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-sm border border-slate-100 dark:border-slate-700">
+            <div
+                class="flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-sm border border-slate-100 dark:border-slate-700">
                 <div class="w-full aspect-video bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
                 <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
                 <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
@@ -79,49 +90,62 @@
         </div>
     </main>
 
-    <!-- Call Waiter Floating Action Button (FAB) -->
-    <button id="callWaiterBtn" aria-label="Llamar al mesero" class="fixed bottom-6 right-6 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform hover:bg-primary/90">
+    <!-- FAB — Llamar al mesero -->
+    <button id="callWaiterBtn" aria-label="Llamar al mesero"
+        class="fixed bottom-6 right-6 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform hover:bg-primary/90">
         <span class="material-symbols-outlined text-3xl">notifications_active</span>
     </button>
 
-    <!-- Waiter Call Modal -->
+    <!-- Modal — Motivo de llamada -->
     <div id="callModal" class="fixed inset-0 z-50 hidden">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0" id="callModalOverlay"></div>
-        <!-- Modal Content -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0" id="callModalOverlay">
+        </div>
         <div class="flex items-end justify-center min-h-screen p-0 sm:items-center sm:p-4">
-            <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 transform transition-all translate-y-full sm:translate-y-0 sm:scale-95 opacity-0 pb-6 sm:pb-0" id="callModalContent">
+            <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 transform transition-all translate-y-full sm:translate-y-0 sm:scale-95 opacity-0 pb-6 sm:pb-0"
+                id="callModalContent">
                 <div class="p-6">
                     <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
                         <span class="material-symbols-outlined text-3xl text-primary">room_service</span>
                     </div>
-                    <h3 class="text-2xl font-black tracking-tight text-center text-slate-900 dark:text-white mb-2">Llamar al Mesero</h3>
-                    <p class="text-center text-slate-500 dark:text-slate-400 text-sm mb-6 font-medium">Selecciona el motivo de tu llamado para brindarte un servicio rápido.</p>
-                    
+                    <h3 class="text-2xl font-black tracking-tight text-center text-slate-900 dark:text-white mb-2">
+                        Llamar al Mesero</h3>
+                    <p class="text-center text-slate-500 dark:text-slate-400 text-sm mb-6 font-medium">
+                        Selecciona el motivo de tu llamado para brindarte un servicio rápido.
+                    </p>
+
                     <div class="space-y-3">
-                        <button class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left" data-reason="ORDER">
+                        <button
+                            class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left"
+                            data-reason="ORDER">
                             <span class="material-symbols-outlined text-primary text-xl">restaurant</span>
                             <span class="font-bold text-slate-700 dark:text-slate-200">Ordenar / Pedir más</span>
                             <span class="material-symbols-outlined ml-auto text-slate-300">chevron_right</span>
                         </button>
-                        <button class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left" data-reason="BILL">
+                        <button
+                            class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left"
+                            data-reason="BILL">
                             <span class="material-symbols-outlined text-primary text-xl">receipt_long</span>
                             <span class="font-bold text-slate-700 dark:text-slate-200">Pedir la cuenta</span>
                             <span class="material-symbols-outlined ml-auto text-slate-300">chevron_right</span>
                         </button>
-                        <button class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left" data-reason="ASSISTANCE">
+                        <button
+                            class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left"
+                            data-reason="ASSISTANCE">
                             <span class="material-symbols-outlined text-primary text-xl">help</span>
                             <span class="font-bold text-slate-700 dark:text-slate-200">Asistencia general</span>
                             <span class="material-symbols-outlined ml-auto text-slate-300">chevron_right</span>
                         </button>
-                        <button class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left" data-reason="CLEANING">
+                        <button
+                            class="call-reason-btn w-full flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors text-left"
+                            data-reason="CLEANING">
                             <span class="material-symbols-outlined text-primary text-xl">cleaning_services</span>
                             <span class="font-bold text-slate-700 dark:text-slate-200">Limpieza de mesa</span>
                             <span class="material-symbols-outlined ml-auto text-slate-300">chevron_right</span>
                         </button>
                     </div>
 
-                    <button id="closeModalBtn" class="mt-6 w-full py-4 font-black tracking-widest uppercase text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl bg-slate-50 dark:bg-slate-900">
+                    <button id="closeModalBtn"
+                        class="mt-6 w-full py-4 font-black tracking-widest uppercase text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl bg-slate-50 dark:bg-slate-900">
                         Cancelar
                     </button>
                 </div>
@@ -129,16 +153,23 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
-        <div class="bg-slate-900 border border-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl font-medium flex items-center gap-3 w-80">
+    <!-- Toast -->
+    <div id="toast"
+        class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+        <div
+            class="bg-slate-900 border border-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl font-medium flex items-center gap-3 w-80">
             <span class="material-symbols-outlined text-emerald-400" id="toastIcon">check_circle</span>
             <span id="toastMsg" class="text-sm font-bold flex-1">Notificación enviada</span>
         </div>
     </div>
 
-    <!-- Vanilla Code Initialization -->
+    <!--
+        ✅ menu.js se auto-arranca con DOMContentLoaded.
+        Este micrositio NO usa kore.core.js — es una página pública de solo lectura,
+        no una SPA con PubSub/views/auth. No requiere el bootstrap del Core.
+        app.js eliminado — era dead code (poll de window.launchMenuApp que nunca se resolvía).
+    -->
     <script type="module" src="js/menu.js"></script>
-    <script type="module" src="/core/js/kore.core.js"></script>
 </body>
+
 </html>

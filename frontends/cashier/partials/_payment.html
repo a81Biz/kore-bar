@@ -1,0 +1,138 @@
+<!-- ============================================================
+     cashier/partials/_payment.html
+     Templates: tpl-cashier-payment | tpl-cashier-pay-line | tpl-cashier-ticket
+     ============================================================ -->
+
+<!-- Modal completo de procesamiento de pago -->
+<template id="tpl-cashier-payment">
+    <div
+        class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+                </div>
+                <div>
+                    <h2 class="font-black text-slate-900 dark:text-white">Procesar Pago</h2>
+                    <!-- Inyectado con textContent: "Mesa X · $N,NNN.NN" -->
+                    <p class="col-payment-subtitle text-xs text-slate-500"></p>
+                </div>
+            </div>
+            <button id="btn-close-payment"
+                class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                <span class="material-symbols-outlined text-slate-500">close</span>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-5">
+
+            <!-- Líneas de cobro acumuladas (se llena con tpl-cashier-pay-line x N) -->
+            <div id="payment-lines" class="space-y-1"></div>
+
+            <!-- Selector método + campo monto -->
+            <div class="grid grid-cols-2 gap-3">
+                <select id="sel-method"
+                    class="px-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="CASH">💵 Efectivo</option>
+                    <option value="CARD">💳 Tarjeta</option>
+                    <option value="TRANSFER">📱 Transferencia</option>
+                </select>
+                <input id="inp-amount" type="number" step="0.01" min="0.01"
+                    class="px-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-bold text-lg focus:ring-2 focus:ring-amber-500 outline-none" />
+            </div>
+
+            <!-- Botones rápidos de monto -->
+            <div class="grid grid-cols-4 gap-2">
+                <button data-quick="100"
+                    class="quick-amount py-2.5 rounded-lg font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100 hover:text-amber-700 transition-all border border-transparent hover:border-amber-200">$100</button>
+                <button data-quick="200"
+                    class="quick-amount py-2.5 rounded-lg font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100 hover:text-amber-700 transition-all border border-transparent hover:border-amber-200">$200</button>
+                <button data-quick="500"
+                    class="quick-amount py-2.5 rounded-lg font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100 hover:text-amber-700 transition-all border border-transparent hover:border-amber-200">$500</button>
+                <button data-quick="1000"
+                    class="quick-amount py-2.5 rounded-lg font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100 hover:text-amber-700 transition-all border border-transparent hover:border-amber-200">$1000</button>
+            </div>
+
+            <button id="btn-add-line"
+                class="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 font-bold text-sm hover:border-amber-400 hover:text-amber-500 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-base">add</span>
+                Agregar línea de pago
+            </button>
+
+            <!-- Propina -->
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap">Propina:</label>
+                <div class="relative flex-1">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                    <input id="inp-tip" type="number" step="0.01" min="0" placeholder="0.00"
+                        class="w-full pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-amber-500 outline-none" />
+                </div>
+            </div>
+
+            <!-- Resumen de cobro (clases de color se aplican desde JS según estado) -->
+            <div id="payment-summary"
+                class="rounded-xl p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-slate-600 dark:text-slate-400">Total cobrado:</span>
+                    <span class="col-paid font-bold text-slate-900 dark:text-white"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="col-balance-label text-slate-600 dark:text-slate-400"></span>
+                    <span class="col-balance-amount font-bold text-amber-600"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer con botón de confirmar -->
+        <div class="px-6 pb-6">
+            <button id="btn-confirm-payment" disabled
+                class="w-full flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-xl transition-all bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed">
+                <span class="material-symbols-outlined text-2xl">receipt_long</span>
+                Confirmar y Emitir Ticket
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- Fila de una línea de cobro acumulada en el modal -->
+<template id="tpl-cashier-pay-line">
+    <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+            <span class="col-line-icon material-symbols-outlined text-slate-400 text-base"></span>
+            <span class="col-line-method text-sm font-semibold text-slate-700 dark:text-slate-300"></span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="col-line-amount font-bold text-slate-900 dark:text-white"></span>
+            <button class="btn-rm-line text-red-400 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined text-base">delete</span>
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- Pantalla de éxito tras confirmar el pago (reemplaza el contenido del modal) -->
+<template id="tpl-cashier-ticket">
+    <div
+        class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 text-center p-10">
+        <div
+            class="w-20 h-20 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-5">
+            <span class="material-symbols-outlined text-4xl text-green-600 dark:text-green-400">check_circle</span>
+        </div>
+        <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-2">¡Pago Exitoso!</h2>
+        <p class="text-slate-500 text-sm mb-6">El ticket fue emitido y la mesa queda libre.</p>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 mb-6">
+            <p class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Folio del Ticket</p>
+            <!-- Inyectados con textContent -->
+            <p class="col-ticket-folio text-2xl font-black text-amber-500 font-mono"></p>
+            <p class="col-ticket-total text-lg font-bold text-slate-900 dark:text-white mt-2"></p>
+        </div>
+        <p class="text-xs text-slate-400 mb-6">El cliente puede usar este folio en <strong>invoice.localhost</strong>
+            para facturar.</p>
+        <button id="btn-close-success"
+            class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-xl transition-all">
+            Cerrar
+        </button>
+    </div>
+</template>

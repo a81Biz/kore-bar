@@ -1,14 +1,14 @@
 // shared/js/endpoints.js
+// Fuente única de verdad para todas las rutas HTTP del sistema.
+// Los tokens :param son reemplazados dinámicamente por http.client.js → buildUrl().
 
 export const ENDPOINTS = {
-    // ----------------------------------------------------
-    // 1. MÓDULOS ORIGINALES (Gestión de Piso, Cajas, Meseros)
-    // ----------------------------------------------------
-    orders: {
-        post: { create: '/orders' }
-    },
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // MESEROS (waiters.localhost)
+    // ──────────────────────────────────────────────────────────────────────────
     waiters: {
-        get: { 
+        get: {
             layout: '/waiters/layout',
             orderStatus: '/waiters/tables/:tableCode/order'
         },
@@ -24,9 +24,9 @@ export const ENDPOINTS = {
         }
     },
 
-    // ----------------------------------------------------
-    // 2. MÓDULO DE ADMINISTRACIÓN (admin.localhost)
-    // ----------------------------------------------------
+    // ──────────────────────────────────────────────────────────────────────────
+    // ADMINISTRACIÓN (admin.localhost)
+    // ──────────────────────────────────────────────────────────────────────────
     admin: {
         get: {
             employees: '/admin/employees',
@@ -68,13 +68,51 @@ export const ENDPOINTS = {
             menuDish: '/admin/menu/dishes/:code'
         }
     },
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CAJA (cashier.localhost)
+    // ──────────────────────────────────────────────────────────────────────────
+    cashier: {
+        get: {
+            // Lista de empleados con acceso a caja (can_access_cashier = true)
+            employees: '/cashier/employees',
+            // Tablero: mesas en AWAITING_PAYMENT
+            board: '/cashier/board',
+            // Resumen del día — Corte Z
+            corte: '/cashier/corte',
+            // Ticket por folio (también consumido por invoice.localhost)
+            ticket: '/cashier/tickets/:folio'
+        },
+        post: {
+            // Autenticar cajero con PIN
+            login: '/cashier/login',
+            // Procesar cobro mixto de una mesa → devuelve folio TKT-
+            pay: '/cashier/tables/:tableCode/pay'
+        }
+    },
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // FACTURACION (invoice.localhost)
+    invoice: {
+        // GET /cashier/tickets/:folio se reutiliza desde ENDPOINTS.cashier.get.ticket
+        post: {
+            // Registrar solicitud de CFDI — guarda datos fiscales en invoice_data (JSONB)
+            // Integracion con el PAC (timbrado SAT) queda como fase futura.
+            request: '/cashier/tickets/:folio/invoice'
+        }
+    },
+
+    // COCINA (kitchen.localhost)
+    // ──────────────────────────────────────────────────────────────────────────
     kitchen: {
         get: {
             board: '/kitchen/board',
             pendingDishes: '/kitchen/dishes/pending',
-            ingredients: '/kitchen/ingredients',
             finishedDishes: '/kitchen/dishes/finished',
-            recipeBOM: '/kitchen/recipes/:dishCode/bom'
+            ingredients: '/kitchen/ingredients',
+            recipeBOM: '/kitchen/recipes/:dishCode/bom',
+            // Stock filtrado por locacion de cocina
+            kitchenStock: '/inventory/stock?location=LOC-COCINA'
         },
         post: {
             ingredient: '/kitchen/ingredients',
@@ -85,10 +123,16 @@ export const ENDPOINTS = {
             techSheet: '/kitchen/recipes/:dishCode/tech-sheet'
         }
     },
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // INVENTARIO (admin.localhost — sub-módulo)
+    // ──────────────────────────────────────────────────────────────────────────
     inventory: {
         get: {
             suppliers: '/inventory/suppliers',
             stock: '/inventory/stock',
+            // Stock filtrado por locacion de piso (meseros) — query param incluida
+            floorStock: '/inventory/stock?location=LOC-PISO',
             kardex: '/inventory/kardex'
         },
         post: {
@@ -99,4 +143,18 @@ export const ENDPOINTS = {
             sync: '/inventory/sync'
         }
     }
+    ,
+
+    // MENU DIGITAL (menu.localhost — portal público de QR, sin autenticación)
+    menu: {
+        get: {
+            // Catálogo completo agrupado por categoría (solo platillos habilitados)
+            public: '/menu/public'
+        },
+        post: {
+            // Notificación al mesero desde la mesa del cliente
+            callWaiter: '/tables/:tableCode/call-waiter'
+        }
+    }
+
 };

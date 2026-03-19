@@ -1,46 +1,39 @@
 // waiters/js/views/dashboard.js
 import { PubSub } from '/shared/js/pubsub.js';
+import { fetchData } from '/shared/js/http.client.js';
+import { ENDPOINTS } from '/shared/js/endpoints.js';
 
 export async function mount(container, authData) {
-    // Top UI bindings
     const clockDisplay = container.querySelector('#clock-display');
     const btnLogout = container.querySelector('#btn-logout');
     const btnQuickOrder = container.querySelector('#btn-quick-order');
     const tablesGrid = container.querySelector('#tables-grid');
 
-    // Inject authData name if present
-    const nameLabel = container.querySelector('.text-right p.font-bold');
-    if (nameLabel && authData && authData.name) {
-        nameLabel.textContent = authData.name;
-    }
+    // ✅ Nombre del mesero inyectado con textContent — datos de auth, no de API directa
+    const nameLabel = container.querySelector('.col-waiter-name');
+    if (nameLabel && authData?.name) nameLabel.textContent = authData.name;
 
-    const { ENDPOINTS } = await import('/shared/js/endpoints.js');
-    const { fetchData } = await import('/shared/js/http.client.js');
-
-    // 1. Clock Tracker
+    // ── Reloj ─────────────────────────────────────────────────────────────
     const updateTime = () => {
-        const time = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-        if (clockDisplay) clockDisplay.textContent = time;
+        if (clockDisplay) {
+            clockDisplay.textContent = new Date().toLocaleTimeString('es-MX', {
+                hour: '2-digit', minute: '2-digit', hour12: true
+            });
+        }
     };
     updateTime();
     const interval = setInterval(updateTime, 60000);
 
-    // 2. Fetch Active Tables from SSOT endpoint
+    // ── Layout de mesas ───────────────────────────────────────────────────
     const fetchTables = async () => {
         try {
             const res = await fetchData(ENDPOINTS.waiters.get.layout);
-            if (res.success && res.data && res.data.length > 0) {
-                // The layout backend returns grouped by Zone. We flatten it here for 'Todas' view.
-                let allTables = [];
-                res.data.forEach(zone => {
-                    zone.tables.forEach(t => {
-                        allTables.push(t);
-                    });
-                });
+            if (res.success && res.data?.length > 0) {
+                const allTables = res.data.flatMap(zone => zone.tables);
                 renderTables(allTables);
             }
         } catch (e) {
-            console.error("Failed loading table layout:", e);
+            console.error('[Dashboard] Error cargando layout de mesas:', e);
         }
     };
 
@@ -50,46 +43,61 @@ export async function mount(container, authData) {
 
         tables.forEach(table => {
             const btn = document.createElement('button');
+            const isOccupied = table.status === 'OCCUPIED';
 
-            // Logical Tailwind formatting dynamically rendered based upon state rules
-            let bgClass = "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary";
-            let iconClass = "text-slate-400";
-            let iconCode = "event_seat";
-            let iconBgClass = "bg-slate-100 dark:bg-slate-700";
-            let textClass = "text-slate-800 dark:text-white";
-            let upperClass = "text-slate-400";
-            let upperRaw = "Libre";
-            let labelBadge = "";
+            // Clases por estado — sin datos de la API en className
+            btn.className = [
+                'group relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all shadow-sm aspect-square',
+                isOccupied
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary'
+            ].join(' ');
 
-            if (table.status === 'OCCUPIED') {
-                bgClass = "bg-green-50 dark:bg-green-900/20 border-green-500";
-                iconClass = "text-white";
-                iconCode = "person";
-                iconBgClass = "bg-green-500 shadow-md";
-                textClass = "text-green-700 dark:text-green-400";
-                upperClass = "text-green-600 dark:text-green-500";
-                upperRaw = `${table.capacity} Comensales`;
-                labelBadge = table.waiterName ? `<div class="absolute top-4 right-4 text-white text-[10px] font-bold px-2 py-1 rounded-full bg-green-500">${table.waiterName}</div>` : '';
+            // Icono
+            const iconWrap = document.createElement('div');
+            iconWrap.className = [
+                'size-20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform',
+                isOccupied ? 'bg-green-500 shadow-md' : 'bg-slate-100 dark:bg-slate-700'
+            ].join(' ');
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = `material-symbols-outlined text-4xl ${isOccupied ? 'text-white' : 'text-slate-400'}`;
+            iconSpan.textContent = isOccupied ? 'person' : 'event_seat';
+            iconWrap.appendChild(iconSpan);
+
+            // Nombre de mesa
+            const mesaLabel = document.createElement('span');
+            mesaLabel.className = `text-2xl font-black mb-1 ${isOccupied ? 'text-green-700 dark:text-green-400' : 'text-slate-800 dark:text-white'}`;
+            // ✅ tableCode con textContent
+            mesaLabel.textContent = `MESA ${table.tableCode}`;
+
+            // Sublabel de estado
+            const statusLabel = document.createElement('span');
+            statusLabel.className = `font-bold text-sm uppercase ${isOccupied ? 'text-green-600 dark:text-green-500' : 'text-slate-400'}`;
+            // ✅ waiterName con textContent
+            statusLabel.textContent = isOccupied
+                ? (table.waiterName ? table.waiterName : `${table.capacity} Comensales`)
+                : 'Libre';
+
+            // Badge del mesero (mesa ocupada) — ✅ textContent, sin innerHTML
+            if (isOccupied && table.waiterName) {
+                const badge = document.createElement('div');
+                badge.className = 'absolute top-4 right-4 text-white text-[10px] font-bold px-2 py-1 rounded-full bg-green-500';
+                badge.textContent = table.waiterName; // ✅
+                btn.appendChild(badge);
             }
 
-            btn.className = `group relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all shadow-sm aspect-square ${bgClass}`;
-            btn.innerHTML = `
-                ${labelBadge}
-                <div class="size-20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${iconBgClass}">
-                    <span class="material-symbols-outlined text-4xl ${iconClass}">${iconCode}</span>
-                </div>
-                <span class="text-2xl font-black mb-1 ${textClass}">MESA ${table.tableCode}</span>
-                <span class="font-bold text-sm uppercase ${upperClass}">${upperRaw}</span>
-            `;
+            btn.appendChild(iconWrap);
+            btn.appendChild(mesaLabel);
+            btn.appendChild(statusLabel);
 
-            // Emit Order Transition natively parsing logic
             btn.addEventListener('click', () => {
                 clearInterval(interval);
                 PubSub.publish('TABLE_SELECTED', {
                     tableCode: table.tableCode,
                     status: table.status,
                     waiterName: table.waiterName,
-                    authData: authData // Pass auth to next view!
+                    authData
                 });
             });
 
@@ -99,18 +107,14 @@ export async function mount(container, authData) {
 
     fetchTables();
 
-    // Event Bindings
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            clearInterval(interval);
-            PubSub.publish('LOGOUT_TRIGGERED');
-        });
-    }
+    // ── Eventos ───────────────────────────────────────────────────────────
+    btnLogout?.addEventListener('click', () => {
+        clearInterval(interval);
+        PubSub.publish('LOGOUT_TRIGGERED');
+    });
 
-    if (btnQuickOrder) {
-        btnQuickOrder.addEventListener('click', () => {
-            clearInterval(interval);
-            PubSub.publish('TABLE_SELECTED', { tableId: 0 }); // Null pattern table
-        });
-    }
+    btnQuickOrder?.addEventListener('click', () => {
+        clearInterval(interval);
+        PubSub.publish('TABLE_SELECTED', { tableCode: null, authData });
+    });
 }

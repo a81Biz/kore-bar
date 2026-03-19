@@ -1,13 +1,33 @@
-import { KORE_CONFIG } from '/core/js/kore.config.js';
+// ============================================================
+// menu/js/menu.js — Menú Digital de Kore Bar
+// ============================================================
+//
+// ✅ Usa fetchData / postData de http.client.js (sin fetch() directo).
+// ✅ Usa ENDPOINTS — sin URLs hardcodeadas.
+// ✅ Datos de la API inyectados con textContent / setAttribute — sin XSS.
+// ✅ Auto-arranca con DOMContentLoaded — no depende de kore.core.js.
+//
+// DECISIÓN ARQUITECTÓNICA:
+//   Este micrositio es lectura pública (QR en mesa), no SPA con auth/views.
+//   No usa PubSub, TemplateLoader ni viewManager del Core.
+// ============================================================
+
+import { fetchData, postData } from '/shared/js/http.client.js';
+import { ENDPOINTS } from '/shared/js/endpoints.js';
+
+const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
+
+// ── Imagen de respaldo si el platillo no tiene foto ────────────────────────
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400&h=300';
 
 class MenuApp {
     constructor() {
         this.menuData = [];
-        this.tableCode = this.getTableCodeFromUrl() || 'T-01'; // Default Fallback, assuming T-01 exists for real life mock or QR
+        this.tableCode = this._getTableCodeFromUrl();
         this.isLoading = true;
         this.isModalOpen = false;
-        
-        // Caching DOM elements
+        this.toastTimeout = null;
+
         this.DOM = {
             tableIndicator: document.getElementById('tableIndicator'),
             categoryTabs: document.getElementById('categoryTabs'),
@@ -21,258 +41,332 @@ class MenuApp {
             toast: document.getElementById('toast'),
             toastMsg: document.getElementById('toastMsg'),
             toastIcon: document.getElementById('toastIcon'),
-            header: document.getElementById('mainHeader')
+            header: document.getElementById('mainHeader'),
+            logoArea: document.getElementById('logoArea')
         };
 
-        this.init();
+        this._init();
     }
 
-    getTableCodeFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('table');
+    // ── Tabla desde parámetro de URL (?table=XXX) ─────────────────────────
+    _getTableCodeFromUrl() {
+        return new URLSearchParams(window.location.search).get('table') || null;
     }
 
-    async init() {
-        this.DOM.tableIndicator.textContent = `Mesa ${this.tableCode}`;
-        this.setupEventListeners();
-        
-        await this.fetchMenu();
-        this.renderMenu();
-        this.setupScrollSpy();
+    async _init() {
+        // Indicador de mesa — solo si viene en la URL; si no, se oculta
+        if (this.tableCode) {
+            this.DOM.tableIndicator.textContent = `Mesa ${this.tableCode}`;
+        } else {
+            this.DOM.tableIndicator.closest('div')?.classList.add('hidden');
+        }
+
+        this._logoArea();
+        this._setupEventListeners();
+        await this._fetchMenu();
+        this._renderMenu();
+        this._setupScrollSpy();
     }
 
-    setupEventListeners() {
-        // Modal logic
-        this.DOM.callWaiterBtn.addEventListener('click', () => this.openModal());
-        this.DOM.closeModalBtn.addEventListener('click', () => this.closeModal());
-        this.DOM.callModalOverlay.addEventListener('click', () => this.closeModal());
-
-        // Waiter Call Reason buttons
-        this.DOM.reasonBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const reason = btn.dataset.reason;
-                // Add loading state to button
-                const originalContent = btn.innerHTML;
-                btn.innerHTML = `<span class="material-symbols-outlined animate-spin mx-auto text-primary">progress_activity</span>`;
-                
-                this.handleCallWaiter(reason).finally(() => {
-                    btn.innerHTML = originalContent;
-                });
-            });
-        });
-
-        // Sticky Header Shadow transition
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 10) {
-                this.DOM.header.classList.add('shadow-lg');
-                this.DOM.header.classList.remove('shadow-md');
-            } else {
-                this.DOM.header.classList.add('shadow-md');
-                this.DOM.header.classList.remove('shadow-lg');
-            }
-        });
+    _logoArea() {
+        this.DOM.logoArea.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
 
-    async fetchMenu() {
+    // ── Fetch del menú ────────────────────────────────────────────────────
+    async _fetchMenu() {
         try {
-            const response = await fetch(`${KORE_CONFIG.API.BASE_URL}/menu/public`);
-            if (!response.ok) throw new Error('API Error');
-            const json = await response.json();
-            this.menuData = json.data || json; // Handle standard API response wrappers
+            const json = await fetchData(ENDPOINTS.menu.get.public);
+            this.menuData = json.data || [];
         } catch (error) {
-            console.error('Error fetching menu:', error);
-            this.showToast('Error de conexión al cargar el menú', 'error');
+            console.error('[Menu] Error cargando menú:', error);
+            this._showToast('Error de conexión al cargar el menú', 'error');
             this.menuData = [];
         } finally {
             this.isLoading = false;
         }
     }
 
-    renderMenu() {
+    // ── Renderizado del menú ──────────────────────────────────────────────
+    _renderMenu() {
         if (this.isLoading) return;
+        this.DOM.menuContainer.innerHTML = '';
+        this.DOM.categoryTabs.innerHTML = '';
 
-        if (!this.menuData || this.menuData.length === 0) {
-            this.DOM.menuContainer.innerHTML = `
-                <div class="text-center p-12 text-slate-500 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50 block mx-auto text-terracotta">restaurant_menu</span>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Menú no disponible</h2>
-                    <p class="font-medium">No hay platillos disponibles en este momento. Por favor contacta al mesero.</p>
-                </div>
-            `;
-            this.DOM.categoryTabs.innerHTML = '';
+        if (!this.menuData.length) {
+            this._renderEmptyState();
             return;
         }
 
-        // Render Top Tabs (Scrollspy Targets)
-        this.DOM.categoryTabs.innerHTML = this.menuData.map((cat, index) => `
-            <a href="#cat-${cat.categoryCode}" class="category-tab shrink-0 flex items-center justify-center h-10 px-6 rounded-full font-bold text-sm transition-all duration-300 border shadow-sm snap-center ${index === 0 ? 'bg-white text-terracotta border-white' : 'bg-white/10 text-white border-white/20 hover:bg-white/30'}" data-target="cat-${cat.categoryCode}">
-                ${cat.categoryName}
-            </a>
-        `).join('');
+        this.menuData.forEach((cat, index) => {
+            // Tab de categoría
+            this.DOM.categoryTabs.appendChild(this._buildCategoryTab(cat, index === 0));
+            // Sección de platillos
+            this.DOM.menuContainer.appendChild(this._buildCategorySection(cat));
+        });
 
-        // Render Main Categories & Dishes
-        this.DOM.menuContainer.innerHTML = this.menuData.map(cat => `
-            <section id="cat-${cat.categoryCode}" class="category-section scroll-mt-32">
-                <h2 class="text-slate-900 dark:text-slate-100 text-2xl font-black px-1 mb-6 mt-4 flex items-center gap-3 tracking-tight">
-                    <span class="w-2 h-8 bg-primary rounded-full drop-shadow-sm"></span>
-                    ${cat.categoryName}
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    ${cat.dishes.length > 0 
-                        ? cat.dishes.map(dish => this.renderDishCard(dish)).join('') 
-                        : '<div class="col-span-full p-6 text-center text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700"><p class="font-medium text-sm">No hay platillos habilitados en esta categoría actualmente.</p></div>'}
-                </div>
-            </section>
-        `).join('');
-
-        // Setup smooth scroll click handler for tabs
+        // Scroll suave al hacer clic en un tab
         this.DOM.categoryTabs.querySelectorAll('a').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetId = tab.getAttribute('href').substring(1);
                 const targetEl = document.getElementById(targetId);
                 if (targetEl) {
-                    // Update tab state immediately for better response feel
-                    this.setActiveTabVisuals(targetId);
+                    this._setActiveTabVisuals(targetId);
                     targetEl.scrollIntoView({ behavior: 'smooth' });
                 }
             });
         });
     }
 
-    renderDishCard(dish) {
-        const formatPrice = (price) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(price);
-        // Clean up visual presentation for missing images
-        const imageUrl = dish.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400&h=300';
-        
-        return `
-            <div class="group flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-700 active:scale-[0.98] transition-all cursor-pointer">
-                <div class="w-full aspect-video bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden relative">
-                    <img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="${imageUrl}" alt="${dish.name}" loading="lazy" />
-                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-12">
-                        <span class="text-white font-black text-xl tracking-tight drop-shadow-md">${formatPrice(dish.price)}</span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1.5 px-2 pb-1">
-                    <h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">${dish.name}</h3>
-                    <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug line-clamp-2">${dish.description || ''}</p>
-                </div>
-            </div>
-        `;
+    _renderEmptyState() {
+        const wrap = document.createElement('div');
+        wrap.className = 'text-center p-12 text-slate-500 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined text-6xl mb-4 opacity-50 block mx-auto text-terracotta';
+        icon.textContent = 'restaurant_menu';
+
+        const h2 = document.createElement('h2');
+        h2.className = 'text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight';
+        h2.textContent = 'Menú no disponible';
+
+        const p = document.createElement('p');
+        p.className = 'font-medium';
+        p.textContent = 'No hay platillos disponibles en este momento. Por favor contacta al mesero.';
+
+        wrap.appendChild(icon);
+        wrap.appendChild(h2);
+        wrap.appendChild(p);
+        this.DOM.menuContainer.appendChild(wrap);
     }
 
-    setupScrollSpy() {
-        const sections = document.querySelectorAll('.category-section');
-        if (sections.length === 0) return;
+    // ── Tab de categoría ──────────────────────────────────────────────────
+    _buildCategoryTab(cat, isFirst) {
+        const a = document.createElement('a');
+        // ✅ href construido con setAttribute — no innerHTML
+        a.setAttribute('href', `#cat-${cat.categoryCode}`);
+        a.dataset.target = `cat-${cat.categoryCode}`;
+        a.className = [
+            'category-tab shrink-0 flex items-center justify-center h-10 px-6 rounded-full font-bold text-sm',
+            'transition-all duration-300 border shadow-sm snap-center',
+            isFirst
+                ? 'bg-white text-terracotta border-white'
+                : 'bg-white/10 text-white border-white/20 hover:bg-white/30'
+        ].join(' ');
+        // ✅ nombre de categoría con textContent
+        a.textContent = cat.categoryName;
+        return a;
+    }
 
-        const observerOptions = {
-            root: null,
-            rootMargin: '-130px 0px -60% 0px',
-            threshold: 0
-        };
+    // ── Sección de categoría ──────────────────────────────────────────────
+    _buildCategorySection(cat) {
+        const section = document.createElement('section');
+        section.id = `cat-${cat.categoryCode}`;
+        section.className = 'category-section scroll-mt-32';
+
+        // Título de la categoría
+        const h2 = document.createElement('h2');
+        h2.className = 'text-slate-900 dark:text-slate-100 text-2xl font-black px-1 mb-6 mt-4 flex items-center gap-3 tracking-tight';
+
+        const accent = document.createElement('span');
+        accent.className = 'w-2 h-8 bg-primary rounded-full drop-shadow-sm';
+
+        // ✅ nombre con textContent — nunca innerHTML
+        const catLabel = document.createTextNode(''); // placeholder
+        h2.appendChild(accent);
+        h2.appendChild(catLabel);
+        catLabel.textContent = cat.categoryName; // ✅
+
+        section.appendChild(h2);
+
+        // Grid de platillos
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-5';
+
+        if (cat.dishes.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'col-span-full p-6 text-center text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700';
+            const emptyP = document.createElement('p');
+            emptyP.className = 'font-medium text-sm';
+            emptyP.textContent = 'No hay platillos habilitados en esta categoría actualmente.';
+            empty.appendChild(emptyP);
+            grid.appendChild(empty);
+        } else {
+            cat.dishes.forEach(dish => grid.appendChild(this._buildDishCard(dish)));
+        }
+
+        section.appendChild(grid);
+        return section;
+    }
+
+    // ── Tarjeta de platillo ───────────────────────────────────────────────
+    _buildDishCard(dish) {
+        // ── Raíz ──
+        const card = document.createElement('div');
+        card.className = 'group flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-700 active:scale-[0.98] transition-all cursor-pointer';
+
+        // ── Imagen ──
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'w-full aspect-video bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden relative';
+
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-cover transition-transform duration-500 group-hover:scale-105';
+        img.loading = 'lazy';
+        // ✅ src y alt vía propiedad, no innerHTML — imageUrl viene de la API
+        img.src = dish.imageUrl?.trim() || FALLBACK_IMG;
+        img.alt = dish.name;                  // ✅ propiedad, no atributo interpolado
+
+        // Overlay de precio
+        const overlay = document.createElement('div');
+        overlay.className = 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-12';
+
+        const priceSpan = document.createElement('span');
+        priceSpan.className = 'text-white font-black text-xl tracking-tight drop-shadow-md';
+        priceSpan.textContent = fmt(dish.price); // ✅ número formateado, no datos de API directos
+
+        overlay.appendChild(priceSpan);
+        imgWrap.appendChild(img);
+        imgWrap.appendChild(overlay);
+
+        // ── Info ──
+        const info = document.createElement('div');
+        info.className = 'flex flex-col gap-1.5 px-2 pb-1';
+
+        const nameEl = document.createElement('h3');
+        nameEl.className = 'text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight';
+        nameEl.textContent = dish.name;          // ✅
+
+        const descEl = document.createElement('p');
+        descEl.className = 'text-slate-500 dark:text-slate-400 text-sm leading-snug line-clamp-2';
+        descEl.textContent = dish.description || ''; // ✅
+
+        info.appendChild(nameEl);
+        info.appendChild(descEl);
+
+        card.appendChild(imgWrap);
+        card.appendChild(info);
+        return card;
+    }
+
+    // ── ScrollSpy ─────────────────────────────────────────────────────────
+    _setupScrollSpy() {
+        const sections = document.querySelectorAll('.category-section');
+        if (!sections.length) return;
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    const id = entry.target.getAttribute('id');
-                    this.setActiveTabVisuals(id);
+                    this._setActiveTabVisuals(entry.target.getAttribute('id'));
                 }
             });
-        }, observerOptions);
+        }, { root: null, rootMargin: '-130px 0px -60% 0px', threshold: 0 });
 
-        sections.forEach(section => observer.observe(section));
+        sections.forEach(s => observer.observe(s));
     }
 
-    setActiveTabVisuals(activeId) {
-        const tabs = document.querySelectorAll('.category-tab');
-        tabs.forEach(tab => {
-            if (tab.dataset.target === activeId) {
-                tab.classList.remove('bg-white/10', 'text-white', 'border-white/20', 'hover:bg-white/30');
-                tab.classList.add('bg-white', 'text-terracotta', 'border-white');
-                // Auto scroll tab container horizontally into view
-                tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            } else {
-                tab.classList.add('bg-white/10', 'text-white', 'border-white/20', 'hover:bg-white/30');
-                tab.classList.remove('bg-white', 'text-terracotta', 'border-white');
-            }
+    _setActiveTabVisuals(activeId) {
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            const isActive = tab.dataset.target === activeId;
+            tab.classList.toggle('bg-white', isActive);
+            tab.classList.toggle('text-terracotta', isActive);
+            tab.classList.toggle('border-white', isActive);
+            tab.classList.toggle('bg-white/10', !isActive);
+            tab.classList.toggle('text-white', !isActive);
+            tab.classList.toggle('border-white/20', !isActive);
+            tab.classList.toggle('hover:bg-white/30', !isActive);
+            if (isActive) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         });
     }
 
-    openModal() {
+    // ── Modal ─────────────────────────────────────────────────────────────
+    _setupEventListeners() {
+        this.DOM.callWaiterBtn.addEventListener('click', () => this._openModal());
+        this.DOM.closeModalBtn.addEventListener('click', () => this._closeModal());
+        this.DOM.callModalOverlay.addEventListener('click', () => this._closeModal());
+
+        this.DOM.reasonBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const reason = btn.dataset.reason;
+
+                // ✅ Spinner con createElement — sin innerHTML
+                const originalChildren = Array.from(btn.childNodes).map(n => n.cloneNode(true));
+                btn.textContent = '';
+                const spinIcon = document.createElement('span');
+                spinIcon.className = 'material-symbols-outlined animate-spin mx-auto text-primary';
+                spinIcon.textContent = 'progress_activity';
+                btn.appendChild(spinIcon);
+
+                this._handleCallWaiter(reason).finally(() => {
+                    btn.textContent = '';
+                    originalChildren.forEach(n => btn.appendChild(n));
+                });
+            });
+        });
+
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY > 10;
+            this.DOM.header.classList.toggle('shadow-lg', scrolled);
+            this.DOM.header.classList.toggle('shadow-md', !scrolled);
+        });
+    }
+
+    _openModal() {
         if (this.isModalOpen) return;
         this.isModalOpen = true;
         this.DOM.callModal.classList.remove('hidden');
-        
-        // Mobile bottom sheet vs Desktop modal centering animation
         requestAnimationFrame(() => {
             this.DOM.callModalOverlay.classList.remove('opacity-0');
             this.DOM.callModalContent.classList.remove('opacity-0', 'translate-y-full', 'sm:scale-95');
             this.DOM.callModalContent.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
         });
-        
-        // Prevent body scroll when modal is open
         document.body.style.overflow = 'hidden';
     }
 
-    closeModal() {
+    _closeModal() {
         if (!this.isModalOpen) return;
         this.isModalOpen = false;
-        
         this.DOM.callModalOverlay.classList.add('opacity-0');
         this.DOM.callModalContent.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
         this.DOM.callModalContent.classList.add('opacity-0', 'translate-y-full', 'sm:scale-95');
-        
         document.body.style.overflow = '';
-        
-        setTimeout(() => {
-            if (!this.isModalOpen) {
-                this.DOM.callModal.classList.add('hidden');
-            }
-        }, 300); // 300ms matches Tailwind transition-all duration
+        setTimeout(() => { if (!this.isModalOpen) this.DOM.callModal.classList.add('hidden'); }, 300);
     }
 
-    async handleCallWaiter(reason) {
+    // ── Notificación al mesero ────────────────────────────────────────────
+    async _handleCallWaiter(reason) {
+        if (!this.tableCode) {
+            this._showToast('No se detectó el número de mesa. Llama al mesero directamente.', 'error');
+            this._closeModal();
+            return;
+        }
+
         try {
-            const tableToCall = this.tableCode === 'T-01' ? 'TEST-TBL-1' : this.tableCode; 
-            
-            const response = await fetch(`${KORE_CONFIG.API.BASE_URL}/tables/${tableToCall}/call-waiter`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason })
-            });
-            
-            if (response.ok) {
-                this.showToast('¡Mesero notificado! Enseguida te atenderemos.', 'success');
-                this.closeModal();
-            } else {
-                const json = await response.json();
-                throw new Error(json.error || 'Mesa no configurada o error en servidor');
-            }
+            await postData(
+                ENDPOINTS.menu.post.callWaiter,
+                { reason },
+                { tableCode: this.tableCode }   // ✅ buildUrl reemplaza :tableCode
+            );
+            this._showToast('¡Mesero notificado! Enseguida te atenderemos.', 'success');
+            this._closeModal();
         } catch (error) {
-            console.error('Call waiter error:', error);
-            this.showToast(error.message, 'error');
-            this.closeModal();
+            console.error('[Menu] Error llamando al mesero:', error);
+            this._showToast(error.message, 'error');
+            this._closeModal();
         }
     }
 
-    showToast(message, type = 'success') {
-        const icons = {
-            success: 'check_circle',
-            error: 'error'
-        };
-        const textColors = {
-            success: 'text-emerald-400',
-            error: 'text-red-400'
-        };
+    // ── Toast ─────────────────────────────────────────────────────────────
+    _showToast(message, type = 'success') {
+        const icons = { success: 'check_circle', error: 'error' };
+        const colors = { success: 'text-emerald-400', error: 'text-red-400' };
 
+        // ✅ mensaje inyectado con textContent
         this.DOM.toastMsg.textContent = message;
         this.DOM.toastIcon.textContent = icons[type];
-        this.DOM.toastIcon.className = `material-symbols-outlined ${textColors[type]} text-2xl`;
+        this.DOM.toastIcon.className = `material-symbols-outlined ${colors[type]} text-2xl`;
 
-        // Animate In
         this.DOM.toast.classList.remove('translate-y-20', 'opacity-0');
-        
-        // Hide after 4s
+
         if (this.toastTimeout) clearTimeout(this.toastTimeout);
         this.toastTimeout = setTimeout(() => {
             this.DOM.toast.classList.add('translate-y-20', 'opacity-0');
@@ -280,7 +374,7 @@ class MenuApp {
     }
 }
 
-// Bootstrap
+// ✅ Bootstrap limpio — sin depender de kore.core.js ni de window.launchMenuApp
 document.addEventListener('DOMContentLoaded', () => {
     window.MenuDigitalApp = new MenuApp();
 });

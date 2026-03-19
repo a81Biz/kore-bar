@@ -1,0 +1,79 @@
+<!-- ============================================================
+     cashier/partials/_detail.html
+     Templates: tpl-cashier-detail | tpl-cashier-detail-row | tpl-cashier-detail-loading
+     ============================================================ -->
+
+<!-- Panel derecho completo con detalle de la mesa seleccionada -->
+<template id="tpl-cashier-detail">
+    <div class="flex flex-col h-full">
+
+        <!-- Header del panel -->
+        <div
+            class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+            <div>
+                <!-- Inyectados con textContent -->
+                <h3 class="col-detail-title text-lg font-black text-slate-900 dark:text-white"></h3>
+                <p class="col-detail-meta text-sm text-slate-500"></p>
+            </div>
+        </div>
+
+        <!-- Tabla de consumo -->
+        <div class="flex-1 overflow-y-auto px-6 py-4">
+            <table class="w-full">
+                <thead>
+                    <tr
+                        class="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                        <th class="pb-3 text-left w-10">Cant.</th>
+                        <th class="pb-3 text-left">Producto</th>
+                        <th class="pb-3 text-right">Unitario</th>
+                        <th class="pb-3 text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <!-- Filas: tpl-cashier-detail-row x N  o  tpl-cashier-detail-loading si no hay items -->
+                <tbody id="detail-items" class="divide-y divide-slate-50 dark:divide-slate-800"></tbody>
+            </table>
+        </div>
+
+        <!-- Footer con totales y botón de cobro -->
+        <div class="border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 px-6 py-5">
+            <div class="flex items-center justify-between mb-4">
+                <div class="space-y-1 text-sm text-slate-500">
+                    <div class="flex justify-between gap-8">
+                        <span>Subtotal (sin IVA):</span>
+                        <span class="col-subtotal font-medium text-slate-700 dark:text-slate-300"></span>
+                    </div>
+                    <div class="flex justify-between gap-8">
+                        <span>IVA (16%):</span>
+                        <span class="col-iva font-medium text-slate-700 dark:text-slate-300"></span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase tracking-widest text-slate-400 font-bold">Total a Cobrar</p>
+                    <p class="col-total text-4xl font-black text-amber-500"></p>
+                </div>
+            </div>
+            <button id="btn-open-payment"
+                class="w-full flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-bold text-xl rounded-xl shadow-lg shadow-green-600/30 transition-all">
+                <span class="material-symbols-outlined text-2xl">payments</span>
+                Procesar Pago
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- Fila de un item de consumo -->
+<template id="tpl-cashier-detail-row">
+    <tr>
+        <td class="col-qty py-3 font-bold text-amber-600"></td>
+        <td class="col-name py-3 font-semibold text-slate-800 dark:text-slate-100"></td>
+        <td class="col-unit-price py-3 text-right text-slate-500 dark:text-slate-400"></td>
+        <td class="col-subtotal py-3 text-right font-bold text-slate-900 dark:text-white"></td>
+    </tr>
+</template>
+
+<!-- Estado de carga (cuando la mesa se acaba de seleccionar) -->
+<template id="tpl-cashier-detail-loading">
+    <tr>
+        <td colspan="4" class="py-8 text-center text-slate-400">Cargando consumo...</td>
+    </tr>
+</template>

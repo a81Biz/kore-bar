@@ -5,7 +5,8 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Kore Bar — Caja</title>
-    <meta name="description" content="Terminal de caja del Kore Bar. Login dinámico, cobro mixto y emisión de tickets." />
+    <meta name="description"
+        content="Terminal de caja del Kore Bar. Login dinámico, cobro mixto y emisión de tickets." />
 
     <!-- Tailwind CSS v3 CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
@@ -24,7 +25,7 @@
                     },
                     keyframes: {
                         "slide-up": {
-                            "0%":   { opacity: "0", transform: "translateY(12px)" },
+                            "0%": { opacity: "0", transform: "translateY(12px)" },
                             "100%": { opacity: "1", transform: "translateY(0)" }
                         }
                     },
@@ -38,10 +39,13 @@
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
     <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
 
     <link href="css/cashier.css" rel="stylesheet" />
 </head>
@@ -59,8 +63,16 @@
     <!-- SPA Mount Point -->
     <div id="app"></div>
 
-    <!-- App (ES Modules) -->
-    <script type="module" src="./js/app.js"></script>
+    <!--
+        ⚠️  NOTA ARQUITECTÓNICA (view.js):
+        Este módulo renderiza HTML mediante innerHTML + template literals en view.js.
+        Esto es una desviación documentada del estándar de <template> + TemplateLoader.
+        Migración planificada en la siguiente iteración del módulo.
+        Ver: 05_guia_creacion_vistas_frontend.md §1 y §2
+    -->
+
+    <!-- ✅ Bootstrap via KoreCore — igual que todos los micrositios -->
+    <script type="module" src="/core/js/kore.core.js"></script>
 </body>
 
 </html>

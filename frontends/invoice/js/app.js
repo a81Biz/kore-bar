@@ -1,7 +1,15 @@
 // ============================================================
-// app.js — Punto de entrada del Portal de Facturación
+// invoice/js/app.js — Punto de entrada del Portal de Facturación
 // ============================================================
 
-import { initSearch } from './logic.js';
+import { TemplateLoader } from '/shared/js/templateLoader.js';
+import { KORE_CONFIG }    from '/core/js/kore.config.js';
+import { initSearch }     from './logic.js';
 
-initSearch();
+(async () => {
+    await TemplateLoader.loadPartials(
+        KORE_CONFIG.DOM.INVOICE.PARTIALS,
+        ''
+    );
+    initSearch();
+})();

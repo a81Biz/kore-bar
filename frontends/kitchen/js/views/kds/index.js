@@ -1,8 +1,10 @@
+// frontends/kitchen/js/views/kds/index.js
 import { PubSub } from '/shared/js/pubsub.js';
 import { fetchData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
+import { showErrorModal } from '/shared/js/ui.js';
 
-// 1. ESTADO PRIVADO
+// ── 1. ESTADO PRIVADO ─────────────────────────────────────────────────────
 const state = {
     dom: {},
     items: [],
@@ -10,24 +12,23 @@ const state = {
     timerInterval: null
 };
 
-// 2. CACHÉ DE DOM
+// ── 2. CACHÉ DE DOM ───────────────────────────────────────────────────────
 const _cacheDOM = (container) => {
-    // Clonar template inicial
     const template = document.getElementById('tpl-kitchen-kds');
     container.innerHTML = '';
     container.appendChild(template.content.cloneNode(true));
 
-    state.dom.root = container;
-    state.dom.colPending = container.querySelector('#col-pending');
+    state.dom.root         = container;
+    state.dom.colPending   = container.querySelector('#col-pending');
     state.dom.colPreparing = container.querySelector('#col-preparing');
-    state.dom.colReady = container.querySelector('#col-ready');
-    
-    state.dom.countPending = container.querySelector('#count-pending');
-    state.dom.countPreparing = container.querySelector('#count-preparing');
-    state.dom.countReady = container.querySelector('#count-ready');
+    state.dom.colReady     = container.querySelector('#col-ready');
 
-    state.dom.navButtons = container.querySelectorAll('[data-nav]');
-    state.dom.btnClockIn = container.querySelector('[data-action="open-pin-modal"]');
+    state.dom.countPending   = container.querySelector('#count-pending');
+    state.dom.countPreparing = container.querySelector('#count-preparing');
+    state.dom.countReady     = container.querySelector('#count-ready');
+
+    state.dom.navButtons  = container.querySelectorAll('[data-nav]');
+    state.dom.btnClockIn  = container.querySelector('[data-action="open-pin-modal"]');
 };
 
 const _bindEvents = () => {
@@ -38,15 +39,12 @@ const _bindEvents = () => {
         });
     });
 
-    if (state.dom.btnClockIn) {
-        state.dom.btnClockIn.addEventListener('click', () => {
-             PubSub.publish('OPEN_MODAL', 'pin-modal');
-        });
-    }
+    state.dom.btnClockIn?.addEventListener('click', () => {
+        PubSub.publish('OPEN_MODAL', 'pin-modal');
+    });
 };
 
-// 3. LÓGICA DE NEGOCIO (BOARD)
-
+// ── 3. LÓGICA DEL TABLERO ────────────────────────────────────────────────
 const fetchBoardData = async () => {
     try {
         const res = await fetchData(ENDPOINTS.kitchen.get.board);
@@ -55,81 +53,83 @@ const fetchBoardData = async () => {
             renderBoard();
         }
     } catch (e) {
-        console.error("[KDS] Error fetching board", e);
+        console.error('[KDS] Error fetching board', e);
     }
 };
 
 const renderBoard = () => {
-    // Limpiar columnas
-    state.dom.colPending.innerHTML = '';
+    state.dom.colPending.innerHTML   = '';
     state.dom.colPreparing.innerHTML = '';
-    state.dom.colReady.innerHTML = '';
+    state.dom.colReady.innerHTML     = '';
 
     const groups = {
         PENDING_KITCHEN: [],
-        PREPARING: [],
-        READY: []
+        PREPARING:       [],
+        READY:           []
     };
 
     state.items.forEach(item => {
         if (groups[item.status]) groups[item.status].push(item);
     });
 
-    // Actualizar contadores
-    state.dom.countPending.textContent = groups.PENDING_KITCHEN.length;
+    state.dom.countPending.textContent   = groups.PENDING_KITCHEN.length;
     state.dom.countPreparing.textContent = groups.PREPARING.length;
-    state.dom.countReady.textContent = groups.READY.length;
+    state.dom.countReady.textContent     = groups.READY.length;
 
-    // Renderizar tarjetas por grupo
-    Object.keys(groups).forEach(status => {
-        const items = groups[status];
-        const container = status === 'PENDING_KITCHEN' ? state.dom.colPending : 
-                          status === 'PREPARING' ? state.dom.colPreparing : state.dom.colReady;
+    const colMap = {
+        PENDING_KITCHEN: state.dom.colPending,
+        PREPARING:       state.dom.colPreparing,
+        READY:           state.dom.colReady
+    };
 
-        items.forEach(item => {
-            container.appendChild(createOrderCard(item));
-        });
+    Object.entries(colMap).forEach(([status, container]) => {
+        groups[status].forEach(item => container.appendChild(createOrderCard(item)));
     });
 };
 
 const createOrderCard = (item) => {
     const template = document.getElementById('tpl-kds-order-card');
-    const card = template.content.cloneNode(true);
-    const root = card.querySelector('div');
+    const card     = template.content.cloneNode(true);
+    const root     = card.querySelector('div');
 
-    root.querySelector('.col-mesa').textContent = `Mesa ${item.table_code || '--'}`;
+    // ✅ textContent para todos los campos que vienen de la API
+    root.querySelector('.col-mesa').textContent   = `Mesa ${item.table_code || '--'}`;
     root.querySelector('.col-ticket').textContent = `#${item.order_code}`;
     root.querySelector('.col-mesero').textContent = item.waiter_name || 'Personal';
-    
-    // Timer setup
-    const timerEl = root.querySelector('.col-tiempo');
+
+    // Timer
     const startTime = new Date(item.started_at || item.created_at).getTime();
     root.setAttribute('data-start-time', startTime);
     root.classList.add('kds-card');
 
-    // Item details
+    // ✅ Items del pedido — textContent, sin innerHTML con template literals
     const itemsContainer = root.querySelector('.col-items');
-    itemsContainer.innerHTML = `
-        <div class="flex justify-between items-center text-white font-bold">
-            <span>${item.quantity}x ${item.name}</span>
-        </div>
-    `;
+    const itemDiv    = document.createElement('div');
+    itemDiv.className = 'flex justify-between items-center text-white font-bold';
+    const itemSpan   = document.createElement('span');
+    itemSpan.textContent = `${item.quantity}x ${item.name}`;
+    itemDiv.appendChild(itemSpan);
+    itemsContainer.appendChild(itemDiv);
 
-    // Actions
+    // Acciones por estado
     const actionsContainer = root.querySelector('.col-actions');
+
     if (item.status === 'PENDING_KITCHEN') {
         const btn = document.createElement('button');
-        btn.className = "flex-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black py-3 rounded-lg transition-colors uppercase text-sm tracking-widest";
-        btn.textContent = "COMENZAR";
-        btn.onclick = () => updateItemStatus(item.id, 'PREPARING');
+        btn.className   = 'flex-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black py-3 rounded-lg transition-colors uppercase text-sm tracking-widest';
+        btn.textContent = 'COMENZAR';
+        // ✅ addEventListener en lugar de onclick
+        btn.addEventListener('click', () => updateItemStatus(item.id, 'PREPARING'));
         actionsContainer.appendChild(btn);
+
     } else if (item.status === 'PREPARING') {
         root.classList.replace('border-amber-500', 'border-orange-500');
         const btn = document.createElement('button');
-        btn.className = "flex-1 bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-lg transition-colors uppercase text-sm tracking-widest";
-        btn.textContent = "LISTO";
-        btn.onclick = () => updateItemStatus(item.id, 'READY');
+        btn.className   = 'flex-1 bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-lg transition-colors uppercase text-sm tracking-widest';
+        btn.textContent = 'LISTO';
+        btn.addEventListener('click', () => updateItemStatus(item.id, 'READY'));
         actionsContainer.appendChild(btn);
+
     } else if (item.status === 'READY') {
         root.classList.replace('border-amber-500', 'border-emerald-500');
         root.querySelector('.col-tiempo').classList.replace('text-slate-300', 'text-emerald-400');
@@ -141,47 +141,49 @@ const createOrderCard = (item) => {
 const updateItemStatus = async (itemId, newStatus) => {
     try {
         const res = await putData(ENDPOINTS.kitchen.put.itemStatus, { status: newStatus }, { itemId });
-        if (res.success) {
-            await fetchBoardData();
-        }
+        if (res.success) await fetchBoardData();
     } catch (e) {
-        alert("Error al actualizar estado: " + e.message);
+        // ✅ showErrorModal en lugar de alert()
+        showErrorModal('Error al actualizar estado: ' + e.message, 'Error KDS');
     }
 };
 
+// ── 4. TIMERS ─────────────────────────────────────────────────────────────
 const startTimers = () => {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.timerInterval = setInterval(() => {
-        const cards = document.querySelectorAll('.kds-card');
-        const now = Date.now();
-        cards.forEach(card => {
-            const start = parseInt(card.getAttribute('data-start-time'));
-            const diff = Math.floor((now - start) / 1000);
-            const mins = Math.floor(diff / 60).toString().padStart(2, '0');
-            const secs = (diff % 60).toString().padStart(2, '0');
+        document.querySelectorAll('.kds-card').forEach(card => {
+            const start  = parseInt(card.getAttribute('data-start-time'));
+            const diff   = Math.floor((Date.now() - start) / 1000);
+            const mins   = Math.floor(diff / 60).toString().padStart(2, '0');
+            const secs   = (diff % 60).toString().padStart(2, '0');
             const timerEl = card.querySelector('.col-tiempo');
-            if (timerEl) {
-                timerEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">timer</span> ${mins}:${secs}`;
-                if (diff > 600) timerEl.classList.add('text-red-500', 'animate-pulse'); // 10 mins threshold
-            }
+            if (!timerEl) return;
+
+            // ✅ Construir el timer con DOM — sin innerHTML
+            timerEl.textContent = '';
+            const iconSpan = document.createElement('span');
+            iconSpan.className   = 'material-symbols-outlined text-[14px]';
+            iconSpan.textContent = 'timer';
+            timerEl.appendChild(iconSpan);
+            timerEl.appendChild(document.createTextNode(` ${mins}:${secs}`));
+
+            if (diff > 600) timerEl.classList.add('text-red-500', 'animate-pulse');
         });
     }, 1000);
 };
 
-// 4. EXPORTAR CICLO DE VIDA
+// ── 5. CICLO DE VIDA PÚBLICO ──────────────────────────────────────────────
 export const KdsController = {
     mount: async (container) => {
         _cacheDOM(container);
         _bindEvents();
-        
         await fetchBoardData();
         startTimers();
-        
         state.pollingInterval = setInterval(fetchBoardData, 5000);
-        console.log('[KDS] Board mounted and polling started.');
     },
     unmount: () => {
         if (state.pollingInterval) clearInterval(state.pollingInterval);
-        if (state.timerInterval) clearInterval(state.timerInterval);
+        if (state.timerInterval)   clearInterval(state.timerInterval);
     }
 };
