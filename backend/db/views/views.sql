@@ -39,6 +39,7 @@ JOIN job_titles jt ON p.job_title_id = jt.id
 JOIN areas a       ON p.area_id = a.id
 ORDER BY a.code, jt.name ASC;
 
+
 -- ── MENÚ ─────────────────────────────────────────────────────
 
 CREATE OR REPLACE VIEW vw_menu_dishes AS
@@ -57,7 +58,8 @@ FROM menu_dishes d
 JOIN menu_categories c ON d.category_id = c.id
 ORDER BY c.name, d.name;
 
--- ── INVENTARIO ───────────────────────────────────────────────
+
+-- ── INVENTARIO ────────────────────────────────────────────────
 
 CREATE OR REPLACE VIEW vw_suppliers_with_prices AS
 SELECT
@@ -80,7 +82,6 @@ LEFT JOIN supplier_prices sp ON s.id = sp.supplier_id
 LEFT JOIN inventory_items i  ON sp.item_id = i.id
 GROUP BY s.id, s.code, s.name, s.contact_info;
 
--- Stock consolidado por insumo (suma de todas las ubicaciones)
 CREATE OR REPLACE VIEW vw_stock_summary AS
 SELECT
     ii.code,
@@ -103,9 +104,9 @@ WHERE ii.is_active = true
 GROUP BY ii.id, ii.code, ii.name, ii.unit_measure, ii.recipe_unit, ii.minimum_stock
 ORDER BY ii.name;
 
+
 -- ── CAJA ─────────────────────────────────────────────────────
 
--- Tablero en tiempo real: órdenes esperando pago
 CREATE OR REPLACE VIEW vw_cashier_board AS
 SELECT
     rt.code        AS table_code,
@@ -122,7 +123,6 @@ JOIN employees e           ON e.id  = oh.waiter_id
 WHERE oh.status = 'AWAITING_PAYMENT'
 ORDER BY oh.updated_at ASC;
 
--- Corte Z del día (agrupado por método de pago)
 CREATE OR REPLACE VIEW vw_cashier_corte AS
 SELECT
     p.method,
@@ -135,3 +135,59 @@ WHERE oh.status = 'CLOSED'
   AND DATE(p.created_at AT TIME ZONE 'America/Mexico_City') = CURRENT_DATE
 GROUP BY p.method
 ORDER BY p.method;
+
+
+-- ── MESEROS ───────────────────────────────────────────────────
+-- Crítico #6: reemplaza la query raw con JOINs en waiter.model.js
+
+CREATE OR REPLACE VIEW vw_waiter_floor_layout AS
+SELECT
+    z.code       AS zone_code,
+    z.name       AS zone_name,
+    t.code       AS table_code,
+    t.capacity,
+    CASE
+        WHEN oh.id IS NOT NULL THEN 'OCCUPIED'
+        ELSE 'AVAILABLE'
+    END          AS status,
+    e.first_name AS waiter_name
+FROM restaurant_zones z
+JOIN restaurant_tables t   ON t.zone_id   = z.id AND t.is_active = true
+LEFT JOIN order_headers oh  ON oh.table_id = t.id AND oh.status = 'OPEN'
+LEFT JOIN employees e       ON oh.waiter_id = e.id
+WHERE z.is_active = true
+ORDER BY z.name, t.code;
+
+
+-- ── ORDEN ITEMS (detalle) ─────────────────────────────────────
+-- Crítico #6: reemplaza la query raw con JOIN en waiter.model.js
+
+CREATE OR REPLACE VIEW vw_order_items_detail AS
+SELECT
+    oi.id,
+    oi.order_id,
+    md.code      AS dish_code,
+    md.name,
+    oi.quantity,
+    oi.unit_price,
+    oi.subtotal,
+    oi.status,
+    md.has_recipe,
+    oi.created_at
+FROM order_items oi
+JOIN menu_dishes md ON oi.dish_id = md.id;
+
+
+-- ── CAJA — EMPLEADOS ELEGIBLES ────────────────────────────────
+-- Crítico #6: reemplaza la query raw con JOINs en cashier.model.js
+
+CREATE OR REPLACE VIEW vw_cashier_eligible_employees AS
+SELECT DISTINCT
+    e.employee_number,
+    e.first_name,
+    e.last_name
+FROM employees e
+JOIN positions pos ON pos.id = e.position_id AND pos.is_active = true
+JOIN areas a       ON a.id = pos.area_id AND a.can_access_cashier = true
+WHERE e.is_active = true
+ORDER BY e.first_name, e.last_name;

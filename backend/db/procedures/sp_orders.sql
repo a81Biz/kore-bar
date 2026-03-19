@@ -2,17 +2,9 @@
 -- sp_orders.sql
 -- Procedimientos almacenados del módulo de Comandas (POS + KDS)
 -- Dependencias: 05_orders.sql, 03_inventory.sql, 04_menu.sql
---
--- Arquitectura de descuento de inventario (2 pasos):
---   1. sp_pos_submit_order  → registra la comanda, NO descuenta inventario
---   2. sp_pos_collect_item  → el mesero recolecta, descuenta en ese momento
---
--- Esto permite que el KDS valide antes de que el mesero lleve el plato.
 -- ============================================================
 
--- ── SUBMIT ORDER (Comanda) ────────────────────────────────────
--- Si la mesa ya tiene una orden OPEN, agrega items a ella.
--- Enruta cada item a PENDING_KITCHEN (tiene receta) o PENDING_FLOOR (sin receta).
+-- ── SUBMIT ORDER ──────────────────────────────────────────────
 DROP PROCEDURE IF EXISTS public.sp_pos_submit_order;
 
 CREATE OR REPLACE PROCEDURE public.sp_pos_submit_order(p_payload JSONB)
@@ -53,7 +45,6 @@ BEGIN
         RAISE EXCEPTION 'Mesa no encontrada: %', v_table_code;
     END IF;
 
-    -- Reutiliza la orden abierta si existe, si no crea una nueva
     SELECT id INTO v_order_id
     FROM public.order_headers
     WHERE table_id = v_table_id AND status = 'OPEN';
@@ -84,7 +75,6 @@ BEGIN
 
         v_total := v_total + (v_dish_price * v_qty);
 
-        -- Enrutamiento KDS: cocina solo si tiene receta
         v_initial_status := CASE WHEN v_has_recipe = true THEN 'PENDING_KITCHEN' ELSE 'PENDING_FLOOR' END;
 
         INSERT INTO public.order_items (order_id, dish_id, quantity, unit_price, subtotal, notes, status)
@@ -96,9 +86,7 @@ END;
 $$;
 
 
--- ── COLLECT ITEM (Recolección y descuento de inventario) ──────
--- El mesero confirma que lleva el plato a la mesa.
--- En este momento se descuenta del inventario (LOC-COCINA o LOC-PISO).
+-- ── COLLECT ITEM ──────────────────────────────────────────────
 DROP PROCEDURE IF EXISTS public.sp_pos_collect_item;
 
 CREATE OR REPLACE PROCEDURE public.sp_pos_collect_item(
@@ -152,7 +140,6 @@ BEGIN
     v_has_recipe := v_order_item.has_recipe;
 
     IF v_has_recipe = true THEN
-        -- Platillos con receta: descontar ingredientes de LOC-COCINA
         v_origin_loc_id := v_kitchen_loc_id;
 
         FOR v_recipe_ingredient IN
@@ -174,7 +161,6 @@ BEGIN
         END LOOP;
 
     ELSE
-        -- Productos directos (sin receta): descontar de LOC-PISO
         v_origin_loc_id := v_floor_loc_id;
 
         SELECT item_id INTO v_direct_item_id
@@ -195,8 +181,135 @@ BEGIN
         END IF;
     END IF;
 
+    UPDATE public.order_items SET status = 'COLLECTED' WHERE id = p_item_id;
+END;
+$$;
+
+
+-- ── OPEN TABLE ────────────────────────────────────────────────
+-- Reemplaza el INSERT raw + getOpenOrder de waiter.model.js
+-- Idempotente: si ya hay una orden OPEN, no hace nada.
+
+DROP PROCEDURE IF EXISTS public.sp_pos_open_table;
+
+CREATE OR REPLACE PROCEDURE public.sp_pos_open_table(
+    p_table_code      VARCHAR,
+    p_employee_number VARCHAR,
+    p_diners          INT
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_table_id  UUID;
+    v_waiter_id UUID;
+    v_order_code VARCHAR;
+BEGIN
+    SELECT id INTO v_table_id
+    FROM public.restaurant_tables WHERE code = p_table_code AND is_active = true;
+    IF v_table_id IS NULL THEN
+        RAISE EXCEPTION 'Mesa no encontrada o inactiva: %', p_table_code USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT id INTO v_waiter_id
+    FROM public.employees WHERE employee_number = p_employee_number AND is_active = true;
+    IF v_waiter_id IS NULL THEN
+        RAISE EXCEPTION 'Empleado no encontrado o inactivo: %', p_employee_number USING ERRCODE = 'P0001';
+    END IF;
+
+    -- Idempotente: si ya existe orden OPEN no hace nada
+    IF EXISTS (SELECT 1 FROM public.order_headers WHERE table_id = v_table_id AND status = 'OPEN') THEN
+        RETURN;
+    END IF;
+
+    v_order_code := 'ORD-' || TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISSMS');
+    INSERT INTO public.order_headers (code, table_id, waiter_id, diners, status, total)
+    VALUES (v_order_code, v_table_id, v_waiter_id, COALESCE(p_diners, 1), 'OPEN', 0);
+END;
+$$;
+
+
+-- ── CLOSE TABLE ───────────────────────────────────────────────
+-- Reemplaza setOrderAwaitingPayment + validaciones en waiter.helper.js
+
+DROP PROCEDURE IF EXISTS public.sp_pos_close_table;
+
+CREATE OR REPLACE PROCEDURE public.sp_pos_close_table(
+    p_table_code      VARCHAR,
+    p_employee_number VARCHAR
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_table_id UUID;
+    v_order_id UUID;
+BEGIN
+    SELECT id INTO v_table_id
+    FROM public.restaurant_tables WHERE code = p_table_code AND is_active = true;
+    IF v_table_id IS NULL THEN
+        RAISE EXCEPTION 'Mesa no encontrada o inactiva: %', p_table_code USING ERRCODE = 'P0001';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.employees WHERE employee_number = p_employee_number AND is_active = true) THEN
+        RAISE EXCEPTION 'Empleado no encontrado o inactivo: %', p_employee_number USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT id INTO v_order_id
+    FROM public.order_headers WHERE table_id = v_table_id AND status = 'OPEN';
+    IF v_order_id IS NULL THEN
+        RAISE EXCEPTION 'No hay ninguna orden abierta en la mesa: %', p_table_code USING ERRCODE = 'P0001';
+    END IF;
+
+    UPDATE public.order_headers
+    SET status = 'AWAITING_PAYMENT', updated_at = CURRENT_TIMESTAMP
+    WHERE id = v_order_id;
+END;
+$$;
+
+
+-- ── DELIVER ITEM ──────────────────────────────────────────────
+-- Reemplaza el UPDATE raw + res.length check en waiter.model.js
+
+DROP PROCEDURE IF EXISTS public.sp_pos_deliver_item;
+
+CREATE OR REPLACE PROCEDURE public.sp_pos_deliver_item(p_item_id UUID)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE public.order_items SET status = 'DELIVERED'
+    WHERE id = p_item_id AND status = 'COLLECTED';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'El artículo no pudo ser entregado. Debe estar en estado COLLECTED.' USING ERRCODE = 'P0001';
+    END IF;
+END;
+$$;
+
+
+-- ── KDS: TRANSICIONES DE ESTADO ──────────────────────────────
+-- Reemplazan los UPDATE raw con máquina de estados explícita y validada
+
+DROP PROCEDURE IF EXISTS public.sp_kds_set_preparing;
+
+CREATE OR REPLACE PROCEDURE public.sp_kds_set_preparing(p_item_id UUID)
+LANGUAGE plpgsql AS $$
+BEGIN
     UPDATE public.order_items
-    SET status = 'COLLECTED'
-    WHERE id = p_item_id;
+    SET status = 'PREPARING', started_at = CURRENT_TIMESTAMP
+    WHERE id = p_item_id AND status = 'PENDING_KITCHEN';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'El item no puede avanzar a PREPARING. Estado actual no es PENDING_KITCHEN.' USING ERRCODE = 'P0001';
+    END IF;
+END;
+$$;
+
+DROP PROCEDURE IF EXISTS public.sp_kds_set_ready;
+
+CREATE OR REPLACE PROCEDURE public.sp_kds_set_ready(p_item_id UUID)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE public.order_items SET status = 'READY'
+    WHERE id = p_item_id AND status = 'PREPARING';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'El item no puede avanzar a READY. Estado actual no es PREPARING.' USING ERRCODE = 'P0001';
+    END IF;
 END;
 $$;

@@ -8,7 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const schemasDir = path.join(__dirname, 'schemas');
 
-// ── Explorador recursivo de schemas ──────────────────────────
 const getAllSchemaFiles = (dir, fileList = []) => {
     if (!fs.existsSync(dir)) return fileList;
     const files = fs.readdirSync(dir);
@@ -17,7 +16,6 @@ const getAllSchemaFiles = (dir, fileList = []) => {
         if (fs.statSync(filePath).isDirectory()) {
             getAllSchemaFiles(filePath, fileList);
         } else if (file.endsWith('.schema.json')) {
-            // Solo .schema.json — evita cargar package.json u otros .json del proyecto
             fileList.push(filePath);
         }
     }
@@ -25,9 +23,36 @@ const getAllSchemaFiles = (dir, fileList = []) => {
 };
 
 /**
+ * Valida un objeto contra un conjunto de properties y required de un sub-schema.
+ * Usado para validación de un nivel de profundidad en campos tipo "object".
+ */
+const validateNestedObject = (obj, properties = {}, required = [], parentKey) => {
+    const missing = required.filter(f =>
+        obj[f] === undefined || obj[f] === null || obj[f] === ''
+    );
+    if (missing.length > 0) {
+        return {
+            valid: false,
+            error: `Faltan campos requeridos en '${parentKey}': ${missing.join(', ')}`
+        };
+    }
+
+    for (const [key, propDef] of Object.entries(properties)) {
+        const val = obj[key];
+        if (val === undefined || val === null) continue;
+
+        if (propDef.type === 'string'  && typeof val !== 'string')     return { valid: false, error: `El campo '${parentKey}.${key}' debe ser texto.` };
+        if (propDef.type === 'number'  && typeof val !== 'number')     return { valid: false, error: `El campo '${parentKey}.${key}' debe ser numérico.` };
+        if (propDef.type === 'integer' && !Number.isInteger(val))      return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un entero.` };
+        if (propDef.type === 'boolean' && typeof val !== 'boolean')    return { valid: false, error: `El campo '${parentKey}.${key}' debe ser booleano.` };
+        if (propDef.type === 'array'   && !Array.isArray(val))         return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un arreglo.` };
+    }
+
+    return { valid: true };
+};
+
+/**
  * Construye y registra rutas Hono dinámicamente desde los schemas JSON.
- * @param {import('hono').Hono} router  - Router Hono donde se montarán las rutas
- * @param {string}              subDir  - Subcarpeta de schemas a cargar (ej: 'admin', 'cashier')
  */
 export const buildRoutes = (router, subDir = '') => {
     const targetDir = subDir
@@ -52,24 +77,21 @@ export const buildRoutes = (router, subDir = '') => {
 
         console.log(`[SchemaRouter] Registering ${method.toUpperCase()} ${routePath} -> Workflow: ${schema.name || schema.id}`);
 
-        // ── Auth middleware derivado del schema ───────────────
         const authMiddleware = buildAuthMiddleware(schema.api.auth);
 
-        // ── Montaje de la ruta HTTP ───────────────────────────
         router[method](routePath, authMiddleware, async (c) => {
             try {
                 const params = c.req.param() || {};
                 const queries = c.req.query() || {};
                 let sanitizedBody = {};
 
-                // ── Gatekeeper: solo para métodos con body ────
                 if (['POST', 'PUT', 'PATCH'].includes(schema.api.method.toUpperCase())) {
                     const body = await c.req.json().catch(() => ({}));
 
                     if (schema.api.body) {
                         const { required = [], properties = {} } = schema.api.body;
 
-                        // Validar campos requeridos
+                        // ── Campos requeridos de nivel raíz ──────────────────
                         const missing = required.filter(field =>
                             body[field] === undefined || body[field] === null || body[field] === ''
                         );
@@ -80,26 +102,48 @@ export const buildRoutes = (router, subDir = '') => {
                             }, 400);
                         }
 
-                        // Validar tipos y sanitizar
+                        // ── Validación de tipos y sanitización ───────────────
                         for (const [key, propDef] of Object.entries(properties)) {
                             const val = body[key];
                             if (val !== undefined && val !== null) {
+
                                 if (propDef.type === 'boolean' && typeof val !== 'boolean') {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser booleano.` }, 400);
                                 }
                                 if (propDef.type === 'string' && typeof val !== 'string') {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser texto.` }, 400);
                                 }
-                                if (propDef.type === 'integer' && typeof val !== 'number') {
-                                    return c.json({ success: false, error: `El campo '${key}' debe ser numérico entero.` }, 400);
+                                // FIX: type "number" no estaba validado
+                                if (propDef.type === 'number' && typeof val !== 'number') {
+                                    return c.json({ success: false, error: `El campo '${key}' debe ser numérico.` }, 400);
+                                }
+                                // FIX: integer necesita Number.isInteger, no typeof === 'number'
+                                if (propDef.type === 'integer' && !Number.isInteger(val)) {
+                                    return c.json({ success: false, error: `El campo '${key}' debe ser un entero.` }, 400);
                                 }
                                 if (propDef.type === 'array' && !Array.isArray(val)) {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser un arreglo.` }, 400);
                                 }
-                                if (propDef.type === 'object' && (typeof val !== 'object' || Array.isArray(val))) {
-                                    return c.json({ success: false, error: `El campo '${key}' debe ser un objeto.` }, 400);
+                                if (propDef.type === 'object') {
+                                    if (typeof val !== 'object' || Array.isArray(val)) {
+                                        return c.json({ success: false, error: `El campo '${key}' debe ser un objeto.` }, 400);
+                                    }
+                                    // FIX: validar required y tipos anidados (crítico #7)
+                                    if (propDef.properties || propDef.required?.length > 0) {
+                                        const nestedResult = validateNestedObject(
+                                            val,
+                                            propDef.properties || {},
+                                            propDef.required || [],
+                                            key
+                                        );
+                                        if (!nestedResult.valid) {
+                                            return c.json({ success: false, error: nestedResult.error }, 400);
+                                        }
+                                    }
                                 }
+
                                 sanitizedBody[key] = val;
+
                             } else if (propDef.default !== undefined) {
                                 sanitizedBody[key] = propDef.default;
                             }
@@ -116,9 +160,6 @@ export const buildRoutes = (router, subDir = '') => {
                     }
                 }
 
-                // ── Construir estado inicial del workflow ─────
-                // FIX: los query params se incluyen en payload para que
-                // los helpers los lean desde state.payload (ej: ?location=LOC-COCINA)
                 const initialState = {
                     caller: 'schema_router',
                     payload: { ...queries, ...sanitizedBody },
@@ -131,19 +172,16 @@ export const buildRoutes = (router, subDir = '') => {
                     return c.json({ success: false, error: 'Workflow execution failed.' }, 400);
                 }
 
-                // ── Interpolación Handlebars para respuestas SSOT ──
                 let responseData = finalState.data || finalState.response || finalState;
 
                 if (finalState.response?.body) {
                     const interpolate = (obj) => {
                         if (typeof obj === 'string') {
-                            // Match exacto → reemplaza el string completo por el valor (soporta objetos/arrays)
                             const exactMatch = obj.match(/^\{\{state\.([a-zA-Z0-9_.]+)\}\}$/);
                             if (exactMatch) {
                                 const val = exactMatch[1].split('.').reduce((acc, k) => acc?.[k], finalState);
                                 return val !== undefined ? val : obj;
                             }
-                            // Match parcial → reemplaza dentro del string
                             return obj.replace(/\{\{state\.([a-zA-Z0-9_.]+)\}\}/g, (match, keyPath) => {
                                 const val = keyPath.split('.').reduce((acc, k) => acc?.[k], finalState);
                                 return val !== undefined ? val : match;

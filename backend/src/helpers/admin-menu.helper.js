@@ -4,7 +4,7 @@ import { AppError } from '../utils/errors.util.js';
 // ============================================================
 // CATEGORÍAS
 // ============================================================
-export const saveCategory = async (state, c) => {
+export const createCategoryHandler = async (state, c) => {
     const { categoryCode, name, description } = state.payload;
     try {
         await MenuModel.createCategory(c, categoryCode, name, description);
@@ -56,7 +56,7 @@ export const deleteCategory = async (state, c) => {
 // ============================================================
 // PLATILLOS
 // ============================================================
-export const saveDish = async (state, c) => {
+export const createDishHandler = async (state, c) => {
     const { dishCode, categoryCode, name, description, price, imageUrl } = state.payload;
     try {
         await MenuModel.createDish(c, dishCode, categoryCode, name, description, price, imageUrl);
@@ -70,7 +70,7 @@ export const saveDish = async (state, c) => {
     }
 };
 
-export const updateDish = async (state, c) => {
+export const updateDishHandler = async (state, c) => {
     const { code } = state.params; // ← antes: state.params (objeto completo)
     const { categoryCode, name, description, price, imageUrl, isActive } = state.payload;
     try {
@@ -94,7 +94,7 @@ export const getDishes = async (state, c) => {
     }
 };
 
-export const deleteDish = async (state, c) => {
+export const deleteDishHandler = async (state, c) => {
     const { code } = state.params; // ← antes: state.params (objeto completo)
     try {
         await MenuModel.deleteDishSmart(c, code);

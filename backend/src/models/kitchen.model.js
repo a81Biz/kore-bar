@@ -1,61 +1,104 @@
-import { executeQuery } from '../db/connection.js';
+import { executeQuery, executeStoredProcedure } from '../db/connection.js';
 
-export const getPendingDishes = async (c) =>
-    await executeQuery(c, 'SELECT dish_code AS "dishCode", category_name AS "categoryName", name, description, image_url AS "imageUrl" FROM vw_menu_dishes WHERE has_recipe = false AND is_active = true');
+// ── RECETARIO (TECH SHEET) ────────────────────────────────────
+// Antes: UPDATE raw directo en el modelo
+// Ahora: sp_update_tech_sheet (crítico #1 + #5)
 
-export const createIngredient = async (c, code, name, unit) =>
-    await executeQuery(c, 'SELECT sp_create_ingredient($1::VARCHAR, $2::VARCHAR, $3::VARCHAR)', [code, name, unit]);
+export const updateTechSheet = async (c, dishCode, preparationMethod, imageUrl) =>
+    await executeStoredProcedure(c, 'sp_update_tech_sheet', {
+        p_dish_code: dishCode,
+        p_preparation_method: preparationMethod,
+        p_image_url: imageUrl ?? null
+    });
 
-export const getIngredients = async (c) =>
-    await executeQuery(c, 'SELECT code, name, COALESCE(recipe_unit, unit_measure) AS unit, is_active AS "isActive" FROM inventory_items WHERE is_active = true ORDER BY name');
-
-export const addRecipeItem = async (c, dishCode, ingredientCode, quantity) =>
-    await executeQuery(c, 'SELECT sp_add_recipe_item($1::VARCHAR, $2::VARCHAR, $3::DECIMAL)', [dishCode, ingredientCode, quantity]);
-
-export const getFinishedDishes = async (c) =>
-    await executeQuery(c, 'SELECT dish_code AS "dishCode", category_name AS "categoryName", name, description, image_url AS "imageUrl", preparation_method AS "preparationMethod" FROM vw_menu_dishes WHERE has_recipe = true AND is_active = true ORDER BY name');
-
-export const getRecipeBOM = async (c, dishCode) =>
-    await executeQuery(c, 'SELECT i.code, i.name, dr.quantity_required AS qty, COALESCE(i.recipe_unit, i.unit_measure) AS unit FROM dish_recipes dr JOIN inventory_items i ON dr.item_id = i.id JOIN menu_dishes d ON dr.dish_id = d.id WHERE d.code = $1', [dishCode]);
-
-export const updateTechSheet = async (c, dishCode, prepMethod, imageUrl) =>
-    await executeQuery(c, 'UPDATE menu_dishes SET preparation_method = $1, image_url = COALESCE($2, image_url) WHERE code = $3', [prepMethod, imageUrl, dishCode]);
-
-export const getKitchenBoard = async (c) =>
+export const getRecipes = async (c) =>
     await executeQuery(c, `
-        SELECT
-            oi.id          AS item_id,
-            md.name        AS dish_name,
-            oi.quantity,
-            oi.notes,
-            oi.status,
-            oi.started_at,
-            oi.created_at,
-            oh.code        AS order_code,
-            rt.code        AS table_code,
-            e.first_name   AS waiter_name
-        FROM order_items oi
-        JOIN order_headers oh     ON oi.order_id  = oh.id
-        JOIN restaurant_tables rt ON oh.table_id  = rt.id
-        JOIN menu_dishes md       ON oi.dish_id   = md.id
-        JOIN employees e          ON oh.waiter_id = e.id
-        WHERE md.has_recipe = true
-          AND oi.status IN ('PENDING_KITCHEN', 'PREPARING', 'READY')
-        ORDER BY oi.created_at ASC
+        SELECT d.code     AS "dishCode",
+               d.name,
+               d.price,
+               d.image_url           AS "imageUrl",
+               d.preparation_method  AS "preparationMethod",
+               d.has_recipe          AS "hasRecipe",
+               c.code    AS "categoryCode",
+               c.name    AS "categoryName",
+               COALESCE(
+                   jsonb_agg(
+                       jsonb_build_object(
+                           'itemCode',         i.code,
+                           'itemName',         i.name,
+                           'unit',             i.recipe_unit,
+                           'quantityRequired', dr.quantity_required
+                       )
+                   ) FILTER (WHERE dr.id IS NOT NULL),
+                   '[]'::jsonb
+               ) AS recipe
+        FROM menu_dishes d
+        JOIN menu_categories c ON c.id = d.category_id
+        LEFT JOIN dish_recipes dr     ON dr.dish_id = d.id
+        LEFT JOIN inventory_items i   ON i.id = dr.item_id
+        WHERE d.is_active = true
+        GROUP BY d.id, d.code, d.name, d.price, d.image_url,
+                 d.preparation_method, d.has_recipe, c.code, c.name
+        ORDER BY c.name, d.name
     `);
 
-export const setItemPreparing = async (c, itemId) =>
+export const getIngredients = async (c) =>
     await executeQuery(c, `
-        UPDATE order_items
-        SET status = 'PREPARING', started_at = CURRENT_TIMESTAMP
-        WHERE id = $1 AND status = 'PENDING_KITCHEN'
-        RETURNING id
-    `, [itemId]);
+        SELECT code, name, recipe_unit AS "unit"
+        FROM inventory_items
+        WHERE is_active = true
+        ORDER BY name ASC
+    `);
+
+export const addIngredient = async (c, code, name, unit) =>
+    await executeStoredProcedure(c, 'sp_create_ingredient', {
+        p_code: code,
+        p_name: name,
+        p_unit: unit
+    });
+
+export const addRecipeItem = async (c, dishCode, ingredientCode, quantity) =>
+    await executeStoredProcedure(c, 'sp_add_recipe_item', {
+        p_dish_code: dishCode,
+        p_ingredient_code: ingredientCode,
+        p_quantity: quantity
+    });
+
+
+// ── KDS — MÁQUINA DE ESTADOS ──────────────────────────────────
+// Antes: UPDATE raw sin validar la transición de estado (críticos #1 y #5)
+// Ahora: sp_kds_set_preparing y sp_kds_set_ready validan en BD que
+//        la transición sea válida (PENDING_KITCHEN → PREPARING → READY).
+//        Si el estado actual no coincide, el SP lanza excepción P0001.
+
+export const setItemPreparing = async (c, itemId) =>
+    await executeStoredProcedure(c, 'sp_kds_set_preparing', {
+        p_item_id: itemId
+    }, { p_item_id: 'UUID' });
 
 export const setItemReady = async (c, itemId) =>
+    await executeStoredProcedure(c, 'sp_kds_set_ready', {
+        p_item_id: itemId
+    }, { p_item_id: 'UUID' });
+
+// ── KDS — LECTURA ─────────────────────────────────────────────
+
+export const getPendingKdsItems = async (c) =>
     await executeQuery(c, `
-        UPDATE order_items
-        SET status = 'READY'
-        WHERE id = $1 AND status = 'PREPARING'
-        RETURNING id
-    `, [itemId]);
+        SELECT oi.id,
+               oi.order_id  AS "orderId",
+               rt.code      AS "tableCode",
+               md.code      AS "dishCode",
+               md.name,
+               oi.quantity,
+               oi.notes,
+               oi.status,
+               oi.started_at AS "startedAt",
+               oi.created_at AS "createdAt"
+        FROM order_items oi
+        JOIN order_headers oh ON oh.id = oi.order_id
+        JOIN restaurant_tables rt ON rt.id = oh.table_id
+        JOIN menu_dishes md ON md.id = oi.dish_id
+        WHERE oi.status IN ('PENDING_KITCHEN', 'PREPARING')
+        ORDER BY oi.created_at ASC
+    `);

@@ -142,7 +142,7 @@ export const submitOrder = async (state, c) => {
 // POST /waiters/tables/:tableCode/close
 // Cierra la mesa pasando la orden a AWAITING_PAYMENT
 // ============================================================
-export const closeTable = async (state, c) => {
+export const closeTableHandler = async (state, c) => {
     const { params = {}, payload } = state;
     const { tableCode } = params;
     const { employeeNumber } = payload;

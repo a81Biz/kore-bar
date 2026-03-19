@@ -4,10 +4,7 @@
 -- Dependencias: 03_inventory.sql
 -- ============================================================
 
--- ── TRASPASO entre ubicaciones ───────────────────────────────
--- Mueve stock de una ubicación a otra aplicando conversion_factor
--- p_base_qty está en unidad de compra (unit_measure)
--- El destino recibe en unidad de receta (base_qty × conv_factor)
+-- ── TRASPASO ──────────────────────────────────────────────────
 CREATE OR REPLACE PROCEDURE public.sp_kardex_transfer(
     p_item_code          VARCHAR,
     p_from_location_code VARCHAR,
@@ -40,7 +37,6 @@ BEGIN
         RAISE EXCEPTION 'Ubicación destino no encontrada: %', p_to_location_code;
     END IF;
 
-    -- Validar existencia suficiente en origen
     IF NOT EXISTS (
         SELECT 1 FROM public.inventory_stock_locations
         WHERE item_id = v_item_id AND location_id = v_from_loc_id AND stock >= p_base_qty
@@ -71,13 +67,12 @@ END;
 $$;
 
 
--- ── AJUSTE FÍSICO (Merma o Sobrante) ─────────────────────────
--- Compara stock teórico vs conteo físico y registra la diferencia
+-- ── AJUSTE FÍSICO ─────────────────────────────────────────────
 CREATE OR REPLACE PROCEDURE public.sp_kardex_adjustment(
-    p_location_code VARCHAR(50),
-    p_item_code     VARCHAR(50),
+    p_location_code  VARCHAR(50),
+    p_item_code      VARCHAR(50),
     p_physical_stock DECIMAL(18, 4),
-    p_note          TEXT
+    p_note           TEXT
 )
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -105,7 +100,7 @@ BEGIN
     v_difference    := p_physical_stock - v_current_stock;
 
     IF v_difference = 0 THEN
-        RETURN; -- Sin cambio, nada que registrar
+        RETURN;
     END IF;
 
     INSERT INTO inventory_kardex (
@@ -127,8 +122,7 @@ END;
 $$;
 
 
--- ── SINCRONIZACIÓN DE COMPRAS (PULL/PUSH) ────────────────────
--- Procesa un JSON de compra: upsert proveedor, items, precios y kardex
+-- ── SINCRONIZACIÓN DE COMPRAS ─────────────────────────────────
 CREATE OR REPLACE PROCEDURE public.sp_sync_purchases(p_payload JSONB)
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -247,5 +241,21 @@ BEGIN
     VALUES (v_supplier_id, v_item_id, p_price)
     ON CONFLICT (supplier_id, item_id) DO UPDATE
     SET price = EXCLUDED.price;
+END;
+$$;
+
+
+-- ── ALTA DE PROVEEDOR ─────────────────────────────────────────
+-- Reemplaza el INSERT raw que vivía en admin-inventory.model.js
+
+CREATE OR REPLACE PROCEDURE public.sp_create_supplier(
+    p_code         VARCHAR,
+    p_name         VARCHAR,
+    p_contact_info TEXT
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO suppliers (code, name, contact_info)
+    VALUES (p_code, p_name, p_contact_info);
 END;
 $$;

@@ -1,0 +1,67 @@
+{
+    "id": "cashier_invoice_request",
+    "name": "Solicitar Factura CFDI",
+    "description": "Registra los datos fiscales del receptor (RFC, CP, régimen, uso CFDI) y marca el ticket como facturado. El campo invoice_data (JSONB) queda listo para timbrado futuro con el PAC. Devuelve 409 si el ticket ya fue facturado.",
+    "api": {
+        "method": "POST",
+        "path": "/cashier/tickets/:folio/invoice",
+        "tags": [
+            "Admin / Cashier",
+            "Facturación"
+        ],
+        "body": {
+            "required": [
+                "rfc",
+                "cp",
+                "razonSocial",
+                "regimenFiscal",
+                "usoCfdi"
+            ],
+            "properties": {
+                "rfc": {
+                    "type": "string",
+                    "example": "XAXX010101000"
+                },
+                "cp": {
+                    "type": "string",
+                    "example": "06600"
+                },
+                "razonSocial": {
+                    "type": "string",
+                    "example": "Empresa Ejemplo S.A. de C.V."
+                },
+                "regimenFiscal": {
+                    "type": "string",
+                    "example": "601"
+                },
+                "usoCfdi": {
+                    "type": "string",
+                    "example": "G03"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "facturacion@empresa.com"
+                }
+            }
+        }
+    },
+    "startAt": "process_invoice",
+    "nodes": {
+        "process_invoice": {
+            "type": "action",
+            "handler": "requestInvoice",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "folio": "{{state.folio}}",
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

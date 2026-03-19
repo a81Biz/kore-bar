@@ -4,21 +4,21 @@ export const upsertHrCatalog = async (c, catalogItem) => {
     await executeStoredProcedure(c, 'sp_upsert_hr_catalog', {
         p_area_code: catalogItem.areaId,
         p_area_name: catalogItem.areaName,
-        p_job_code: catalogItem.jobTitleId,
-        p_job_name: catalogItem.jobTitleName
+        p_job_code:  catalogItem.jobTitleId,
+        p_job_name:  catalogItem.jobTitleName
     });
 };
 
 export const upsertEmployee = async (c, emp) => {
     await executeStoredProcedure(c, 'sp_upsert_employee', {
         p_employee_number: emp.employeeNumber,
-        p_first_name: emp.firstName,
-        p_last_name: emp.lastName,
-        p_area_code: emp.areaId,
-        p_job_code: emp.jobTitleId,
-        p_hire_date: emp.hireDate,
-        p_is_active: emp.isActive,
-        p_pin_code: emp.pinCode
+        p_first_name:      emp.firstName,
+        p_last_name:       emp.lastName,
+        p_area_code:       emp.areaId,
+        p_job_code:        emp.jobTitleId,
+        p_hire_date:       emp.hireDate,
+        p_is_active:       emp.isActive,
+        p_pin_code:        emp.pinCode
     });
 };
 
@@ -37,7 +37,6 @@ export const deactivateEmployee = async (c, employeeNumber) => {
     });
 };
 
-// FIX 2: se agrega can_access_cashier al SELECT
 export const getAllAreas = async (c) => {
     return await executeQuery(c, `
         SELECT id, code, name, description, can_access_cashier
@@ -56,69 +55,69 @@ export const getAllJobTitles = async (c) => {
     `);
 };
 
+// ── Áreas — antes eran UPDATE/INSERT raw, ahora delegan al SP ────────────────
+
+export const insertAreaModel = async (c, code, name, canAccessCashier = false) => {
+    await executeStoredProcedure(c, 'sp_create_area', {
+        p_code:               code,
+        p_name:               name,
+        p_can_access_cashier: canAccessCashier
+    });
+};
+
 export const updateAreaModel = async (c, code, name) => {
-    await executeQuery(c, `
-        UPDATE areas SET name = $1, updated_at = NOW() WHERE code = $2
-    `, [name, code]);
+    await executeStoredProcedure(c, 'sp_update_area', {
+        p_code: code,
+        p_name: name
+    });
 };
 
 export const deactivateAreaModel = async (c, code) => {
-    await executeQuery(c, `
-        UPDATE areas SET is_active = false, updated_at = NOW() WHERE code = $1
-    `, [code]);
-};
-
-export const updateJobTitleModel = async (c, code, name) => {
-    await executeQuery(c, `
-        UPDATE job_titles SET name = $1, updated_at = NOW() WHERE code = $2
-    `, [name, code]);
-};
-
-export const deactivateJobTitleModel = async (c, code) => {
-    await executeQuery(c, `
-        UPDATE job_titles SET is_active = false, updated_at = NOW() WHERE code = $1
-    `, [code]);
-};
-
-// FIX 3: se agrega can_access_cashier como parámetro opcional (default false)
-export const insertAreaModel = async (c, code, name, canAccessCashier = false) => {
-    await executeQuery(c, `
-        INSERT INTO areas (code, name, can_access_cashier)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (code) DO UPDATE
-        SET name               = EXCLUDED.name,
-            can_access_cashier = EXCLUDED.can_access_cashier,
-            is_active          = true,
-            updated_at         = NOW()
-    `, [code, name, canAccessCashier]);
-};
-
-export const insertJobTitleModel = async (c, code, name) => {
-    await executeQuery(c, `
-        INSERT INTO job_titles (code, name)
-        VALUES ($1, $2)
-        ON CONFLICT (code) DO UPDATE
-        SET name = EXCLUDED.name, is_active = true, updated_at = NOW()
-    `, [code, name]);
+    await executeStoredProcedure(c, 'sp_deactivate_area', {
+        p_code: code
+    });
 };
 
 export const bulkDeactivateAreasModel = async (c, codes) => {
-    const placeholders = codes.map((_, i) => `$${i + 1}`).join(',');
-    await executeQuery(c, `
-        UPDATE areas SET is_active = false, updated_at = NOW()
-        WHERE code IN (${placeholders})
-    `, codes);
+    await executeStoredProcedure(
+        c,
+        'sp_bulk_deactivate_areas',
+        { p_codes: codes },
+        { p_codes: 'VARCHAR[]' }
+    );
+};
+
+// ── Puestos — antes eran UPDATE/INSERT raw, ahora delegan al SP ─────────────
+
+export const insertJobTitleModel = async (c, code, name) => {
+    await executeStoredProcedure(c, 'sp_create_job_title', {
+        p_code: code,
+        p_name: name
+    });
+};
+
+export const updateJobTitleModel = async (c, code, name) => {
+    await executeStoredProcedure(c, 'sp_update_job_title', {
+        p_code: code,
+        p_name: name
+    });
+};
+
+export const deactivateJobTitleModel = async (c, code) => {
+    await executeStoredProcedure(c, 'sp_deactivate_job_title', {
+        p_code: code
+    });
 };
 
 export const bulkDeactivateJobTitlesModel = async (c, codes) => {
-    const placeholders = codes.map((_, i) => `$${i + 1}`).join(',');
-    await executeQuery(c, `
-        UPDATE job_titles SET is_active = false, updated_at = NOW()
-        WHERE code IN (${placeholders})
-    `, codes);
+    await executeStoredProcedure(
+        c,
+        'sp_bulk_deactivate_job_titles',
+        { p_codes: codes },
+        { p_codes: 'VARCHAR[]' }
+    );
 };
 
-// FIX 1: se agrega return para que el llamador reciba el resultado
 export const viewDictionaryPositions = async (c, code) => {
     return await executeQuery(c, `
         SELECT 1 FROM vw_dictionary_positions WHERE position_code = $1 LIMIT 1

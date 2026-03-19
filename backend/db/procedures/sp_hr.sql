@@ -59,7 +59,6 @@ BEGIN
         END IF;
     END IF;
 
-    -- Si el empleado ya existe, solo actualiza los campos que llegan con valor
     IF EXISTS (SELECT 1 FROM employees WHERE employee_number = p_employee_number) THEN
         UPDATE employees SET
             first_name  = COALESCE(p_first_name,  first_name),
@@ -70,8 +69,6 @@ BEGIN
             pin_code    = COALESCE(p_pin_code,    pin_code),
             updated_at  = NOW()
         WHERE employee_number = p_employee_number;
-
-    -- Si es nuevo, requiere los campos obligatorios
     ELSE
         IF p_first_name IS NULL OR p_last_name IS NULL THEN
             RAISE EXCEPTION 'first_name y last_name son requeridos para crear un empleado';
@@ -91,7 +88,6 @@ BEGIN
 END;
 $$;
 
--- Baja lógica de empleado (desactiva en employees y system_users)
 CREATE OR REPLACE PROCEDURE sp_deactivate_employee(p_employee_number VARCHAR)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -103,7 +99,6 @@ BEGIN
 END;
 $$;
 
--- Verifica existencia de empleado (usado por el webhook de RRHH)
 CREATE OR REPLACE FUNCTION fn_check_employee_exists(p_employee_number VARCHAR)
 RETURNS TABLE("id" UUID, "hireDate" DATE, "isActive" BOOLEAN) AS $$
 BEGIN
@@ -114,3 +109,84 @@ BEGIN
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- ── CATÁLOGOS DE ÁREAS ────────────────────────────────────────
+-- Reemplaza las mutaciones SQL raw que vivían en admin-employee.model.js
+
+CREATE OR REPLACE PROCEDURE sp_create_area(
+    p_code               VARCHAR,
+    p_name               VARCHAR,
+    p_can_access_cashier BOOLEAN DEFAULT FALSE
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO areas (code, name, can_access_cashier)
+    VALUES (p_code, p_name, p_can_access_cashier)
+    ON CONFLICT (code) DO UPDATE
+    SET name               = EXCLUDED.name,
+        can_access_cashier = EXCLUDED.can_access_cashier,
+        is_active          = TRUE,
+        updated_at         = NOW();
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_update_area(p_code VARCHAR, p_name VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE areas SET name = p_name, updated_at = NOW() WHERE code = p_code;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_deactivate_area(p_code VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE areas SET is_active = FALSE, updated_at = NOW() WHERE code = p_code;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_bulk_deactivate_areas(p_codes VARCHAR[])
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE areas SET is_active = FALSE, updated_at = NOW()
+    WHERE code = ANY(p_codes);
+END;
+$$;
+
+
+-- ── CATÁLOGOS DE PUESTOS ──────────────────────────────────────
+-- Reemplaza las mutaciones SQL raw que vivían en admin-employee.model.js
+
+CREATE OR REPLACE PROCEDURE sp_create_job_title(p_code VARCHAR, p_name VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO job_titles (code, name)
+    VALUES (p_code, p_name)
+    ON CONFLICT (code) DO UPDATE
+    SET name       = EXCLUDED.name,
+        is_active  = TRUE,
+        updated_at = NOW();
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_update_job_title(p_code VARCHAR, p_name VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE job_titles SET name = p_name, updated_at = NOW() WHERE code = p_code;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_deactivate_job_title(p_code VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE job_titles SET is_active = FALSE, updated_at = NOW() WHERE code = p_code;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_bulk_deactivate_job_titles(p_codes VARCHAR[])
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE job_titles SET is_active = FALSE, updated_at = NOW()
+    WHERE code = ANY(p_codes);
+END;
+$$;

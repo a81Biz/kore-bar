@@ -109,7 +109,7 @@ export const deleteTable = async (state, c) => {
 // ============================================================
 // ASIGNACIONES OPERATIVAS
 // ============================================================
-export const saveAssignment = async (state, c) => {
+export const createAssignmentRangeHandler = async (state, c) => {
     const { employeeNumber, zoneCode, shift, assignmentDate, recurrence } = state.payload;
 
     let daysToAdd = 0;

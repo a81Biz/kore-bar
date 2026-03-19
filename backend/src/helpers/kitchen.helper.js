@@ -52,7 +52,7 @@ export const getIngredients = async (state, c) => {
 // POST /recipes/items
 // Agrega o actualiza un ingrediente en la receta de un platillo
 // ============================================================
-export const addRecipeItem = async (state, c) => {
+export const addRecipeItemHandler = async (state, c) => {
     const { dishCode, ingredientCode, quantity } = state.payload;
 
     try {

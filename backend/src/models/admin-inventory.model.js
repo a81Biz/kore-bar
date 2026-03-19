@@ -1,59 +1,81 @@
 import { executeQuery, executeStoredProcedure } from '../db/connection.js';
 
-export const getSuppliers = async (c) =>
-    await executeQuery(c, `SELECT * FROM vw_suppliers_with_prices ORDER BY code ASC`);
+// ── PROVEEDORES ───────────────────────────────────────────────
 
-export const createSupplier = async (c, { code, name, contactName, phone }) => {
-    const contactInfo = [contactName, phone ? `Tel: ${phone}` : ''].filter(Boolean).join(' | ');
-    return await executeQuery(c, `
-        INSERT INTO suppliers (code, name, contact_info) VALUES ($1, $2, $3)
-    `, [code, name, contactInfo]);
+export const createSupplier = async (c, code, name, contactInfo) =>
+    await executeStoredProcedure(c, 'sp_create_supplier', {
+        p_code:         code,
+        p_name:         name,
+        p_contact_info: contactInfo
+    });
+
+export const getSuppliers = async (c) =>
+    await executeQuery(c, `SELECT * FROM vw_suppliers_with_prices ORDER BY name ASC`);
+
+export const getSupplierByCode = async (c, code) => {
+    const res = await executeQuery(c, `
+        SELECT * FROM vw_suppliers_with_prices WHERE code = $1
+    `, [code]);
+    return res[0] ?? null;
 };
 
-export const getInventoryStock = async (c, locationCode) =>
-    await executeQuery(c, `
-        SELECT
-            i.code,
-            i.name,
-            i.unit_measure  AS unit,
-            i.recipe_unit,
-            COALESCE(sl.stock, 0) AS stock,
-            i.minimum_stock AS "minStock"
-        FROM inventory_items i
-        LEFT JOIN inventory_locations l         ON l.code = $1
-        LEFT JOIN inventory_stock_locations sl  ON sl.item_id = i.id AND sl.location_id = l.id
-        WHERE i.is_active = true
-        ORDER BY i.name
-    `, [locationCode || null]);
+// ── PRECIOS ───────────────────────────────────────────────────
 
-export const getKardex = async (c, locationCode, itemCode) =>
-    await executeQuery(c, `
-        SELECT
-            i.name  AS ingredient,
-            i.code  AS item_code,
-            k.transaction_type AS type,
-            k.quantity,
-            k.reference_id     AS reference,
-            k.date,
-            fl.code AS origin,
-            tl.code AS dest
-        FROM inventory_kardex k
-        JOIN inventory_items i          ON k.item_id = i.id
-        LEFT JOIN inventory_locations fl ON fl.id = k.from_location_id
-        LEFT JOIN inventory_locations tl ON tl.id = k.to_location_id
-        WHERE ($1::text IS NULL OR fl.code = $1 OR tl.code = $1)
-          AND ($2::text IS NULL OR upper(i.name) LIKE '%' || upper($2) || '%'
-                                OR upper(i.code) LIKE '%' || upper($2) || '%')
-        ORDER BY k.date DESC
-        LIMIT 50
-    `, [locationCode || null, itemCode || null]);
-
-// FIX: p_supplier_id → p_supplier_code para que coincida con el SP
-export const upsertSupplierPrice = async (c, payload) =>
+export const upsertSupplierPrice = async (c, supplierCode, itemCode, itemName, itemUnit, price) =>
     await executeStoredProcedure(c, 'sp_upsert_supplier_price', {
-        p_supplier_code: payload.supplierCode,
-        p_item_code: payload.itemCode,
-        p_item_name: payload.itemName,
-        p_item_unit: payload.itemUnit,
-        p_price: payload.price
+        p_supplier_code: supplierCode,
+        p_item_code:     itemCode,
+        p_item_name:     itemName,
+        p_item_unit:     itemUnit,
+        p_price:         price
+    });
+
+// ── COMPRAS ───────────────────────────────────────────────────
+
+export const syncPurchases = async (c, payload) =>
+    await executeStoredProcedure(c, 'sp_sync_purchases', { p_payload: payload }, { p_payload: 'JSONB' });
+
+// ── STOCK / INVENTARIO ────────────────────────────────────────
+
+export const getStockSummary = async (c) =>
+    await executeQuery(c, `SELECT * FROM vw_stock_summary`);
+
+export const getInventoryItems = async (c) =>
+    await executeQuery(c, `
+        SELECT id, code, name, unit_measure AS "unitMeasure",
+               recipe_unit AS "recipeUnit", minimum_stock AS "minimumStock",
+               is_active AS "isActive"
+        FROM inventory_items
+        WHERE is_active = true
+        ORDER BY name ASC
+    `);
+
+// ── LOCACIONES ────────────────────────────────────────────────
+
+export const getLocations = async (c) =>
+    await executeQuery(c, `
+        SELECT id, code, name, type, is_active AS "isActive"
+        FROM inventory_locations
+        WHERE is_active = true
+        ORDER BY name ASC
+    `);
+
+// ── KARDEX ────────────────────────────────────────────────────
+
+export const transferStock = async (c, itemCode, fromCode, toCode, qty, userId, ref) =>
+    await executeStoredProcedure(c, 'sp_kardex_transfer', {
+        p_item_code:          itemCode,
+        p_from_location_code: fromCode,
+        p_to_location_code:   toCode,
+        p_base_qty:           qty,
+        p_user_id:            userId,
+        p_reference_id:       ref
+    }, { p_user_id: 'UUID' });
+
+export const adjustStock = async (c, locationCode, itemCode, physicalStock, note) =>
+    await executeStoredProcedure(c, 'sp_kardex_adjustment', {
+        p_location_code:  locationCode,
+        p_item_code:      itemCode,
+        p_physical_stock: physicalStock,
+        p_note:           note
     });

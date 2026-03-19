@@ -1,0 +1,45 @@
+{
+    "id": "auth_login",
+    "name": "Login Web",
+    "description": "Autenticación con employee_number + password para micrositios admin/gerencia. Emite JWT en cookie httpOnly `session`.",
+    "api": {
+        "method": "POST",
+        "path": "/auth/login",
+        "auth": "none",
+        "body": {
+            "required": ["employeeNumber", "password"],
+            "properties": {
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "ADMIN001"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "••••••••"
+                }
+            }
+        }
+    },
+    "startAt": "do_login",
+    "nodes": {
+        "do_login": {
+            "type": "action",
+            "handler": "login",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "employeeNumber": "{{state.data.employeeNumber}}",
+                    "firstName":      "{{state.data.firstName}}",
+                    "lastName":       "{{state.data.lastName}}",
+                    "roleCode":       "{{state.data.roleCode}}",
+                    "areaCode":       "{{state.data.areaCode}}"
+                }
+            }
+        }
+    }
+}

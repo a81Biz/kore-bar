@@ -1,0 +1,46 @@
+{
+    "id": "auth_pin",
+    "name": "Login PIN (POS)",
+    "description": "Autenticación con employee_number + PIN numérico para micrositios POS (meseros, caja, cocina). Devuelve JWT Bearer en body; el cliente lo guarda en memoria.",
+    "api": {
+        "method": "POST",
+        "path": "/auth/pin",
+        "auth": "none",
+        "body": {
+            "required": ["employeeNumber", "pinCode"],
+            "properties": {
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "MES001"
+                },
+                "pinCode": {
+                    "type": "string",
+                    "example": "1234"
+                }
+            }
+        }
+    },
+    "startAt": "do_pin",
+    "nodes": {
+        "do_pin": {
+            "type": "action",
+            "handler": "validatePin",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "token":            "{{state.data.token}}",
+                    "employeeNumber":   "{{state.data.employeeNumber}}",
+                    "firstName":        "{{state.data.firstName}}",
+                    "lastName":         "{{state.data.lastName}}",
+                    "areaCode":         "{{state.data.areaCode}}",
+                    "canAccessCashier": "{{state.data.canAccessCashier}}"
+                }
+            }
+        }
+    }
+}
