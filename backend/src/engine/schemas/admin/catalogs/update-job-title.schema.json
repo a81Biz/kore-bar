@@ -1,0 +1,26 @@
+{
+    "id": "update_job_title",
+    "name": "Update Job Title",
+    "description": "Actualiza el nombre o estado activo de un puesto existente.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/job-titles/:code",
+        "tags": ["Admin / Catalogos"],
+        "body": {
+            "properties": {
+                "jobTitleName": { "type": "string" },
+                "isActive": { "type": "boolean" }
+            },
+            "required": ["jobTitleName"]
+        }
+    },
+    "startAt": "update_job_node",
+    "nodes": {
+        "update_job_node": {
+            "type": "action",
+            "handler": "updateJobTitle",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

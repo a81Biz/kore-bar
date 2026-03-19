@@ -1,0 +1,35 @@
+{
+    "id": "waiter_close_table",
+    "name": "Waiter Close Table",
+    "description": "Cierra la mesa enviando la orden a AWAITING_PAYMENT para que el cajero procese el cobro.",
+    "api": {
+        "method": "POST",
+        "path": "/waiters/tables/:tableCode/close",
+        "tags": ["Waiters"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string" }
+            },
+            "required": ["employeeNumber"]
+        }
+    },
+    "startAt": "close_session",
+    "nodes": {
+        "close_session": {
+            "type": "action",
+            "handler": "closeTable",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orderCode": "{{state.orderCode}}",
+                    "total": "{{state.totalPaid}}"
+                }
+            }
+        }
+    }
+}

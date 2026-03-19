@@ -1,0 +1,25 @@
+{
+    "id": "deactivate_employee",
+    "name": "Desactivar Empleado",
+    "description": "Baja lógica (soft delete) del empleado. Desactiva también su acceso de sistema en system_users.",
+    "api": {
+        "method": "DELETE",
+        "path": "/employees/:employeeNumber",
+        "tags": ["Admin / Empleados"]
+    },
+    "startAt": "validate_employee",
+    "nodes": {
+        "validate_employee": {
+            "type": "action",
+            "handler": "validateEmployeeExists",
+            "next": "deactivate_employee_data",
+            "onError": "end"
+        },
+        "deactivate_employee_data": {
+            "type": "action",
+            "handler": "deactivateEmployeeData",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

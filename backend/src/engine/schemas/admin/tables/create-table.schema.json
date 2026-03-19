@@ -1,0 +1,43 @@
+{
+    "id": "create_table",
+    "name": "Create Table",
+    "description": "Crea una mesa operativa con capacidad dinámica dentro de una zona.",
+    "api": {
+        "method": "POST",
+        "path": "/tables",
+        "tags": [
+            "Admin / Piso"
+        ],
+        "body": {
+            "properties": {
+                "tableId": {
+                    "type": "string",
+                    "example": "T-11"
+                },
+                "zoneCode": {
+                    "type": "string",
+                    "example": "TERR"
+                },
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 5
+                }
+            },
+            "required": [
+                "tableId",
+                "zoneCode",
+                "capacity"
+            ]
+        }
+    },
+    "startAt": "save_table",
+    "nodes": {
+        "save_table": {
+            "type": "action",
+            "handler": "saveTable",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

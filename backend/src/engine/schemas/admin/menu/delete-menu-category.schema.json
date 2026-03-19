@@ -1,0 +1,19 @@
+{
+    "id": "delete_menu_category",
+    "name": "Eliminar Categoría",
+    "description": "Borrado híbrido de categoría. Físico si no tiene historial, lógico si ya tuvo platillos activos.",
+    "api": {
+        "method": "DELETE",
+        "path": "/menu/categories/:code",
+        "tags": ["Admin / Menú"]
+    },
+    "startAt": "delete_category",
+    "nodes": {
+        "delete_category": {
+            "type": "action",
+            "handler": "deleteCategory",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

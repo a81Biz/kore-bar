@@ -1,0 +1,19 @@
+{
+    "id": "kitchen_board",
+    "name": "Kitchen Display Board",
+    "description": "Devuelve el tablero Kanban de cocina con las tarjetas de platillos agrupadas por estado: PENDING_KITCHEN, PREPARING y READY.",
+    "api": {
+        "method": "GET",
+        "path": "/board",
+        "tags": ["KDS"]
+    },
+    "startAt": "fetch_board",
+    "nodes": {
+        "fetch_board": {
+            "type": "action",
+            "handler": "getKitchenBoard",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

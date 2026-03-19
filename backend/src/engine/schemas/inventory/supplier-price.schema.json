@@ -1,0 +1,29 @@
+{
+    "id": "save_supplier_price",
+    "name": "Guardar Precio de Proveedor",
+    "description": "Upsert del precio de un insumo por proveedor. Si el insumo no existe en inventory_items, lo crea automáticamente.",
+    "api": {
+        "method": "POST",
+        "path": "/suppliers/prices",
+        "tags": ["Inventario"],
+        "body": {
+            "properties": {
+                "supplierCode": { "type": "string" },
+                "itemCode": { "type": "string" },
+                "itemName": { "type": "string" },
+                "itemUnit": { "type": "string" },
+                "price": { "type": "number" }
+            },
+            "required": ["supplierCode", "itemCode", "itemName", "itemUnit", "price"]
+        }
+    },
+    "startAt": "save_price",
+    "nodes": {
+        "save_price": {
+            "type": "action",
+            "handler": "saveSupplierPrice",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

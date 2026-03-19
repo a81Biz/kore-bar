@@ -1,0 +1,28 @@
+{
+    "id": "call_waiter",
+    "name": "Llamar al Mesero (Menú Digital)",
+    "description": "Permite al cliente llamar al mesero desde el menú digital. Registra la solicitud en waiter_calls con el motivo indicado.",
+    "api": {
+        "method": "POST",
+        "path": "/tables/:tableCode/call-waiter",
+        "tags": ["Menú Front-Office"],
+        "body": {
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "enum": ["ORDER", "BILL", "ASSISTANCE", "CLEANING"],
+                    "default": "ASSISTANCE"
+                }
+            }
+        }
+    },
+    "startAt": "register_call",
+    "nodes": {
+        "register_call": {
+            "type": "action",
+            "handler": "registerWaiterCall",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

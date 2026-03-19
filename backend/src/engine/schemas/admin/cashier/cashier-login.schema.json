@@ -1,0 +1,46 @@
+{
+    "id": "cashier_login",
+    "name": "Cashier Login",
+    "description": "Autentica a un cajero validando su employeeNumber y PIN de 6 dígitos. El empleado debe pertenecer a un área con can_access_cashier = true.",
+    "api": {
+        "method": "POST",
+        "path": "/cashier/login",
+        "tags": [
+            "Admin / Cashier"
+        ],
+        "body": {
+            "required": [
+                "employeeNumber",
+                "pin"
+            ],
+            "properties": {
+                "employeeNumber": {
+                    "type": "string"
+                },
+                "pin": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "startAt": "validate_pin",
+    "nodes": {
+        "validate_pin": {
+            "type": "action",
+            "handler": "validateCashierPin",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "employeeNumber": "{{state.employeeNumber}}",
+                    "firstName": "{{state.firstName}}",
+                    "lastName": "{{state.lastName}}"
+                }
+            }
+        }
+    }
+}

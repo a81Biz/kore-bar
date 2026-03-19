@@ -1,0 +1,37 @@
+{
+    "id": "create_area",
+    "name": "Create Area",
+    "description": "Crea una nueva área en el catálogo.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/areas",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "50"
+                },
+                "areaName": {
+                    "type": "string",
+                    "example": "Barra Principal"
+                }
+            },
+            "required": [
+                "code",
+                "areaName"
+            ]
+        }
+    },
+    "startAt": "create_area_node",
+    "nodes": {
+        "create_area_node": {
+            "type": "action",
+            "handler": "createArea",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

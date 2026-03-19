@@ -1,0 +1,30 @@
+{
+    "id": "create_employee",
+    "name": "Registrar Nuevo Empleado",
+    "description": "Inserta un empleado en la BD delegando la transacción al Stored Procedure sp_upsert_employee.",
+    "api": {
+        "method": "POST",
+        "path": "/employees",
+        "tags": ["Admin / Empleados"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string", "example": "80219608" },
+                "firstName": { "type": "string", "example": "Juan" },
+                "lastName": { "type": "string", "example": "Pérez" },
+                "areaId": { "type": "string", "example": "20" },
+                "jobTitleId": { "type": "string", "example": "04" },
+                "isActive": { "type": "boolean", "example": true }
+            },
+            "required": ["employeeNumber", "firstName", "areaId", "jobTitleId"]
+        }
+    },
+    "startAt": "save_employee_data",
+    "nodes": {
+        "save_employee_data": {
+            "type": "action",
+            "handler": "saveEmployee",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

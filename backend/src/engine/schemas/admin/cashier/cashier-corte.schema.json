@@ -1,0 +1,30 @@
+{
+    "id": "cashier_corte",
+    "name": "Cashier Corte Z",
+    "description": "Genera el reporte de cierre de turno (Corte Z). Devuelve el total de ventas del día, desglosado por método de pago y propinas acumuladas.",
+    "api": {
+        "method": "GET",
+        "path": "/cashier/corte",
+        "tags": [
+            "Admin / Cashier"
+        ]
+    },
+    "startAt": "fetch_corte",
+    "nodes": {
+        "fetch_corte": {
+            "type": "action",
+            "handler": "getCashierCorte",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "corte": "{{state.corte}}"
+                }
+            }
+        }
+    }
+}

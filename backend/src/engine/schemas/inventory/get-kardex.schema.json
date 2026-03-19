@@ -1,0 +1,19 @@
+{
+    "id": "get_kardex",
+    "name": "Obtener Libro Mayor (Kardex)",
+    "description": "Devuelve el historial de movimientos de inventario. Acepta query params ?location=LOC-COCINA y ?item=INS-TOMATE para filtrar.",
+    "api": {
+        "method": "GET",
+        "path": "/kardex",
+        "tags": ["Inventario"]
+    },
+    "startAt": "fetch_kardex",
+    "nodes": {
+        "fetch_kardex": {
+            "type": "action",
+            "handler": "getKardex",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

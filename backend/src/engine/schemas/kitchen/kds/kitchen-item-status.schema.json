@@ -1,0 +1,28 @@
+{
+    "id": "kitchen_item_status",
+    "name": "Actualizar Estado de Item en Cocina",
+    "description": "Avanza el estado de un platillo en el KDS. PENDING_KITCHEN → PREPARING registra el tiempo de inicio. PREPARING → READY notifica al mesero.",
+    "api": {
+        "method": "PUT",
+        "path": "/items/:itemId/status",
+        "tags": ["KDS"],
+        "body": {
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["PREPARING", "READY"]
+                }
+            },
+            "required": ["status"]
+        }
+    },
+    "startAt": "update_status",
+    "nodes": {
+        "update_status": {
+            "type": "action",
+            "handler": "updateKitchenItemStatus",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

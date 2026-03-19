@@ -1,0 +1,34 @@
+/* Inyecciones base de Tailwind (Si decides compilarlo en el futuro) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+
+    /* Animación estándar para la entrada de los módulos de Lego */
+    .fade-in {
+        animation: fadeIn 0.3s ease-in-out forwards;
+    }
+
+    /* Ocultar barras de scroll pero permitir el desplazamiento (Estética limpia) */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,8 @@
+name = "kore-bar-backend"
+main = "src/index.js"
+compatibility_date = "2024-03-03"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kore_db"
+database_id = "mock-id" # We will mock the D1 binding locally for now over Node

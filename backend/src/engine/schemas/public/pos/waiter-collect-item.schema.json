@@ -1,0 +1,34 @@
+{
+    "id": "waiter_collect_item",
+    "name": "Waiter Collect Item",
+    "description": "El mesero recolecta un platillo listo en cocina o piso. Llama al SP atómico que descuenta el inventario y pasa el item a COLLECTED.",
+    "api": {
+        "method": "PUT",
+        "path": "/waiters/tables/:tableCode/items/:itemId/collect",
+        "tags": ["Waiters"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string" }
+            },
+            "required": ["employeeNumber"]
+        }
+    },
+    "startAt": "collect_item",
+    "nodes": {
+        "collect_item": {
+            "type": "action",
+            "handler": "waiterCollectItem",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

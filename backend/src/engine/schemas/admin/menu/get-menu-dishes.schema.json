@@ -1,0 +1,19 @@
+{
+    "id": "get_menu_dishes",
+    "name": "Obtener Platillos del Menú",
+    "description": "Devuelve todos los platillos activos e inactivos del menú para la vista de administración.",
+    "api": {
+        "method": "GET",
+        "path": "/menu/dishes",
+        "tags": ["Admin / Menú"]
+    },
+    "startAt": "fetch_dishes",
+    "nodes": {
+        "fetch_dishes": {
+            "type": "action",
+            "handler": "getDishes",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,38 @@
+{
+    "id": "sync_catalogs",
+    "name": "Sync HR Catalogs",
+    "description": "Recibe el catálogo de áreas y puestos desde RRHH y los sincroniza (upsert) en la BD.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/sync-catalogs",
+        "tags": ["Admin / Empleados", "Integraciones"],
+        "body": {
+            "properties": {
+                "catalogo_puestos": {
+                    "type": "array",
+                    "description": "Jerarquía de áreas y puestos proveniente de RRHH.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "codigo_area": { "type": "string", "example": "10" },
+                            "nombre_area": { "type": "string", "example": "Gerencia" },
+                            "codigo_puesto": { "type": "string", "example": "01" },
+                            "nombre_puesto": { "type": "string", "example": "Host" }
+                        },
+                        "required": ["codigo_area", "nombre_area", "codigo_puesto", "nombre_puesto"]
+                    }
+                }
+            },
+            "required": ["catalogo_puestos"]
+        }
+    },
+    "startAt": "process_hr_catalogs",
+    "nodes": {
+        "process_hr_catalogs": {
+            "type": "action",
+            "handler": "syncHrCatalogs",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

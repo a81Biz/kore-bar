@@ -1,0 +1,21 @@
+{
+    "id": "get_assignments",
+    "name": "Obtener Asignaciones",
+    "description": "Recupera todas las asignaciones operativas de una fecha específica.",
+    "api": {
+        "method": "GET",
+        "path": "/assignments",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "fetch_assignments",
+    "nodes": {
+        "fetch_assignments": {
+            "type": "action",
+            "handler": "getAssignments",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

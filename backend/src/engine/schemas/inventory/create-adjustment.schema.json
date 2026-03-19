@@ -1,0 +1,37 @@
+{
+    "id": "create_adjustment",
+    "name": "Registrar Ajuste o Merma Física",
+    "description": "Compara el stock físico contado contra el teórico del sistema y registra la diferencia (merma o sobrante) en el kardex.",
+    "api": {
+        "method": "POST",
+        "path": "/adjustments",
+        "tags": ["Inventario"],
+        "body": {
+            "properties": {
+                "locationCode": { "type": "string", "example": "LOC-COCINA" },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "itemCode": { "type": "string", "example": "INS-LIMON" },
+                            "realStock": { "type": "number", "example": 2500 },
+                            "note": { "type": "string" }
+                        },
+                        "required": ["itemCode", "realStock"]
+                    }
+                }
+            },
+            "required": ["locationCode", "items"]
+        }
+    },
+    "startAt": "adjustment_logic",
+    "nodes": {
+        "adjustment_logic": {
+            "type": "action",
+            "handler": "saveKardexAdjustment",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "id": "create_menu_category",
+    "name": "Crear Categoría de Menú",
+    "description": "Crea una nueva categoría para agrupar platillos en el menú.",
+    "api": {
+        "method": "POST",
+        "path": "/menu/categories",
+        "tags": ["Admin / Menú"],
+        "body": {
+            "properties": {
+                "categoryCode": { "type": "string" },
+                "name": { "type": "string" },
+                "description": { "type": "string" }
+            },
+            "required": ["categoryCode", "name"]
+        }
+    },
+    "startAt": "save_category",
+    "nodes": {
+        "save_category": {
+            "type": "action",
+            "handler": "saveCategory",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

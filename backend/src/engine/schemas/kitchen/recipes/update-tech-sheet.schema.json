@@ -1,0 +1,26 @@
+{
+    "id": "update_tech_sheet",
+    "name": "Actualizar Ficha Técnica",
+    "description": "Actualiza el método de preparación e imagen de referencia de un platillo en el recetario.",
+    "api": {
+        "method": "PUT",
+        "path": "/recipes/:dishCode/tech-sheet",
+        "tags": ["Cocina"],
+        "body": {
+            "properties": {
+                "preparationMethod": { "type": "string" },
+                "imageUrl": { "type": "string" }
+            },
+            "required": ["preparationMethod"]
+        }
+    },
+    "startAt": "save_tech_sheet",
+    "nodes": {
+        "save_tech_sheet": {
+            "type": "action",
+            "handler": "updateTechSheet",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

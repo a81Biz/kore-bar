@@ -1,0 +1,21 @@
+{
+    "id": "get_job_titles",
+    "name": "Get Active Job Titles",
+    "description": "Obtiene el catálogo de todos los puestos de trabajo activos para los selectores del frontend.",
+    "api": {
+        "method": "GET",
+        "path": "/employees/job-titles",
+        "tags": [
+            "Admin / Catalogos"
+        ]
+    },
+    "startAt": "fetch_job_titles",
+    "nodes": {
+        "fetch_job_titles": {
+            "type": "action",
+            "handler": "getJobTitles",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

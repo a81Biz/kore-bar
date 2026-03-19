@@ -1,0 +1,19 @@
+{
+    "id": "deactivate_area",
+    "name": "Deactivate Area",
+    "description": "Baja lógica (soft delete) de un área del catálogo. No elimina el registro.",
+    "api": {
+        "method": "DELETE",
+        "path": "/employees/areas/:code",
+        "tags": ["Admin / Catalogos"]
+    },
+    "startAt": "deactivate_area_node",
+    "nodes": {
+        "deactivate_area_node": {
+            "type": "action",
+            "handler": "deactivateArea",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

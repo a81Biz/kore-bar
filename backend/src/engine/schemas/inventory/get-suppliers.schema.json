@@ -1,0 +1,19 @@
+{
+    "id": "get_suppliers",
+    "name": "Obtener Proveedores",
+    "description": "Devuelve el catálogo de proveedores con sus precios por insumo asociados.",
+    "api": {
+        "method": "GET",
+        "path": "/suppliers",
+        "tags": ["Inventario"]
+    },
+    "startAt": "fetch_suppliers",
+    "nodes": {
+        "fetch_suppliers": {
+            "type": "action",
+            "handler": "getSuppliers",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

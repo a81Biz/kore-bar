@@ -1,0 +1,39 @@
+{
+    "id": "add_recipe_item",
+    "name": "Agregar Ingrediente a Receta",
+    "api": {
+        "method": "POST",
+        "path": "/recipes/items",
+        "tags": [
+            "Cocina"
+        ],
+        "body": {
+            "properties": {
+                "dishCode": {
+                    "type": "string"
+                },
+                "ingredientCode": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number",
+                    "minimum": 0.001
+                }
+            },
+            "required": [
+                "dishCode",
+                "ingredientCode",
+                "quantity"
+            ]
+        }
+    },
+    "startAt": "add_item",
+    "nodes": {
+        "add_item": {
+            "type": "action",
+            "handler": "addRecipeItem",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

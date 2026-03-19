@@ -1,0 +1,21 @@
+{
+    "id": "delete_zone",
+    "name": "Delete Zone (Smart Delete)",
+    "description": "Borrado híbrido de una zona. Físico si no tiene historial, lógico si ya tuvo operaciones.",
+    "api": {
+        "method": "DELETE",
+        "path": "/zones/:code",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "smart_delete_zone",
+    "nodes": {
+        "smart_delete_zone": {
+            "type": "action",
+            "handler": "deleteZone",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

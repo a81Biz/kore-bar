@@ -1,0 +1,21 @@
+# Directories to ignore as per user request
+docs/
+functional/
+
+# Sensitive files
+.env
+backend/.env
+**/.env
+
+# Node.js
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db

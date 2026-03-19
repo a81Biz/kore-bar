@@ -1,0 +1,27 @@
+{
+    "id": "update_menu_category",
+    "name": "Actualizar Categoría",
+    "description": "Actualiza el nombre, descripción o estado activo de una categoría de menú.",
+    "api": {
+        "method": "PUT",
+        "path": "/menu/categories/:code",
+        "tags": ["Admin / Menú"],
+        "body": {
+            "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "isActive": { "type": "boolean" }
+            },
+            "required": ["name", "isActive"]
+        }
+    },
+    "startAt": "update_category",
+    "nodes": {
+        "update_category": {
+            "type": "action",
+            "handler": "updateCategory",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

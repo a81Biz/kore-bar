@@ -1,0 +1,101 @@
+{
+    "id": "webhook_purchase_puller",
+    "name": "Sincronización PULL de Compras",
+    "api": {
+        "method": "POST",
+        "path": "/sync",
+        "tags": [
+            "Inventario",
+            "Integraciones"
+        ],
+        "body": {
+            "type": "object",
+            "required": [
+                "supplier",
+                "destinationLocationCode",
+                "items"
+            ],
+            "properties": {
+                "documentType": {
+                    "type": "string"
+                },
+                "referenceId": {
+                    "type": "string"
+                },
+                "since": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "supplier": {
+                    "type": "object",
+                    "required": [
+                        "code",
+                        "name"
+                    ],
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "minLength": 3
+                        },
+                        "name": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "destinationLocationCode": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "itemCode",
+                            "itemName",
+                            "quantityPurchased",
+                            "unitCost"
+                        ],
+                        "properties": {
+                            "itemCode": {
+                                "type": "string"
+                            },
+                            "itemName": {
+                                "type": "string"
+                            },
+                            "purchaseUnit": {
+                                "type": "string"
+                            },
+                            "recipeUnit": {
+                                "type": "string"
+                            },
+                            "conversionFactor": {
+                                "type": "number",
+                                "minimum": 1
+                            },
+                            "quantityPurchased": {
+                                "type": "number",
+                                "minimum": 0.01
+                            },
+                            "unitCost": {
+                                "type": "number",
+                                "minimum": 0
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "startAt": "sync_action",
+    "nodes": {
+        "sync_action": {
+            "type": "action",
+            "handler": "syncPurchasesToKardex",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

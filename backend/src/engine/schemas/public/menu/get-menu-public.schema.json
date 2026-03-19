@@ -1,0 +1,19 @@
+{
+    "id": "get_menu_public",
+    "name": "Consultar Menú Público para Clientes",
+    "description": "Devuelve el menú activo con categorías y platillos para el menú digital del cliente. No requiere autenticación.",
+    "api": {
+        "method": "GET",
+        "path": "/menu/public",
+        "tags": ["Menú Front-Office"]
+    },
+    "startAt": "get_menu",
+    "nodes": {
+        "get_menu": {
+            "type": "action",
+            "handler": "getPublicMenu",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

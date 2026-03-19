@@ -1,0 +1,38 @@
+{
+    "id": "create_ingredient",
+    "name": "Alta de Insumo",
+    "api": {
+        "method": "POST",
+        "path": "/ingredients",
+        "tags": [
+            "Cocina"
+        ],
+        "body": {
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "code",
+                "name",
+                "unit"
+            ]
+        }
+    },
+    "startAt": "save_ingredient",
+    "nodes": {
+        "save_ingredient": {
+            "type": "action",
+            "handler": "createIngredient",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

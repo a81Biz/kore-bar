@@ -1,0 +1,19 @@
+{
+    "id": "get_finished_dishes",
+    "name": "Catálogo de Recetario",
+    "description": "Devuelve los platillos que ya tienen receta completa (has_recipe = true). Catálogo de referencia de cocina.",
+    "api": {
+        "method": "GET",
+        "path": "/dishes/finished",
+        "tags": ["Cocina"]
+    },
+    "startAt": "fetch_finished",
+    "nodes": {
+        "fetch_finished": {
+            "type": "action",
+            "handler": "getFinishedDishes",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

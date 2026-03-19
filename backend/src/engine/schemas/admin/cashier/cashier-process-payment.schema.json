@@ -1,0 +1,49 @@
+{
+    "id": "cashier_process_payment",
+    "name": "Cashier Process Payment",
+    "description": "Procesa el cobro de una mesa en estado AWAITING_PAYMENT. Soporta pagos mixtos (varios métodos). Llama al SP atómico que registra pagos, emite el ticket con folio único y cierra la orden.",
+    "api": {
+        "method": "POST",
+        "path": "/cashier/tables/:tableCode/pay",
+        "tags": [
+            "Admin / Cashier"
+        ],
+        "body": {
+            "required": [
+                "cashierCode",
+                "payments"
+            ],
+            "properties": {
+                "cashierCode": {
+                    "type": "string"
+                },
+                "payments": {
+                    "type": "array"
+                },
+                "tip": {
+                    "type": "number",
+                    "default": 0
+                }
+            }
+        }
+    },
+    "startAt": "process_pay",
+    "nodes": {
+        "process_pay": {
+            "type": "action",
+            "handler": "processPayment",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "folio": "{{state.folio}}",
+                    "total": "{{state.total}}"
+                }
+            }
+        }
+    }
+}

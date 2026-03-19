@@ -1,0 +1,22 @@
+{
+    "workflow": "SampleFlow",
+    "startAt": "node_1",
+    "nodes": {
+        "node_1": {
+            "type": "action",
+            "handler": "validateData",
+            "next": "node_2"
+        },
+        "node_2": {
+            "type": "decision",
+            "handler": "checkCondition",
+            "onTrue": "node_3",
+            "onFalse": "end"
+        },
+        "node_3": {
+            "type": "action",
+            "handler": "finalize",
+            "next": "end"
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "id": "cashier_get_employees",
+    "name": "Cashier Get Eligible Employees",
+    "description": "Devuelve la lista de empleados activos cuya área tiene can_access_cashier = true. Para el login dinámico de caja.",
+    "api": {
+        "method": "GET",
+        "path": "/cashier/employees",
+        "tags": [
+            "Admin / Cashier"
+        ]
+    },
+    "startAt": "fetch_employees",
+    "nodes": {
+        "fetch_employees": {
+            "type": "action",
+            "handler": "getCashierEmployees",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "employees": "{{state.employees}}"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "id": "get_areas",
+    "name": "Get Active Areas",
+    "description": "Obtiene el catálogo de todas las áreas activas para los selectores del frontend.",
+    "api": {
+        "method": "GET",
+        "path": "/employees/areas",
+        "tags": [
+            "Admin / Catalogos"
+        ]
+    },
+    "startAt": "fetch_areas",
+    "nodes": {
+        "fetch_areas": {
+            "type": "action",
+            "handler": "getAreas",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

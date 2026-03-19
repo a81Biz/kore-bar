@@ -1,0 +1,37 @@
+{
+    "id": "update_zone",
+    "name": "Update Zone",
+    "description": "Actualiza el nombre o estado de una zona existente.",
+    "api": {
+        "method": "PUT",
+        "path": "/zones/:code",
+        "tags": [
+            "Admin / Piso"
+        ],
+        "body": {
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Terraza VIP"
+                },
+                "isActive": {
+                    "type": "boolean",
+                    "example": true
+                }
+            },
+            "required": [
+                "name",
+                "isActive"
+            ]
+        }
+    },
+    "startAt": "update_zone_data",
+    "nodes": {
+        "update_zone_data": {
+            "type": "action",
+            "handler": "updateZone",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "id": "update_employee",
+    "name": "Actualizar Registro de Empleado",
+    "description": "Actualiza parcialmente la información operativa de un empleado existente. Solo los campos enviados serán modificados.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/:employeeNumber",
+        "tags": ["Admin / Empleados"],
+        "body": {
+            "properties": {
+                "firstName": { "type": "string" },
+                "lastName": { "type": "string" },
+                "areaId": { "type": "string" },
+                "jobTitleId": { "type": "string" },
+                "isActive": { "type": "boolean" },
+                "pinCode": { "type": "string" }
+            }
+        }
+    },
+    "startAt": "validate_employee",
+    "nodes": {
+        "validate_employee": {
+            "type": "action",
+            "handler": "validateEmployeeExists",
+            "next": "update_employee_data",
+            "onError": "end"
+        },
+        "update_employee_data": {
+            "type": "action",
+            "handler": "updateEmployee",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

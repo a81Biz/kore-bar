@@ -1,0 +1,49 @@
+{
+    "id": "bulk_update_areas",
+    "name": "Bulk Update Areas",
+    "description": "Actualiza el nombre de múltiples áreas a la vez.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/areas/bulk",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "areas": {
+                    "type": "array",
+                    "description": "Lista de áreas a actualizar",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "10"
+                            },
+                            "areaName": {
+                                "type": "string",
+                                "example": "Gerencia General"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "areaName"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "areas"
+            ]
+        }
+    },
+    "startAt": "bulk_update_areas_node",
+    "nodes": {
+        "bulk_update_areas_node": {
+            "type": "action",
+            "handler": "bulkUpdateAreas",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

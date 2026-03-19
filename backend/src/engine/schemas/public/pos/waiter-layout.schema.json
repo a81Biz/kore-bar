@@ -1,0 +1,28 @@
+{
+    "id": "waiter_layout",
+    "name": "Waiter Floor Layout",
+    "description": "Devuelve las zonas activas con sus mesas y el estado actual de ocupación (AVAILABLE / OCCUPIED).",
+    "api": {
+        "method": "GET",
+        "path": "/waiters/layout",
+        "tags": ["Waiters"]
+    },
+    "startAt": "fetch_layout",
+    "nodes": {
+        "fetch_layout": {
+            "type": "action",
+            "handler": "getWaiterLayout",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "layout": "{{state.layout}}"
+                }
+            }
+        }
+    }
+}

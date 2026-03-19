@@ -1,0 +1,43 @@
+{
+    "id": "update_table",
+    "name": "Update Table",
+    "description": "Reubica una mesa a otra zona o actualiza dinámicamente su capacidad de comensales.",
+    "api": {
+        "method": "PUT",
+        "path": "/tables/:id",
+        "tags": [
+            "Admin / Piso"
+        ],
+        "body": {
+            "properties": {
+                "zoneCode": {
+                    "type": "string",
+                    "example": "SALON"
+                },
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 10
+                },
+                "isActive": {
+                    "type": "boolean",
+                    "example": true
+                }
+            },
+            "required": [
+                "zoneCode",
+                "capacity",
+                "isActive"
+            ]
+        }
+    },
+    "startAt": "update_table_data",
+    "nodes": {
+        "update_table_data": {
+            "type": "action",
+            "handler": "updateTable",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "id": "waiter_order_status",
+    "name": "Waiter Table Order Status",
+    "description": "Devuelve los items actuales de la comanda de una mesa con sus estados. Incluye canClose para saber si todos los items ya fueron entregados.",
+    "api": {
+        "method": "GET",
+        "path": "/waiters/tables/:tableCode/order",
+        "tags": ["Waiters"]
+    },
+    "startAt": "fetch_order_status",
+    "nodes": {
+        "fetch_order_status": {
+            "type": "action",
+            "handler": "getWaiterOrderStatus",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orderCode": "{{state.orderCode}}",
+                    "items": "{{state.items}}",
+                    "canClose": "{{state.canClose}}"
+                }
+            }
+        }
+    }
+}

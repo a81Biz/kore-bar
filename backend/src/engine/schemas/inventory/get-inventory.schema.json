@@ -1,0 +1,19 @@
+{
+    "id": "get_inventory",
+    "name": "Obtener Inventario y Kardex",
+    "description": "Devuelve el stock actual por insumo. Acepta query param ?location=LOC-COCINA para filtrar por ubicación.",
+    "api": {
+        "method": "GET",
+        "path": "/stock",
+        "tags": ["Inventario"]
+    },
+    "startAt": "fetch_stock",
+    "nodes": {
+        "fetch_stock": {
+            "type": "action",
+            "handler": "getInventoryStock",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

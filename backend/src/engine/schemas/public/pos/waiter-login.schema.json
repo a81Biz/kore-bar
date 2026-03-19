@@ -1,0 +1,37 @@
+{
+    "id": "waiter_login",
+    "name": "Waiter Login (PIN)",
+    "description": "Valida el PIN de 6 dígitos del mesero y retorna sus datos de sesión.",
+    "api": {
+        "method": "POST",
+        "path": "/waiters/login",
+        "tags": ["Waiters"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string", "example": "EMP-001" },
+                "pin": { "type": "string", "example": "123456" }
+            },
+            "required": ["employeeNumber", "pin"]
+        }
+    },
+    "startAt": "validate_pin",
+    "nodes": {
+        "validate_pin": {
+            "type": "action",
+            "handler": "validateWaiterPin",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "employeeNumber": "{{state.employeeNumber}}",
+                    "firstName": "{{state.firstName}}",
+                    "lastName": "{{state.lastName}}"
+                }
+            }
+        }
+    }
+}

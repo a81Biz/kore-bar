@@ -1,0 +1,30 @@
+{
+    "id": "cashier_get_ticket",
+    "name": "Cashier Get Ticket by Folio",
+    "description": "Consulta de un ticket por su folio. Devuelve resumen de consumo, totales, IVA, propina y si ya fue facturado.",
+    "api": {
+        "method": "GET",
+        "path": "/cashier/tickets/:folio",
+        "tags": [
+            "Admin / Cashier"
+        ]
+    },
+    "startAt": "fetch_ticket",
+    "nodes": {
+        "fetch_ticket": {
+            "type": "action",
+            "handler": "getTicketByFolio",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "ticket": "{{state.ticket}}"
+                }
+            }
+        }
+    }
+}

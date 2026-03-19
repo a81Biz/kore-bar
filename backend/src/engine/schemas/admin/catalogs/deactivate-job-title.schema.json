@@ -1,0 +1,19 @@
+{
+    "id": "deactivate_job_title",
+    "name": "Deactivate Job Title",
+    "description": "Baja lógica (soft delete) de un puesto del catálogo. No elimina el registro.",
+    "api": {
+        "method": "DELETE",
+        "path": "/employees/job-titles/:code",
+        "tags": ["Admin / Catalogos"]
+    },
+    "startAt": "deactivate_job_node",
+    "nodes": {
+        "deactivate_job_node": {
+            "type": "action",
+            "handler": "deactivateJobTitle",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "id": "get_pending_dishes",
+    "name": "Bandeja de Platillos Pendientes",
+    "description": "Devuelve los platillos activos que aún no tienen receta asignada (has_recipe = false). Bandeja de trabajo del chef de recetario.",
+    "api": {
+        "method": "GET",
+        "path": "/dishes/pending",
+        "tags": ["Cocina"]
+    },
+    "startAt": "fetch_pending",
+    "nodes": {
+        "fetch_pending": {
+            "type": "action",
+            "handler": "getPendingDishes",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

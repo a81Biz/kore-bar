@@ -1,0 +1,21 @@
+{
+    "id": "get_tables",
+    "name": "Get Tables",
+    "description": "Obtiene la lista de todas las mesas y sus zonas asociadas.",
+    "api": {
+        "method": "GET",
+        "path": "/tables",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "fetch_tables",
+    "nodes": {
+        "fetch_tables": {
+            "type": "action",
+            "handler": "getTables",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

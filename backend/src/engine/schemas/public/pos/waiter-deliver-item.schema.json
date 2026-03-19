@@ -1,0 +1,28 @@
+{
+    "id": "waiter_deliver_item",
+    "name": "Waiter Deliver Item",
+    "description": "El mesero confirma la entrega física de un item en la mesa. Pasa a DELIVERED liberando el candado de cobro.",
+    "api": {
+        "method": "PUT",
+        "path": "/waiters/tables/:tableCode/items/:itemId/deliver",
+        "tags": ["Waiters"]
+    },
+    "startAt": "deliver_item",
+    "nodes": {
+        "deliver_item": {
+            "type": "action",
+            "handler": "waiterDeliverItem",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

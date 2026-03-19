@@ -1,0 +1,36 @@
+{
+    "id": "bulk_deactivate_areas",
+    "name": "Bulk Deactivate Areas",
+    "description": "Desactiva lógicamente (soft delete) múltiples áreas a la vez.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/areas/bulk-deactivate",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "codes": {
+                    "type": "array",
+                    "description": "Lista de códigos de áreas a desactivar",
+                    "items": {
+                        "type": "string",
+                        "example": "50"
+                    }
+                }
+            },
+            "required": [
+                "codes"
+            ]
+        }
+    },
+    "startAt": "bulk_deactivate_areas_node",
+    "nodes": {
+        "bulk_deactivate_areas_node": {
+            "type": "action",
+            "handler": "bulkDeactivateAreas",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

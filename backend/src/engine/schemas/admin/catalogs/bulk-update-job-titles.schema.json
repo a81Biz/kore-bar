@@ -1,0 +1,49 @@
+{
+    "id": "bulk_update_job_titles",
+    "name": "Bulk Update Job Titles",
+    "description": "Actualiza el nombre de múltiples puestos a la vez.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/job-titles/bulk",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "jobTitles": {
+                    "type": "array",
+                    "description": "Lista de puestos a actualizar",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "01"
+                            },
+                            "jobTitleName": {
+                                "type": "string",
+                                "example": "Host Principal"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "jobTitleName"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "jobTitles"
+            ]
+        }
+    },
+    "startAt": "bulk_update_job_titles_node",
+    "nodes": {
+        "bulk_update_job_titles_node": {
+            "type": "action",
+            "handler": "bulkUpdateJobTitles",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "id": "hr_webhook",
+    "name": "HR External Injection (PUSH)",
+    "description": "Endpoint para que RRHH inyecte o actualice empleados de uno en uno vía webhook.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/webhook",
+        "tags": ["Admin / Empleados", "Integraciones"],
+        "body": {
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["alta", "baja", "reingreso"],
+                    "example": "alta"
+                },
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "numero_empleado": { "type": "string", "example": "80219601" },
+                        "nombre": { "type": "string", "example": "Ana" },
+                        "apellidos": { "type": "string", "example": "Gómez" },
+                        "codigo_area": { "type": "string", "example": "10" },
+                        "codigo_puesto": { "type": "string", "example": "01" },
+                        "fecha_llegada": { "type": "string", "example": "2026-03-06" }
+                    },
+                    "required": ["numero_empleado", "nombre", "codigo_area", "codigo_puesto"]
+                }
+            },
+            "required": ["action", "data"]
+        }
+    },
+    "startAt": "process_webhook",
+    "nodes": {
+        "process_webhook": {
+            "type": "action",
+            "handler": "processHrWebhook",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

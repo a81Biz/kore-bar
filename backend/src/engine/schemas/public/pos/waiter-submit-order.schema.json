@@ -1,0 +1,35 @@
+{
+    "id": "waiter_submit_order",
+    "name": "Waiter Submit Order",
+    "description": "Envía platillos o bebidas a la comanda abierta de una mesa. El SP enruta cada item a cocina (has_recipe) o piso (sin receta).",
+    "api": {
+        "method": "POST",
+        "path": "/waiters/tables/:tableCode/orders",
+        "tags": ["Waiters"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string" },
+                "items": { "type": "array" }
+            },
+            "required": ["employeeNumber", "items"]
+        }
+    },
+    "startAt": "process_order",
+    "nodes": {
+        "process_order": {
+            "type": "action",
+            "handler": "submitOrder",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orderCode": "{{state.orderCode}}"
+                }
+            }
+        }
+    }
+}

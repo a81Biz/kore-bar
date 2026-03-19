@@ -1,0 +1,21 @@
+{
+    "id": "get_employees",
+    "name": "Obtener Empleados",
+    "description": "Devuelve el directorio completo de empleados con su área, puesto y rol de sistema.",
+    "api": {
+        "method": "GET",
+        "path": "/employees",
+        "tags": [
+            "Admin / Empleados"
+        ]
+    },
+    "startAt": "fetch_employees",
+    "nodes": {
+        "fetch_employees": {
+            "type": "action",
+            "handler": "getEmployees",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

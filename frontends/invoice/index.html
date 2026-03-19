@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Kore Bar — Portal de Facturación</title>
+    <meta name="description" content="Portal de auto-servicio de facturación electrónica CFDI 4.0. Ingresa tu folio de ticket para generar tu comprobante." />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { "sans": ["Inter", "system-ui", "sans-serif"] },
+                    keyframes: {
+                        "slide-up": { "0%": { opacity: "0", transform: "translateY(12px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
+                        "fade-in":  { "0%": { opacity: "0" }, "100%": { opacity: "1" } }
+                    },
+                    animation: {
+                        "slide-up": "slide-up 0.3s ease-out",
+                        "fade-in": "fade-in 0.4s ease-out"
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+        <div class="bg-white rounded-2xl p-6 flex items-center gap-4 shadow-2xl border border-slate-200">
+            <div class="w-7 h-7 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="font-bold text-slate-700">Consultando...</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200">
+                <span class="material-symbols-outlined text-white text-xl">receipt_long</span>
+            </div>
+            <div>
+                <h1 class="font-black text-slate-900 text-lg leading-none">Kore Bar</h1>
+                <p class="text-xs text-slate-500">Portal de Facturación Electrónica CFDI 4.0</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- SPA Mount -->
+    <main id="app" class="max-w-2xl mx-auto px-4 py-10"></main>
+
+    <!-- Footer -->
+    <footer class="mt-16 pb-8 text-center text-xs text-slate-400">
+        <p>Kore Bar · Facturación Electrónica · CFDI 4.0</p>
+        <p class="mt-1">Si necesitas ayuda, contacta a la caja del restaurante.</p>
+    </footer>
+
+    <script type="module" src="./js/app.js"></script>
+</body>
+
+</html>

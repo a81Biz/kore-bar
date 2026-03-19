@@ -1,0 +1,19 @@
+{
+    "id": "get_menu_categories",
+    "name": "Obtener Categorías de Menú",
+    "description": "Devuelve todas las categorías activas e inactivas del menú para la vista de administración.",
+    "api": {
+        "method": "GET",
+        "path": "/menu/categories",
+        "tags": ["Admin / Menú"]
+    },
+    "startAt": "fetch_categories",
+    "nodes": {
+        "fetch_categories": {
+            "type": "action",
+            "handler": "getCategories",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

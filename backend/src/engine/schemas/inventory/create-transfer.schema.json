@@ -1,0 +1,37 @@
+{
+    "id": "create_transfer",
+    "name": "Registrar Traspaso de Bodega",
+    "description": "Mueve insumos entre ubicaciones (ej. Bodega → Cocina). Aplica el factor de conversión de unidad de compra a unidad de receta.",
+    "api": {
+        "method": "POST",
+        "path": "/transfers",
+        "tags": ["Inventario"],
+        "body": {
+            "properties": {
+                "sourceLocation": { "type": "string", "example": "LOC-BODEGA" },
+                "targetLocation": { "type": "string", "example": "LOC-COCINA" },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "itemCode": { "type": "string", "example": "INS-TEQUILA" },
+                            "qty": { "type": "number", "example": 1 }
+                        },
+                        "required": ["itemCode", "qty"]
+                    }
+                }
+            },
+            "required": ["sourceLocation", "targetLocation", "items"]
+        }
+    },
+    "startAt": "transfer_logic",
+    "nodes": {
+        "transfer_logic": {
+            "type": "action",
+            "handler": "saveKardexTransfer",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

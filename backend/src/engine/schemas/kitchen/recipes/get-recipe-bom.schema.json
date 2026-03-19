@@ -1,0 +1,19 @@
+{
+    "id": "get_recipe_bom",
+    "name": "Obtener Ingredientes de Platillo",
+    "description": "Devuelve el BOM (Bill of Materials) de un platillo: lista de ingredientes con cantidad y unidad requerida.",
+    "api": {
+        "method": "GET",
+        "path": "/recipes/:dishCode/bom",
+        "tags": ["Cocina"]
+    },
+    "startAt": "fetch_bom",
+    "nodes": {
+        "fetch_bom": {
+            "type": "action",
+            "handler": "getRecipeBOM",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

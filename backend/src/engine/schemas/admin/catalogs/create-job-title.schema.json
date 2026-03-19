@@ -1,0 +1,37 @@
+{
+    "id": "create_job_title",
+    "name": "Create Job Title",
+    "description": "Crea un nuevo puesto en el catálogo.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/job-titles",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "20"
+                },
+                "jobTitleName": {
+                    "type": "string",
+                    "example": "Bartender"
+                }
+            },
+            "required": [
+                "code",
+                "jobTitleName"
+            ]
+        }
+    },
+    "startAt": "create_job_title_node",
+    "nodes": {
+        "create_job_title_node": {
+            "type": "action",
+            "handler": "createJobTitle",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

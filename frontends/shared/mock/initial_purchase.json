@@ -1,0 +1,50 @@
+{
+  "documentType": "PURCHASE_RECEIPT",
+  "referenceId": "PO-2026-0001",
+  "date": "2026-03-10T10:30:00Z",
+  "supplier": {
+    "code": "PRV-SYSCO",
+    "name": "Sysco Corporation",
+    "contact": "ventas@sysco.com"
+  },
+  "destinationLocationCode": "LOC-BODEGA",
+  "items": [
+    {
+      "itemCode": "INS-TEQUILA-70",
+      "itemName": "Tequila Don Julio 70 700ml",
+      "purchaseUnit": "Botella",
+      "recipeUnit": "ML",
+      "conversionFactor": 700,
+      "unitCost": 850.50,
+      "quantityPurchased": 12
+    },
+    {
+      "itemCode": "INS-LIMON",
+      "itemName": "Limón Persa sin Semilla",
+      "purchaseUnit": "KG",
+      "recipeUnit": "GR",
+      "conversionFactor": 1000,
+      "unitCost": 45.00,
+      "quantityPurchased": 25
+    },
+    {
+      "itemCode": "INS-COCA-COLA",
+      "itemName": "Refresco Coca-Cola 355ml VIdrio",
+      "purchaseUnit": "Caja 24pz",
+      "recipeUnit": "PZ",
+      "conversionFactor": 24,
+      "unitCost": 240.00,
+      "quantityPurchased": 5
+    },
+    {
+      "itemCode": "INS-SAL",
+      "itemName": "sal fina",
+      "purchaseUnit": "Cotal 12kg",
+      "recipeUnit": "KG",
+      "conversionFactor": 12,
+      "unitCost": 240.00,
+      "quantityPurchased": 1
+    }
+  ],
+  "notes": "Carga inicial de inventario e hidratación de catálogo maestro."
+}

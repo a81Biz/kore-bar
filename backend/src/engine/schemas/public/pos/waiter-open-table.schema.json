@@ -1,0 +1,35 @@
+{
+    "id": "waiter_open_table",
+    "name": "Waiter Open Table",
+    "description": "Abre una mesa creando la cabecera de la comanda. Si ya está abierta, devuelve la orden existente (idempotente).",
+    "api": {
+        "method": "POST",
+        "path": "/waiters/tables/:tableCode/open",
+        "tags": ["Waiters"],
+        "body": {
+            "properties": {
+                "employeeNumber": { "type": "string" },
+                "diners": { "type": "integer" }
+            },
+            "required": ["employeeNumber", "diners"]
+        }
+    },
+    "startAt": "open_session",
+    "nodes": {
+        "open_session": {
+            "type": "action",
+            "handler": "openTable",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orderCode": "{{state.orderCode}}"
+                }
+            }
+        }
+    }
+}

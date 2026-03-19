@@ -1,0 +1,30 @@
+{
+    "id": "cashier_board",
+    "name": "Cashier Board",
+    "description": "Devuelve todas las mesas en estado AWAITING_PAYMENT con su total, mesero y tiempo de espera. Es el tablero principal del cajero.",
+    "api": {
+        "method": "GET",
+        "path": "/cashier/board",
+        "tags": [
+            "Admin / Cashier"
+        ]
+    },
+    "startAt": "fetch_board",
+    "nodes": {
+        "fetch_board": {
+            "type": "action",
+            "handler": "getCashierBoard",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "tables": "{{state.tables}}"
+                }
+            }
+        }
+    }
+}

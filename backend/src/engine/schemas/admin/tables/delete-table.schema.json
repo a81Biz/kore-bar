@@ -1,0 +1,21 @@
+{
+    "id": "delete_table",
+    "name": "Delete Table (Smart Delete)",
+    "description": "Borrado híbrido de una mesa. Permite deshacer uniones temporales de mesas sin afectar historial.",
+    "api": {
+        "method": "DELETE",
+        "path": "/tables/:id",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "smart_delete_table",
+    "nodes": {
+        "smart_delete_table": {
+            "type": "action",
+            "handler": "deleteTable",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

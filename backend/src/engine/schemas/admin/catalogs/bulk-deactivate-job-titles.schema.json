@@ -1,0 +1,36 @@
+{
+    "id": "bulk_deactivate_job_titles",
+    "name": "Bulk Deactivate Job Titles",
+    "description": "Desactiva lógicamente (soft delete) múltiples puestos a la vez.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/job-titles/bulk-deactivate",
+        "tags": [
+            "Admin / Catalogos"
+        ],
+        "body": {
+            "properties": {
+                "codes": {
+                    "type": "array",
+                    "description": "Lista de códigos de puestos a desactivar",
+                    "items": {
+                        "type": "string",
+                        "example": "20"
+                    }
+                }
+            },
+            "required": [
+                "codes"
+            ]
+        }
+    },
+    "startAt": "bulk_deactivate_job_titles_node",
+    "nodes": {
+        "bulk_deactivate_job_titles_node": {
+            "type": "action",
+            "handler": "bulkDeactivateJobTitles",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

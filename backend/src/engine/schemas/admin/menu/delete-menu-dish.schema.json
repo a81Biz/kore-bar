@@ -1,0 +1,19 @@
+{
+    "id": "delete_menu_dish",
+    "name": "Eliminar Platillo",
+    "description": "Borrado híbrido de platillo. Físico si no tiene historial de ventas, lógico si ya fue vendido.",
+    "api": {
+        "method": "DELETE",
+        "path": "/menu/dishes/:code",
+        "tags": ["Admin / Menú"]
+    },
+    "startAt": "delete_dish",
+    "nodes": {
+        "delete_dish": {
+            "type": "action",
+            "handler": "deleteDish",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

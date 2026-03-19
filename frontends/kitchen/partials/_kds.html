@@ -1,0 +1,88 @@
+<template id="tpl-kitchen-kds">
+    <div class="min-h-screen bg-slate-900 text-slate-200 flex flex-col fade-in">
+        <header
+            class="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-md z-10">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl">🍳</span>
+                <h1 class="text-xl font-bold text-amber-500 tracking-wide">KORE KDS</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button data-action="open-pin-modal"
+                    class="flex items-center gap-3 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl border border-slate-600 transition-colors text-left group">
+                    <div>
+                        <div class="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">Registrar
+                            Asistencia</div>
+                        <div class="text-[10px] text-slate-400 uppercase tracking-widest">Checador / Clock-In</div>
+                    </div>
+                    <div
+                        class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:text-amber-400 transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">fingerprint</span>
+                    </div>
+                </button>
+
+                <button data-nav="inventario"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">inventory</span> Inventario
+                </button>
+
+                <button data-nav="recetas" id="btn-to-admin"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">engineering</span> Admin
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+
+            <div class="bg-slate-800 rounded-2xl flex flex-col border border-slate-700 overflow-hidden shadow-lg">
+                <div class="p-4 border-b border-slate-700 bg-slate-800/80 flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-amber-500 flex items-center gap-2">🟡 Pendientes</h2>
+                    <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-sm font-bold"
+                        id="count-pending">0</span>
+                </div>
+                <div id="col-pending" class="flex-1 overflow-y-auto p-4 space-y-4">
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-2xl flex flex-col border border-slate-700 overflow-hidden shadow-lg">
+                <div class="p-4 border-b border-slate-700 bg-slate-800/80 flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-orange-500 flex items-center gap-2">🟠 En Preparación</h2>
+                    <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-sm font-bold"
+                        id="count-preparing">0</span>
+                </div>
+                <div id="col-preparing" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+            </div>
+
+            <div class="bg-slate-800 rounded-2xl flex flex-col border border-slate-700 overflow-hidden shadow-lg">
+                <div class="p-4 border-b border-slate-700 bg-slate-800/80 flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-emerald-500 flex items-center gap-2">🟢 Listos para Servir</h2>
+                    <span class="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-sm font-bold"
+                        id="count-ready">0</span>
+                </div>
+                <div id="col-ready" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-kds-order-card">
+    <div
+        class="bg-slate-700/50 rounded-xl p-4 border-l-4 border-amber-500 shadow-md transition-transform hover:-translate-y-1">
+        <div class="flex justify-between items-start mb-3">
+            <div class="text-2xl font-black text-white col-mesa">Mesa --</div>
+            <div class="text-right">
+                <div class="text-sm font-bold text-slate-300 col-tiempo flex items-center gap-1 justify-end">
+                    <span class="material-symbols-outlined text-[14px]">timer</span> 00:00
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono mt-0.5 col-ticket">#TK-0000</div>
+            </div>
+        </div>
+        <div class="text-xs text-slate-400 font-medium mb-3 pb-2 border-b border-slate-600/50 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">person</span> <span class="col-mesero">Mesero</span>
+        </div>
+
+        <div class="space-y-2 mb-4 col-items"></div>
+
+        <div class="flex gap-2 col-actions"></div>
+    </div>
+</template>

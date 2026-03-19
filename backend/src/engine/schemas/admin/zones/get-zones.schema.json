@@ -1,0 +1,21 @@
+{
+    "id": "get_zones",
+    "name": "Get Zones",
+    "description": "Obtiene el catálogo de zonas activas e inactivas.",
+    "api": {
+        "method": "GET",
+        "path": "/zones",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "fetch_zones",
+    "nodes": {
+        "fetch_zones": {
+            "type": "action",
+            "handler": "getZones",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

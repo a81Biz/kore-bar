@@ -1,0 +1,37 @@
+{
+    "id": "create_zone",
+    "name": "Create Zone",
+    "description": "Crea una nueva zona física en el restaurante (ej. Terraza).",
+    "api": {
+        "method": "POST",
+        "path": "/zones",
+        "tags": [
+            "Admin / Piso"
+        ],
+        "body": {
+            "properties": {
+                "zoneCode": {
+                    "type": "string",
+                    "example": "TERR"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Terraza Principal"
+                }
+            },
+            "required": [
+                "zoneCode",
+                "name"
+            ]
+        }
+    },
+    "startAt": "save_zone",
+    "nodes": {
+        "save_zone": {
+            "type": "action",
+            "handler": "saveZone",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

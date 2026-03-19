@@ -1,0 +1,41 @@
+{
+    "id": "bulk_save_employees",
+    "name": "Bulk Save Employees",
+    "description": "Inserta o actualiza masivamente una lista de empleados en una sola transacción.",
+    "api": {
+        "method": "POST",
+        "path": "/employees/bulk",
+        "tags": ["Admin / Empleados"],
+        "body": {
+            "properties": {
+                "employees": {
+                    "type": "array",
+                    "description": "Arreglo de objetos con los datos de los empleados.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "employeeNumber": { "type": "string", "example": "BULK-001" },
+                            "firstName": { "type": "string", "example": "Carlos" },
+                            "lastName": { "type": "string", "example": "García" },
+                            "areaId": { "type": "string", "example": "20" },
+                            "jobTitleId": { "type": "string", "example": "04" },
+                            "hireDate": { "type": "string", "example": "2026-03-07" },
+                            "isActive": { "type": "boolean", "example": true }
+                        },
+                        "required": ["employeeNumber", "firstName", "areaId", "jobTitleId"]
+                    }
+                }
+            },
+            "required": ["employees"]
+        }
+    },
+    "startAt": "bulk_save_node",
+    "nodes": {
+        "bulk_save_node": {
+            "type": "action",
+            "handler": "bulkSaveEmployees",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

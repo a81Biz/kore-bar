@@ -1,0 +1,19 @@
+{
+    "id": "get_ingredients",
+    "name": "Obtener Insumos",
+    "description": "Devuelve el catálogo de insumos activos de inventory_items para los selectores del recetario.",
+    "api": {
+        "method": "GET",
+        "path": "/ingredients",
+        "tags": ["Cocina"]
+    },
+    "startAt": "fetch_ingredients",
+    "nodes": {
+        "fetch_ingredients": {
+            "type": "action",
+            "handler": "getIngredients",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

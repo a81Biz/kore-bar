@@ -1,0 +1,33 @@
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+
+        .mexican-pattern {
+            background-image: radial-gradient(rgba(236, 91, 19, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .pin-dot {
+            transition: all 0.2s ease;
+        }
+
+        .pin-filled {
+            background-color: #ec5b13 !important;
+            transform: scale(1.1);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }

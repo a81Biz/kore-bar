@@ -1,0 +1,21 @@
+{
+    "id": "delete_assignment",
+    "name": "Eliminar Asignación",
+    "description": "Retira a un mesero de una zona eliminando su asignación por ID.",
+    "api": {
+        "method": "DELETE",
+        "path": "/assignments/:id",
+        "tags": [
+            "Admin / Piso"
+        ]
+    },
+    "startAt": "remove_assignment",
+    "nodes": {
+        "remove_assignment": {
+            "type": "action",
+            "handler": "deleteAssignment",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

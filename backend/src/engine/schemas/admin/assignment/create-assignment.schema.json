@@ -1,0 +1,51 @@
+{
+    "id": "create_assignment",
+    "name": "Crear Asignación",
+    "description": "Crea una asignación operativa evaluando la recurrencia (Día, Semana, Mes).",
+    "api": {
+        "method": "POST",
+        "path": "/assignments",
+        "tags": [
+            "Admin / Piso"
+        ],
+        "body": {
+            "properties": {
+                "employeeNumber": {
+                    "type": "string"
+                },
+                "zoneCode": {
+                    "type": "string"
+                },
+                "shift": {
+                    "type": "string",
+                    "enum": [
+                        "MATUTINO",
+                        "VESPERTINO"
+                    ]
+                },
+                "assignmentDate": {
+                    "type": "string"
+                },
+                "recurrence": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "employeeNumber",
+                "zoneCode",
+                "shift",
+                "assignmentDate",
+                "recurrence"
+            ]
+        }
+    },
+    "startAt": "save_assignment",
+    "nodes": {
+        "save_assignment": {
+            "type": "action",
+            "handler": "saveAssignment",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

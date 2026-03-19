@@ -1,0 +1,28 @@
+{
+    "id": "create_supplier",
+    "name": "Crear Proveedor",
+    "description": "Da de alta un nuevo proveedor en el catálogo de inventario.",
+    "api": {
+        "method": "POST",
+        "path": "/suppliers",
+        "tags": ["Inventario"],
+        "body": {
+            "properties": {
+                "code": { "type": "string" },
+                "name": { "type": "string" },
+                "contactName": { "type": "string" },
+                "phone": { "type": "string" }
+            },
+            "required": ["code", "name"]
+        }
+    },
+    "startAt": "save_supplier",
+    "nodes": {
+        "save_supplier": {
+            "type": "action",
+            "handler": "createSupplier",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

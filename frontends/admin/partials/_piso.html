@@ -1,0 +1,197 @@
+<template id="tpl-admin-piso">
+    <div class="max-w-[1400px] mx-auto w-full fade-in pb-12">
+        <div class="flex items-start justify-between mb-8 border-b border-slate-200 pb-4">
+            <h2 class="text-3xl font-bold text-slate-800 mb-1">Gestión de Piso</h2>
+            <div class="text-right bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+                <div id="piso-fecha-actual" class="text-xs text-slate-500 font-medium uppercase tracking-widest">
+                    Cargando fecha...</div>
+                <div id="piso-reloj-actual" class="text-xl font-bold text-slate-800 tabular-nums">--:--:--</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[550px]">
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <h3 class="font-bold text-slate-700">1. Áreas / Zonas</h3>
+                </div>
+                <div class="p-4 border-b border-slate-100 bg-white">
+                    <form id="form-piso-zona" class="flex gap-2">
+                        <input type="text" id="zona-code"
+                            class="w-20 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="Cod" required maxlength="10">
+                        <input type="text" id="zona-nombre"
+                            class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="Ej. Terraza VIP" required>
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-1 font-medium shrink-0">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            <span class="hidden xl:inline">Añadir</span>
+                        </button>
+                    </form>
+                </div>
+                <ul id="list-zonas" class="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50/50"></ul>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[550px]">
+                <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700">2. Mesas</h3>
+                </div>
+                <div class="p-4 border-b border-slate-100 bg-white">
+                    <select id="mesa-zona-unica"
+                        class="w-full px-3 py-2 mb-3 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="" disabled selected>Selecciona una Zona...</option>
+                    </select>
+                    <form id="form-piso-mesa" class="flex gap-2 w-full">
+                        <input type="text" id="mesa-id"
+                            class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg uppercase outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="ID (Ej. T-01)" required>
+                        <input type="number" id="mesa-capacidad" min="1"
+                            class="w-20 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Pax" required>
+                        <button type="submit"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-1 font-medium shrink-0">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                        </button>
+                    </form>
+                </div>
+                <ul id="list-mesas" class="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50/50"></ul>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[550px]">
+                <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center gap-2">
+                    <h3 class="font-bold text-slate-700">3. Asignación</h3>
+                    <input type="date" id="filtro-fecha-asig"
+                        class="text-sm bg-white border border-slate-300 rounded px-2 py-1 outline-none font-medium">
+                </div>
+                <div class="p-4 border-b border-slate-100 bg-white">
+                    <form id="form-piso-asignacion" class="flex flex-col gap-2">
+                        <div class="flex gap-2">
+                            <select id="asig-puesto"
+                                class="w-1/3 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                                <option value="" disabled selected>Puesto...</option>
+                            </select>
+                            <select id="asig-mesero"
+                                class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                required disabled>
+                                <option value="" disabled selected>Selecciona puesto primero...</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="asig-zona"
+                                class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                                <option value="" disabled selected>Zona...</option>
+                            </select>
+                            <select id="asig-turno"
+                                class="w-1/3 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                                <option value="" disabled selected>Turno...</option>
+                                <option value="MATUTINO">Matutino</option>
+                                <option value="VESPERTINO">Vespertino</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 mt-1">
+                            <select id="asig-recurrencia"
+                                class="flex-1 px-3 py-2 text-sm bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg outline-none font-medium"
+                                required>
+                                <option value="DIA">Solo el día seleccionado</option>
+                                <option value="SEMANA">Toda la semana (+6 días)</option>
+                                <option value="MES">Todo el mes (+29 días)</option>
+                            </select>
+                            <button type="submit"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-1 font-medium shrink-0">
+                                <span>Asignar</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <ul id="list-asignaciones" class="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50/50"></ul>
+            </div>
+        </div>
+
+        <div class="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 bg-slate-800 text-white flex justify-between items-center">
+                <h3 class="font-bold flex items-center gap-2"><span class="material-symbols-outlined">analytics</span>
+                    Resumen Operativo</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-slate-500 bg-slate-50 uppercase border-b border-slate-200">
+                        <tr>
+                            <th class="px-4 py-3">Personal</th>
+                            <th class="px-4 py-3">Zona Asignada</th>
+                            <th class="px-4 py-3 text-center">Mesas a cargo</th>
+                            <th class="px-4 py-3 text-center">Capacidad Máx (Pax)</th>
+                            <th class="px-4 py-3">Turno</th>
+                            <th class="px-4 py-3 text-right">Vigencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-resumen-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-item-zona">
+    <li
+        class="flex items-center justify-between p-3 bg-white hover:bg-slate-50 rounded-lg shadow-sm border border-slate-100 group transition-colors mb-1">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded code-badge"></div>
+            <div>
+                <div class="col-nombre text-sm font-bold text-slate-800"></div>
+            </div>
+        </div>
+        <button class="btn-eliminar text-slate-300 hover:text-red-500 transition-colors p-1" title="Borrar">
+            <span class="material-symbols-outlined text-[20px]">delete</span>
+        </button>
+    </li>
+</template>
+
+<template id="tpl-item-mesa">
+    <li
+        class="flex items-center justify-between p-3 bg-white hover:bg-slate-50 rounded-lg shadow-sm border border-slate-100 group transition-colors mb-1">
+        <div class="flex items-center gap-3">
+            <div
+                class="bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold px-2 py-1 rounded code-badge">
+            </div>
+            <div>
+                <div class="col-zona text-xs font-bold text-emerald-600 uppercase"></div>
+                <div class="col-detalles text-xs text-slate-500 font-medium mt-0.5"></div>
+            </div>
+        </div>
+        <button class="btn-eliminar text-slate-300 hover:text-red-500 transition-colors p-1">
+            <span class="material-symbols-outlined text-[20px]">delete</span>
+        </button>
+    </li>
+</template>
+
+<template id="tpl-item-asignacion">
+    <li
+        class="flex items-center justify-between p-3 bg-white hover:bg-slate-50 rounded-lg shadow-sm border border-slate-100 group transition-colors mb-1">
+        <div class="flex flex-col">
+            <div class="text-sm font-bold text-slate-800 col-mesero"></div>
+            <div class="flex items-center gap-2 mt-1">
+                <span
+                    class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase col-turno"></span>
+                <span class="text-xs text-slate-500 font-medium col-zona"></span>
+            </div>
+        </div>
+        <button class="btn-eliminar text-slate-300 hover:text-red-500 transition-colors p-1">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+    </li>
+</template>
+
+<template id="tpl-fila-resumen">
+    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+        <td class="px-4 py-3 font-bold text-slate-800 col-res-mesero"></td>
+        <td class="px-4 py-3 text-slate-600 font-medium col-res-zona"></td>
+        <td class="px-4 py-3 text-center font-bold text-emerald-600 bg-emerald-50/50 col-res-mesas"></td>
+        <td class="px-4 py-3 text-center text-slate-500 col-res-pax"></td>
+        <td class="px-4 py-3 col-res-turno"></td>
+        <td class="px-4 py-3 text-right text-xs text-slate-400 font-medium col-res-vigencia"></td>
+    </tr>
+</template>

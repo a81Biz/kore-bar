@@ -1,0 +1,172 @@
+{
+    "catalogo_puestos": [
+        {
+            "codigo_area": "10",
+            "nombre_area": "Gerencia",
+            "codigo_puesto": "01",
+            "nombre_puesto": "Host"
+        },
+        {
+            "codigo_area": "10",
+            "nombre_area": "Gerencia",
+            "codigo_puesto": "02",
+            "nombre_puesto": "Gerente de Turno"
+        },
+        {
+            "codigo_area": "10",
+            "nombre_area": "Gerencia",
+            "codigo_puesto": "03",
+            "nombre_puesto": "Capitán"
+        },
+        {
+            "codigo_area": "20",
+            "nombre_area": "Piso",
+            "codigo_puesto": "04",
+            "nombre_puesto": "Mesero General"
+        },
+        {
+            "codigo_area": "20",
+            "nombre_area": "Piso",
+            "codigo_puesto": "05",
+            "nombre_puesto": "Garrotero"
+        },
+        {
+            "codigo_area": "20",
+            "nombre_area": "Piso",
+            "codigo_puesto": "06",
+            "nombre_puesto": "Runner"
+        },
+        {
+            "codigo_area": "30",
+            "nombre_area": "Cocina",
+            "codigo_puesto": "07",
+            "nombre_puesto": "Chef Ejecutivo"
+        },
+        {
+            "codigo_area": "30",
+            "nombre_area": "Cocina",
+            "codigo_puesto": "08",
+            "nombre_puesto": "Cocinero A"
+        },
+        {
+            "codigo_area": "30",
+            "nombre_area": "Cocina",
+            "codigo_puesto": "09",
+            "nombre_puesto": "Lava Loza"
+        },
+        {
+            "codigo_area": "40",
+            "nombre_area": "Caja",
+            "codigo_puesto": "10",
+            "nombre_puesto": "Cajero Principal"
+        },
+        {
+            "codigo_area": "40",
+            "nombre_area": "Caja",
+            "codigo_puesto": "11",
+            "nombre_puesto": "Cajero Apoyo"
+        },
+        {
+            "codigo_area": "40",
+            "nombre_area": "Caja",
+            "codigo_puesto": "12",
+            "nombre_puesto": "Auditor"
+        },
+        {
+            "codigo_area": "99",
+            "nombre_area": "Mantenimiento",
+            "codigo_puesto": "13",
+            "nombre_puesto": "Plomero"
+        }
+    ],
+    "empleados": [
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "80219601",
+                "nombre": "Ana",
+                "apellidos": "Gómez",
+                "codigo_area": "10",
+                "codigo_puesto": "01",
+                "fecha_llegada": "2026-03-06"
+            }
+        },
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "80219602",
+                "nombre": "Luis",
+                "apellidos": "Torres",
+                "codigo_area": "20",
+                "codigo_puesto": "04",
+                "fecha_llegada": "2026-01-15"
+            }
+        },
+        {
+            "action": "reingreso",
+            "data": {
+                "numero_empleado": "80219603",
+                "nombre": "Carlos",
+                "apellidos": "Lopez",
+                "codigo_area": "40",
+                "codigo_puesto": "10",
+                "fecha_llegada": "2026-03-06"
+            }
+        },
+        {
+            "action": "reingreso",
+            "data": {
+                "numero_empleado": "80219604",
+                "nombre": "Maria",
+                "apellidos": "Paz",
+                "codigo_area": "30",
+                "codigo_puesto": "08",
+                "fecha_llegada": "2025-01-01"
+            }
+        },
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "80219605",
+                "nombre": "Pedro",
+                "apellidos": "Ruiz",
+                "codigo_area": "20",
+                "codigo_puesto": "05",
+                "fecha_llegada": "2026-03-06"
+            }
+        },
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "80219605",
+                "nombre": "Pedro Clon (DUPLICADO)",
+                "apellidos": "Ruiz",
+                "codigo_area": "20",
+                "codigo_puesto": "06",
+                "fecha_llegada": "2026-03-06"
+            }
+        },
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "",
+                "nombre": "Fantasma Sin ID",
+                "apellidos": "",
+                "codigo_area": "10",
+                "codigo_puesto": "02",
+                "fecha_llegada": "2026-03-06"
+            }
+        },
+        {
+            "action": "alta",
+            "data": {
+                "numero_empleado": "80219608",
+                "nombre": "Juan",
+                "apellidos": "Pérez Mantenimiento",
+                "codigo_area": "99",
+                "codigo_puesto": "13",
+                "fecha_llegada": "2026-03-06"
+            }
+        }
+    ]
+}

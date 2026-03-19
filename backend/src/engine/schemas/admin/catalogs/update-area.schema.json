@@ -1,0 +1,26 @@
+{
+    "id": "update_area",
+    "name": "Update Area",
+    "description": "Actualiza el nombre o estado activo de un área existente.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/areas/:code",
+        "tags": ["Admin / Catalogos"],
+        "body": {
+            "properties": {
+                "areaName": { "type": "string" },
+                "isActive": { "type": "boolean" }
+            },
+            "required": ["areaName"]
+        }
+    },
+    "startAt": "update_area_node",
+    "nodes": {
+        "update_area_node": {
+            "type": "action",
+            "handler": "updateArea",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}
