@@ -14,14 +14,13 @@ const _validator = new ValidatorEngine(SupplierRules);
 export const api = {
     loadSuppliers: async () => {
         const res = await fetchData(ENDPOINTS.inventory.get.suppliers);
-        state.data.suppliers = res.data || [];
+        state.data.suppliers = res.data?.suppliers || [];
         render.suppliers();
     },
     loadStock: async () => {
         const query = state.ui.stockLocation ? `?location=${state.ui.stockLocation}` : '';
         const res = await fetchData(`${ENDPOINTS.inventory.get.stock}${query}`);
-        // Soporte de compatibilidad (por si el API antigua devolvía objeto {stock} o arreglo directo)
-        state.data.stock = res.data?.stock || res.data || [];
+        state.data.stock = res.data?.stock || [];
         render.stock();
     },
     loadKardex: async () => {
@@ -33,7 +32,7 @@ export const api = {
         const query = qStr ? `?${qStr}` : '';
         
         const res = await fetchData(`${ENDPOINTS.inventory.get.kardex}${query}`);
-        state.data.kardex = res.data?.kardex || res.data || [];
+        state.data.kardex = res.data?.kardex || [];
         render.kardex();
     },
     saveSupplier: async (payload) => {
