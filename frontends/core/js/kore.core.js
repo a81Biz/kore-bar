@@ -35,7 +35,11 @@ export const KoreCore = {
                     const siteConfig = KORE_CONFIG.SITES[siteKey];
                     const protocol = window.location.protocol;
 
-                    btn.href = `${protocol}//${siteConfig.host}`;
+                    if (siteConfig.external) {
+                        btn.href = siteConfig.url;
+                    } else {
+                        btn.href = `${protocol}//${siteConfig.host}`;
+                    }
 
                     if (!siteConfig.enabled) {
                         btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
@@ -78,34 +82,34 @@ export const KoreCore = {
 
     renderOffline(host) {
         document.body.innerHTML = ''; // Limpiar el body, pero no armar strings HTML grandes
-        
+
         const container = document.createElement('div');
         container.style.cssText = 'display:flex; height:100vh; width:100vw; align-items:center; justify-content:center; background:#f8fafc; font-family:sans-serif;';
-        
+
         const card = document.createElement('div');
         card.style.cssText = 'text-align:center; padding: 2rem; border-radius: 1rem; background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);';
-        
+
         const iconContainer = document.createElement('span');
         iconContainer.style.cssText = 'font-size: 3rem; margin-bottom: 1rem; display:block;';
         iconContainer.textContent = '🚧';
-        
+
         const title = document.createElement('h1');
         title.style.cssText = 'color:#334155; font-size:1.5rem; margin-bottom:0.5rem; font-weight:bold;';
         title.textContent = 'Micrositio Fuera de Línea';
-        
+
         const message = document.createElement('p');
         message.style.cssText = 'color:#64748b;';
         message.appendChild(document.createTextNode('El entorno '));
-        
+
         const boldHost = document.createElement('b');
         boldHost.textContent = host;
         message.appendChild(boldHost);
         message.appendChild(document.createTextNode(' está desactivado o no existe.'));
-        
+
         card.appendChild(iconContainer);
         card.appendChild(title);
         card.appendChild(message);
-        
+
         container.appendChild(card);
         document.body.appendChild(container);
     }

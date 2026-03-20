@@ -21,13 +21,17 @@ export const KORE_CONFIG = {
 
     // ── Registro de micrositios ──────────────────────────────────────────────
     SITES: {
+        PORTAL: { enabled: true, host: BASE_DOMAIN },
         ADMIN: { enabled: true, host: `admin.${BASE_DOMAIN}` },
         CASHIER: { enabled: true, host: `cashier.${BASE_DOMAIN}` },
         KITCHEN: { enabled: true, host: `kitchen.${BASE_DOMAIN}` },
         MENU: { enabled: true, host: `menu.${BASE_DOMAIN}` },
         WAITERS: { enabled: true, host: `waiters.${BASE_DOMAIN}` },
         INVOICE: { enabled: true, host: `invoice.${BASE_DOMAIN}` },
-        API_DOCS: { enabled: true, host: `api.${BASE_DOMAIN}/api/docs` }
+        API_DOCS: { enabled: true, host: `api.${BASE_DOMAIN}/api/docs` },
+        DOCS: { enabled: true, url: 'https://kore.bar/docs', external: true },
+        GITHUB: { enabled: true, url: 'https://github.com/a81Biz/kore-bar', external: true },
+        JIRA: { enabled: true, url: 'https://a81biz.atlassian.net/jira/software/c/projects/SGRM/boards/140?atlOrigin=eyJpIjoiNmM3NWNlMGMyZjgxNDUwMWIxMzNkODgxOWUxZjBlZGQiLCJwIjoiaiJ9', external: true }
     },
 
     // ── Diccionario del DOM ──────────────────────────────────────────────────
