@@ -1,16 +1,10 @@
 // ============================================================
 // auth.middleware.js
-// Lee el tipo de auth desde el schema y aplica la regla
-// correspondiente.
-//
-// Tipos soportados (campo api.auth en el schema JSON):
-//   none          → público, sin validación
-//   session       → JWT en cookie httpOnly `session` (admin web)
-//   pin           → JWT en header Authorization: Bearer (POS)
-//   area:<CODE>   → igual que session/pin + verifica areaCode del token
+// MIGRACIÓN: jsonwebtoken → hono/jwt (verify es async, usa WebCrypto)
+// Compatible 100% con Cloudflare Workers sin polyfills adicionales.
 // ============================================================
 
-import jwt from 'jsonwebtoken';
+import { verify } from 'hono/jwt';
 import { AppError } from '../utils/errors.util.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kore_dev_secret_change_in_prod';
@@ -20,15 +14,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'kore_dev_secret_change_in_prod';
 /**
  * Extrae y verifica el JWT desde cookie (admin) o Bearer header (POS).
  * Retorna el payload decodificado o lanza AppError 401.
+ * ASYNC: hono/jwt.verify usa WebCrypto que es siempre asíncrono.
  */
-const extractAndVerifyToken = (c) => {
+const extractAndVerifyToken = async (c) => {
     // 1. Intentar desde cookie (admin web)
     const cookieHeader = c.req.header('Cookie') ?? '';
-    const cookieMatch  = cookieHeader.match(/(?:^|;\s*)session=([^;]+)/);
-    const cookieToken  = cookieMatch?.[1];
+    const cookieMatch = cookieHeader.match(/(?:^|;\s*)session=([^;]+)/);
+    const cookieToken = cookieMatch?.[1];
 
     // 2. Intentar desde Authorization: Bearer (POS)
-    const authHeader  = c.req.header('Authorization') ?? '';
+    const authHeader = c.req.header('Authorization') ?? '';
     const bearerToken = authHeader.startsWith('Bearer ')
         ? authHeader.slice(7)
         : null;
@@ -40,9 +35,11 @@ const extractAndVerifyToken = (c) => {
     }
 
     try {
-        return jwt.verify(token, JWT_SECRET);
+        // hono/jwt.verify retorna Promise<JWTPayload> y valida exp automáticamente
+        return await verify(token, JWT_SECRET);
     } catch (err) {
-        if (err.name === 'TokenExpiredError') {
+        const msg = (err.message || '').toLowerCase();
+        if (msg.includes('expir') || msg.includes('exp')) {
             throw new AppError('Sesión expirada — vuelve a iniciar sesión', 401);
         }
         throw new AppError('Token inválido', 401);
@@ -67,29 +64,23 @@ export const buildAuthMiddleware = (authType) => {
     }
 
     // ── PIN numérico (mesero / cajero / cocina) ───────────────
-    // Espera JWT firmado en Authorization: Bearer emitido por
-    // POST /auth/pin. El token incluye type: 'pin'.
     if (authType === 'pin') {
         return async (c, next) => {
-            const payload = extractAndVerifyToken(c);
+            const payload = await extractAndVerifyToken(c);
 
             if (payload.type !== 'pin' && payload.type !== 'session') {
                 throw new AppError('Tipo de sesión incorrecto para este endpoint', 403);
             }
 
-            // Inyectar datos del usuario en el contexto para que
-            // los helpers puedan acceder sin re-consultar la BD.
             c.set('user', payload);
             await next();
         };
     }
 
     // ── Usuario + contraseña (admin web / gerencia) ───────────
-    // Espera JWT en cookie httpOnly `session` emitido por
-    // POST /auth/login. El token incluye type: 'session'.
     if (authType === 'session') {
         return async (c, next) => {
-            const payload = extractAndVerifyToken(c);
+            const payload = await extractAndVerifyToken(c);
 
             if (payload.type !== 'session') {
                 throw new AppError('Este endpoint requiere sesión de usuario web', 403);
@@ -101,13 +92,11 @@ export const buildAuthMiddleware = (authType) => {
     }
 
     // ── Área específica (ej: "area:CAJA", "area:GERENCIA") ────
-    // Acepta tanto tokens de tipo 'session' como 'pin'.
-    // Verifica además que el areaCode del token coincida.
     if (authType.startsWith('area:')) {
         const requiredArea = authType.split(':')[1]?.toUpperCase();
 
         return async (c, next) => {
-            const payload = extractAndVerifyToken(c);
+            const payload = await extractAndVerifyToken(c);
 
             if (!payload.areaCode) {
                 throw new AppError('Token sin área asignada', 403);
@@ -126,8 +115,6 @@ export const buildAuthMiddleware = (authType) => {
     }
 
     // ── Tipo desconocido — falla explícita ────────────────────
-    // Nunca dejar un endpoint sin proteger por error de tipeo
-    // en el campo api.auth del schema JSON.
     return async (_c, _next) => {
         throw new AppError(`Tipo de autenticación no implementado: '${authType}'`, 501);
     };

@@ -4,40 +4,23 @@
 //
 // Switch inteligente según el entorno de ejecución:
 //   • Cloudflare Workers → @neondatabase/serverless (HTTP/WebSocket)
-//   • Local / Vitest / CI → pg (TCP socket estándar)
+//   • Local / Vitest / CI → pg (TCP socket estándar, import dinámico)
 //
-// Las funciones consumidoras (executeQuery, executeStoredProcedure)
-// devuelven siempre un array de filas — la librería subyacente
-// es transparente para el resto del backend.
+// IMPORTANTE: pg se importa DINÁMICAMENTE dentro del bloque Node.js
+// para que esbuild NO intente empaquetar net/tls al compilar para Workers.
 // ============================================================
-
-import pg from 'pg';
-
-const { Pool } = pg;
 
 // ── Pool singleton para entorno Node.js (local / CI) ─────────
 // Se inicializa de forma lazy la primera vez que se necesita.
 let _pool = null;
 
-function getPool() {
-    if (!_pool) {
-        _pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            max: 10,
-            idleTimeoutMillis: 30000
-        });
-    }
-    return _pool;
-}
-
 /**
  * Detecta si estamos corriendo dentro de Cloudflare Workers.
- * En Workers, c.env contiene los bindings y secrets inyectados por wrangler.
- * La clave DATABASE_URL existirá solo si fue configurada como secret del Worker.
+ * En Workers el userAgent del navegador global es 'Cloudflare-Workers'.
+ * Con nodejs_compat, process existe como polyfill pero process.versions.node no.
  */
 function isCloudflareEnv(c) {
-    // c.env.DATABASE_URL existe en Workers; process.env no existe en Workers
-    return c?.env?.DATABASE_URL && typeof process === 'undefined';
+    return !!(c?.env?.DATABASE_URL) && typeof process?.versions?.node !== 'string';
 }
 
 /**
@@ -55,7 +38,7 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // ── Ruta A: Cloudflare Workers (serverless HTTP) ─────────
+    // ── Ruta A: Cloudflare Workers (serverless HTTP/WebSocket) ─
     if (isCloudflareEnv(c)) {
         const { neon } = await import('@neondatabase/serverless');
         const sql = neon(c.env.DATABASE_URL);
@@ -70,16 +53,25 @@ export const executeQuery = async (c, query, params = []) => {
     }
 
     // ── Ruta B: Node.js local / Vitest / CI (TCP) ────────────
+    // pg se importa DINÁMICAMENTE aquí para que esbuild no intente
+    // empaquetar net y tls cuando compila el bundle para Workers.
     const dbUrl = c?.env?.DATABASE_URL || process.env.DATABASE_URL;
     if (!dbUrl) {
         throw new Error('No database connection configuration found. Set DATABASE_URL.');
     }
 
-    // Asegurar que el pool use la URL correcta (por si cambió entre tests)
-    const pool = getPool();
+    if (!_pool) {
+        const { default: pg } = await import('pg');
+        const { Pool } = pg;
+        _pool = new Pool({
+            connectionString: dbUrl,
+            max: 10,
+            idleTimeoutMillis: 30000
+        });
+    }
 
     try {
-        const result = await pool.query(pgQuery, params);
+        const result = await _pool.query(pgQuery, params);
         return result.rows;
     } catch (error) {
         console.error('PostgreSQL Query Error:', error);

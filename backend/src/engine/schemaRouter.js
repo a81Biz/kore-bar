@@ -1,30 +1,18 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// ============================================================
+// schemaRouter.js
+// Construye y registra rutas Hono dinámicamente desde los schemas JSON.
+//
+// MIGRACIÓN Workers: eliminados fs, path y fileURLToPath.
+// Los schemas se obtienen del índice estático schema-registry.js
+// que esbuild resuelve en tiempo de compilación.
+// ============================================================
+
 import { executeWorkflow } from './orchestrator.js';
 import { buildAuthMiddleware } from '../middleware/auth.middleware.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const schemasDir = path.join(__dirname, 'schemas');
-
-const getAllSchemaFiles = (dir, fileList = []) => {
-    if (!fs.existsSync(dir)) return fileList;
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        if (fs.statSync(filePath).isDirectory()) {
-            getAllSchemaFiles(filePath, fileList);
-        } else if (file.endsWith('.schema.json')) {
-            fileList.push(filePath);
-        }
-    }
-    return fileList;
-};
+import { schemasBySubDir } from './schema-registry.js';
 
 /**
  * Valida un objeto contra un conjunto de properties y required de un sub-schema.
- * Usado para validación de un nivel de profundidad en campos tipo "object".
  */
 const validateNestedObject = (obj, properties = {}, required = [], parentKey) => {
     const missing = required.filter(f =>
@@ -41,35 +29,31 @@ const validateNestedObject = (obj, properties = {}, required = [], parentKey) =>
         const val = obj[key];
         if (val === undefined || val === null) continue;
 
-        if (propDef.type === 'string'  && typeof val !== 'string')     return { valid: false, error: `El campo '${parentKey}.${key}' debe ser texto.` };
-        if (propDef.type === 'number'  && typeof val !== 'number')     return { valid: false, error: `El campo '${parentKey}.${key}' debe ser numérico.` };
-        if (propDef.type === 'integer' && !Number.isInteger(val))      return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un entero.` };
-        if (propDef.type === 'boolean' && typeof val !== 'boolean')    return { valid: false, error: `El campo '${parentKey}.${key}' debe ser booleano.` };
-        if (propDef.type === 'array'   && !Array.isArray(val))         return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un arreglo.` };
+        if (propDef.type === 'string' && typeof val !== 'string') return { valid: false, error: `El campo '${parentKey}.${key}' debe ser texto.` };
+        if (propDef.type === 'number' && typeof val !== 'number') return { valid: false, error: `El campo '${parentKey}.${key}' debe ser numérico.` };
+        if (propDef.type === 'integer' && !Number.isInteger(val)) return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un entero.` };
+        if (propDef.type === 'boolean' && typeof val !== 'boolean') return { valid: false, error: `El campo '${parentKey}.${key}' debe ser booleano.` };
+        if (propDef.type === 'array' && !Array.isArray(val)) return { valid: false, error: `El campo '${parentKey}.${key}' debe ser un arreglo.` };
     }
 
     return { valid: true };
 };
 
 /**
- * Construye y registra rutas Hono dinámicamente desde los schemas JSON.
+ * Construye y registra rutas Hono desde el registro estático de schemas.
+ *
+ * @param {import('hono').Hono} router - Instancia de Hono donde se registran las rutas.
+ * @param {string} subDir - Clave del registro: 'admin' | 'kitchen' | 'inventory' | 'public'
+ *                          Si está vacío, registra todos los schemas.
  */
 export const buildRoutes = (router, subDir = '') => {
-    const targetDir = subDir
-        ? path.join(schemasDir, subDir)
-        : schemasDir;
 
-    const files = getAllSchemaFiles(targetDir);
+    // Obtener schemas del registro estático (sin leer sistema de archivos)
+    const schemas = subDir
+        ? (schemasBySubDir[subDir] || [])
+        : Object.values(schemasBySubDir).flat();
 
-    files.forEach(schemaPath => {
-        let schema;
-        try {
-            schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-        } catch (e) {
-            console.error(`[SchemaRouter] Failed to parse schema ${schemaPath}:`, e);
-            return;
-        }
-
+    schemas.forEach(schema => {
         if (!schema.api?.method || !schema.api?.path) return;
 
         const method = schema.api.method.toLowerCase();
@@ -113,11 +97,9 @@ export const buildRoutes = (router, subDir = '') => {
                                 if (propDef.type === 'string' && typeof val !== 'string') {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser texto.` }, 400);
                                 }
-                                // FIX: type "number" no estaba validado
                                 if (propDef.type === 'number' && typeof val !== 'number') {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser numérico.` }, 400);
                                 }
-                                // FIX: integer necesita Number.isInteger, no typeof === 'number'
                                 if (propDef.type === 'integer' && !Number.isInteger(val)) {
                                     return c.json({ success: false, error: `El campo '${key}' debe ser un entero.` }, 400);
                                 }
@@ -128,7 +110,6 @@ export const buildRoutes = (router, subDir = '') => {
                                     if (typeof val !== 'object' || Array.isArray(val)) {
                                         return c.json({ success: false, error: `El campo '${key}' debe ser un objeto.` }, 400);
                                     }
-                                    // FIX: validar required y tipos anidados (crítico #7)
                                     if (propDef.properties || propDef.required?.length > 0) {
                                         const nestedResult = validateNestedObject(
                                             val,

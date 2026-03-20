@@ -6,16 +6,29 @@
 //   1. loginHandler      → admin web  (password + bcrypt → JWT en cookie httpOnly)
 //   2. validatePinHandler → POS       (PIN numérico     → JWT en Bearer header)
 //
+// MIGRACIÓN: jsonwebtoken → hono/jwt (WebCrypto nativo, 100% compatible Workers)
 // El JWT incluye: employeeNumber, roleCode, areaCode, type ('session'|'pin')
 // ============================================================
 
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { sign } from 'hono/jwt';
 import { getUserForLogin, getUserForPin } from '../models/auth.model.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kore_dev_secret_change_in_prod';
-const JWT_EXPIRES_WEB = process.env.JWT_EXPIRES_WEB || '8h';   // turno admin
-const JWT_EXPIRES_POS = process.env.JWT_EXPIRES_POS || '12h';  // turno POS
+
+// Convierte strings tipo '8h', '12h', '3600' a segundos
+const parseExpiryToSeconds = (v) => {
+    if (!v) return 28800;
+    const m = String(v).match(/^(\d+)([smhd]?)$/);
+    if (!m) return 28800;
+    const n = parseInt(m[1], 10);
+    const unit = m[2] || 'h';
+    const multipliers = { s: 1, m: 60, h: 3600, d: 86400 };
+    return n * (multipliers[unit] ?? 3600);
+};
+
+const JWT_EXPIRES_WEB_SEC = parseExpiryToSeconds(process.env.JWT_EXPIRES_WEB || '8h');
+const JWT_EXPIRES_POS_SEC = parseExpiryToSeconds(process.env.JWT_EXPIRES_POS || '12h');
 
 
 // ── UTILIDAD INTERNA ──────────────────────────────────────────
@@ -36,7 +49,7 @@ const authError = (message, statusCode = 401) => {
 // Flujo: POST /auth/login
 // Body:  { employeeNumber, password }
 // Éxito: JWT firmado en cookie httpOnly `session`
-// Fallo: 401 con mensaje genérico (nunca revelar si el usuario existe)
+// Fallo: 401 con mensaje genérico
 
 export const loginHandler = async (state, c) => {
     const { employeeNumber, password } = state.payload;
@@ -44,8 +57,7 @@ export const loginHandler = async (state, c) => {
     // 1. Buscar usuario en BD
     const user = await getUserForLogin(c, employeeNumber);
 
-    // 2. Validación en tiempo constante — bcrypt.compare falla
-    //    de forma segura si user es null (usa un hash dummy)
+    // 2. Validación en tiempo constante
     const DUMMY_HASH = '$2b$10$invalidhashtopreventtimingattacks000000000000000000';
     const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
     const isValid = await bcrypt.compare(password, hashToCompare);
@@ -55,19 +67,21 @@ export const loginHandler = async (state, c) => {
     }
 
     // 3. Construir payload del token
+    const exp = Math.floor(Date.now() / 1000) + JWT_EXPIRES_WEB_SEC;
     const tokenPayload = {
         employeeNumber: user.employeeNumber,
         firstName: user.firstName,
         lastName: user.lastName,
         roleCode: user.roleCode,
         areaCode: user.areaCode,
-        type: 'session'
+        type: 'session',
+        exp
     };
 
-    // 4. Firmar JWT
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_WEB });
+    // 4. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
+    const token = await sign(tokenPayload, JWT_SECRET);
 
-    // 5. Establecer cookie httpOnly (admin web usa cookie, no Bearer)
+    // 5. Establecer cookie httpOnly
     c.header('Set-Cookie', [
         `session=${token}`,
         'HttpOnly',
@@ -93,7 +107,7 @@ export const loginHandler = async (state, c) => {
 // ── HANDLER 2: VALIDAR PIN (meseros / caja / cocina) ─────────
 // Flujo: POST /auth/pin
 // Body:  { employeeNumber, pinCode }
-// Éxito: JWT firmado en body como { token } (POS lo guarda en memoria)
+// Éxito: JWT firmado en body como { token }
 // Fallo: 401 con mensaje genérico
 
 export const validatePinHandler = async (state, c) => {
@@ -107,6 +121,7 @@ export const validatePinHandler = async (state, c) => {
     }
 
     // 2. Construir payload del token POS
+    const exp = Math.floor(Date.now() / 1000) + JWT_EXPIRES_POS_SEC;
     const tokenPayload = {
         employeeNumber: user.employeeNumber,
         firstName: user.firstName,
@@ -114,12 +129,12 @@ export const validatePinHandler = async (state, c) => {
         roleCode: user.roleCode ?? 'POS',
         areaCode: user.areaCode,
         canAccessCashier: user.canAccessCashier ?? false,
-        type: 'pin'
+        type: 'pin',
+        exp
     };
 
-    // 3. Firmar JWT — el POS lo guarda en memoria y lo envía
-    //    como Authorization: Bearer <token> en cada petición
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_POS });
+    // 3. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
+    const token = await sign(tokenPayload, JWT_SECRET);
 
     return {
         ...state,

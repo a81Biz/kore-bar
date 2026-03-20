@@ -1,45 +1,23 @@
-import fs from 'fs';
-import path from 'path';
+// ============================================================
+// swagger.js
+// Genera la spec OpenAPI 3.0 desde el registro estático de schemas.
+//
+// MIGRACIÓN Workers: eliminados fs, path y getAllSchemaFiles.
+// Se importa allSchemas desde schema-registry.js que esbuild
+// resuelve en tiempo de compilación.
+// ============================================================
+
 import { RouteRegistry } from './route-registry.js';
-
-
-const getAllSchemaFiles = (dir, fileList = []) => {
-    if (!fs.existsSync(dir)) return fileList;
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        if (fs.statSync(filePath).isDirectory()) {
-            getAllSchemaFiles(filePath, fileList);
-        } else if (file.endsWith('.schema.json')) {
-            fileList.push(filePath);
-        }
-    }
-    return fileList;
-};
+import { allSchemas } from './schema-registry.js';
 
 export const generateOpenAPISpec = () => {
-    const schemasDir = path.resolve(process.cwd(), 'src/engine/schemas');
-    let files = [];
-
-    try {
-        files = getAllSchemaFiles(schemasDir);
-    } catch (e) {
-        console.warn('[Swagger] No se encontró la carpeta de esquemas o está vacía.');
-    }
-
     const paths = {};
 
-    files.forEach(filePath => {
-        const schema = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-
+    allSchemas.forEach(({ schema, subDir }) => {
         if (!schema.api || !schema.api.path || !schema.api.method) return;
 
-        // Derivar el prefijo a partir de la subcarpeta donde vive el schema
-        // Ej: .../schemas/cashier/cashier-login.schema.json → subDir = 'cashier'
-        const relativeToSchemas = path.relative(schemasDir, filePath);
-        const subDir = relativeToSchemas.split(path.sep)[0];
+        // Derivar el prefijo HTTP desde el RouteRegistry usando el subDir del registro
         const prefix = RouteRegistry[subDir] ?? `/api/${subDir}`;
-
         const method = schema.api.method.toLowerCase();
         const openApiPath = prefix + schema.api.path.replace(/:([a-zA-Z0-9_]+)/g, '{$1}');
 
