@@ -153,34 +153,46 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/admin --project-name=kore-admin
+        run: |
+          npx wrangler pages project create kore-admin --production-branch main || true
+          npx wrangler pages deploy frontends/admin --project-name=kore-admin
 
       - name: Deploy Menu frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/menu --project-name=kore-menu
+        run: |
+          npx wrangler pages project create kore-menu --production-branch main || true
+          npx wrangler pages deploy frontends/menu --project-name=kore-menu
 
       - name: Deploy Waiters frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/waiters --project-name=kore-waiters
+        run: |
+          npx wrangler pages project create kore-waiters --production-branch main || true
+          npx wrangler pages deploy frontends/waiters --project-name=kore-waiters
 
       - name: Deploy Kitchen frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/kitchen --project-name=kore-kitchen
+        run: |
+          npx wrangler pages project create kore-kitchen --production-branch main || true
+          npx wrangler pages deploy frontends/kitchen --project-name=kore-kitchen
 
       - name: Deploy Cashier frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/cashier --project-name=kore-cashier
+        run: |
+          npx wrangler pages project create kore-cashier --production-branch main || true
+          npx wrangler pages deploy frontends/cashier --project-name=kore-cashier
 
       - name: Deploy Invoice frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy frontends/invoice --project-name=kore-invoice
+        run: |
+          npx wrangler pages project create kore-invoice --production-branch main || true
+          npx wrangler pages deploy frontends/invoice --project-name=kore-invoice
