@@ -1,0 +1,55 @@
+{
+    "id": "get_attendance",
+    "name": "Monitor de Asistencia",
+    "description": "Devuelve el cruce entre el Roster (restaurant_assignments) y el Checador (attendance_records). Filtrable por fecha (default: hoy) y por número de empleado. Usado por el monitor en tiempo real y el historial semanal/mensual.",
+    "api": {
+        "method": "GET",
+        "path": "/attendance",
+        "tags": [
+            "Admin / Turnos"
+        ],
+        "query": {
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-03-19",
+                    "description": "Fecha en formato YYYY-MM-DD. Default: hoy."
+                },
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "80219601",
+                    "description": "Filtra por número de empleado específico."
+                },
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-03-01",
+                    "description": "Inicio del rango para historial (requiere también endDate)."
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-03-31",
+                    "description": "Fin del rango para historial."
+                }
+            }
+        }
+    },
+    "startAt": "fetch_attendance",
+    "nodes": {
+        "fetch_attendance": {
+            "type": "action",
+            "handler": "getAttendance",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "records": "{{state.data.records}}",
+                    "stats": "{{state.data.stats}}"
+                }
+            }
+        }
+    }
+}

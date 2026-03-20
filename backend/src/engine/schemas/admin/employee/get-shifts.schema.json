@@ -1,0 +1,30 @@
+{
+    "id": "get_shifts",
+    "name": "Obtener Catálogo de Turnos",
+    "description": "Devuelve todos los turnos activos del restaurante con sus horarios. Alimenta el formulario de asignación de piso y el monitor de asistencia.",
+    "api": {
+        "method": "GET",
+        "path": "/shifts",
+        "tags": [
+            "Admin / Turnos"
+        ]
+    },
+    "startAt": "fetch_shifts",
+    "nodes": {
+        "fetch_shifts": {
+            "type": "action",
+            "handler": "getShifts",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "shifts": "{{state.data.shifts}}"
+                }
+            }
+        }
+    }
+}

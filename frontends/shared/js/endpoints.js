@@ -41,7 +41,10 @@ export const ENDPOINTS = {
             tables: '/admin/tables',
             assignments: '/admin/assignments',
             menuCategories: '/admin/menu/categories',
-            menuDishes: '/admin/menu/dishes'
+            menuDishes: '/admin/menu/dishes',
+            // Turnos y Asistencia
+            shifts: '/admin/shifts',
+            attendance: '/admin/attendance'
         },
         post: {
             zone: '/admin/zones',
@@ -54,13 +57,17 @@ export const ENDPOINTS = {
             bulkDeactivateAreas: '/admin/employees/areas/bulk-deactivate',
             bulkDeactivateJobTitles: '/admin/employees/job-titles/bulk-deactivate',
             menuCategory: '/admin/menu/categories',
-            menuDish: '/admin/menu/dishes'
+            menuDish: '/admin/menu/dishes',
+            // Turnos
+            shift: '/admin/shifts'
         },
         put: {
             employee: '/admin/employees/:id',
             bulkAreas: '/admin/employees/areas/bulk',
             bulkJobTitles: '/admin/employees/job-titles/bulk',
-            menuDish: '/admin/menu/dishes/:code'
+            menuDish: '/admin/menu/dishes/:code',
+            // Seguridad
+            resetPin: '/admin/employees/:employeeNumber/reset-pin'
         },
         delete: {
             employee: '/admin/employees/:id',

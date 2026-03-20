@@ -124,6 +124,14 @@ import {
     registerWaiterCall
 } from '../helpers/public-menu.helper.js';
 
+// ── TURNOS Y ASISTENCIA ───────────────────────────────────────
+import {
+    getShifts,
+    createShift,
+    getAttendance,
+    resetEmployeePin
+} from '../helpers/admin-turnos.helper.js';
+
 
 // ============================================================
 // MAPA CENTRAL — KEY = handler en schema JSON
@@ -236,5 +244,11 @@ export const ActionRegistry = {
 
     // Menú público
     getPublicMenu,
-    registerWaiterCall
+    registerWaiterCall,
+
+    // Turnos y Asistencia
+    getShifts,
+    createShift,
+    getAttendance,
+    resetEmployeePin
 };

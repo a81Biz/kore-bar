@@ -1,5 +1,6 @@
 import { AppError } from '../utils/errors.util.js';
 import * as waiterModel from '../models/waiter.model.js';
+import * as turnosModel from '../models/admin-turnos.model.js';
 
 export const validateWaiterPin = async (state, c) => {
     const { employeeNumber, pin } = state.payload;
@@ -13,6 +14,15 @@ export const validateWaiterPin = async (state, c) => {
         state.firstName = employee.first_name;
         state.lastName = employee.last_name;
         state.message = 'Login exitoso';
+
+        // ── CHECK-IN AUTOMÁTICO ────────────────────────────────
+        // No-crítico: si la tabla de asistencia no existe aún (migración pendiente)
+        // o el empleado ya hizo check-in hoy (ON CONFLICT DO NOTHING), no falla el login.
+        try {
+            await turnosModel.recordAttendance(c, employeeNumber, 'WAITERS');
+        } catch (attendanceErr) {
+            console.warn('[Attendance] No se pudo registrar check-in WAITERS:', attendanceErr.message);
+        }
     } catch (error) {
         if (error.isOperational) throw error;
         throw new AppError('Error interno validando PIN', 500);

@@ -1,0 +1,56 @@
+{
+    "id": "create_shift",
+    "name": "Crear Turno en Catálogo",
+    "description": "Crea un nuevo turno en el catálogo con horario de inicio y fin. El código debe ser único (ej. MATUTINO, NOCTURNO). El Gatekeeper rechaza con 400 si faltan campos.",
+    "api": {
+        "method": "POST",
+        "path": "/shifts",
+        "tags": [
+            "Admin / Turnos"
+        ],
+        "body": {
+            "required": [
+                "code",
+                "name",
+                "startTime",
+                "endTime"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "NOCTURNO"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Turno Nocturno"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "22:00"
+                },
+                "endTime": {
+                    "type": "string",
+                    "example": "06:00"
+                }
+            }
+        }
+    },
+    "startAt": "save_shift",
+    "nodes": {
+        "save_shift": {
+            "type": "action",
+            "handler": "createShift",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 201,
+                "body": {
+                    "message": "Turno creado exitosamente"
+                }
+            }
+        }
+    }
+}

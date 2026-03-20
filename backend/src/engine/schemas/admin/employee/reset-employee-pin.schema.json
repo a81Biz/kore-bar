@@ -1,0 +1,43 @@
+{
+    "id": "reset_employee_pin",
+    "name": "Reset de PIN de Empleado",
+    "description": "Sobreescribe el PIN del empleado indicado. Solo accesible para usuarios con sesión de Admin activa. El empleado debe estar activo. El PIN anterior se invalida inmediatamente.",
+    "api": {
+        "method": "PUT",
+        "path": "/employees/:employeeNumber/reset-pin",
+        "tags": [
+            "Admin / Turnos",
+            "Seguridad"
+        ],
+        "body": {
+            "required": [
+                "newPin"
+            ],
+            "properties": {
+                "newPin": {
+                    "type": "string",
+                    "example": "4321",
+                    "description": "Nuevo PIN de 4 a 6 dígitos numéricos."
+                }
+            }
+        }
+    },
+    "startAt": "reset_pin_node",
+    "nodes": {
+        "reset_pin_node": {
+            "type": "action",
+            "handler": "resetEmployeePin",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.data.message}}"
+                }
+            }
+        }
+    }
+}

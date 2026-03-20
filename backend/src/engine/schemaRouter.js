@@ -198,11 +198,13 @@ export const buildRoutes = (router, subDir = '') => {
                     responseData.body = interpolate(finalState.response.body);
                 }
 
+                const httpStatus = finalState.response?.status || 200;
+
                 return c.json({
                     success: true,
                     message: finalState.message || 'Success',
                     data: finalState.data || responseData
-                }, 200);
+                }, httpStatus);
 
             } catch (error) {
                 console.error(`[SchemaRouter] Execution Failed for ${routePath}:`, error);

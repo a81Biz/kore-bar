@@ -72,5 +72,20 @@ export const UIRules = {
         // Se limpia completamente al guardar — el usuario selecciona otro platillo desde la lista.
         // ⚠️ IDs verificados contra _recetas.html: #tech-prep-method, #tech-img-upload
         preserveFields: []
+    },
+
+    // ── MÓDULO TURNOS Y ASISTENCIA ────────────────────────────────────────
+    'form-admin-turno': {
+        // Formulario de nuevo turno en el catálogo.
+        // Se limpia completamente tras guardar — no hay ráfaga de captura en turnos.
+        // ⚠️ IDs verificados contra _turnos.html: #turno-code, #turno-name, #turno-start, #turno-end
+        preserveFields: []
+    },
+
+    'form-reset-pin': {
+        // Formulario de planchado de PIN.
+        // Se limpia completamente tras el reset — el Gerente debe reescribir todo por seguridad.
+        // ⚠️ IDs verificados contra _turnos.html: #pin-employee-number, #pin-new-value, #pin-confirm-value
+        preserveFields: []
     }
 };

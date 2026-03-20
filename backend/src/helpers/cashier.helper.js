@@ -8,6 +8,7 @@ import {
     getLastTicketByTableCode
 } from '../models/cashier.model.js';
 import { getUserForPin } from '../models/auth.model.js';
+import * as turnosModel from '../models/admin-turnos.model.js';
 import { AppError } from '../utils/errors.util.js';
 
 // ── TABLERO DE CAJA ───────────────────────────────────────────
@@ -63,6 +64,13 @@ export const validateCashierPin = async (state, c) => {
     state.firstName = user.firstName;
     state.lastName = user.lastName;
     state.message = `Bienvenido, ${user.firstName}`;
+
+    // ── CHECK-IN AUTOMÁTICO ────────────────────────────────────
+    try {
+        await turnosModel.recordAttendance(c, user.employeeNumber, 'CASHIER');
+    } catch (attendanceErr) {
+        console.warn('[Attendance] No se pudo registrar check-in CASHIER:', attendanceErr.message);
+    }
 };
 
 // ── PROCESAR PAGO ─────────────────────────────────────────────
