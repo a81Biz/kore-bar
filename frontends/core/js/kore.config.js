@@ -2,14 +2,14 @@
 
 const currentHost = window.location.hostname;
 
-const BASE_DOMAIN = currentHost.split('.').length > 1 && !currentHost.match(/^\d/)
-    ? currentHost.substring(currentHost.indexOf('.') + 1)
-    : currentHost;
+const parts = currentHost.split('.');
+
+const BASE_DOMAIN = parts.length > 2 && !currentHost.match(/^\d/)
+    ? parts.slice(1).join('.') // admin.kore.bar -> kore.bar
+    : currentHost;             // kore.bar -> kore.bar / localhost -> localhost
 
 const IS_DEV = currentHost.includes('localhost') || currentHost === '127.0.0.1';
-
 const PROTOCOL = IS_DEV ? 'http' : 'https';
-
 export const KORE_CONFIG = {
 
     ENV: IS_DEV ? 'development' : 'production',
