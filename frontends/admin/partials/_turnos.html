@@ -1,0 +1,273 @@
+<!-- Template principal: Turnos y Asistencia -->
+<template id="tpl-admin-turnos">
+    <div class="min-h-screen bg-slate-50 text-slate-800 w-full flex flex-col fade-in">
+
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center px-6 shrink-0 shadow-sm">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl">🕐</span>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Turnos y Asistencia</h1>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+            <div class="max-w-[1400px] mx-auto w-full">
+
+                <!-- Tabs -->
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button id="tab-monitor"
+                        class="px-6 py-3 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 bg-white transition-colors">
+                        📡 Monitor en Vivo
+                    </button>
+                    <button id="tab-historial"
+                        class="px-6 py-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                        📋 Historial
+                    </button>
+                    <button id="tab-turnos"
+                        class="px-6 py-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                        🗓️ Catálogo de Turnos
+                    </button>
+                    <button id="tab-seguridad"
+                        class="px-6 py-3 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                        🔐 Seguridad / PIN
+                    </button>
+                </div>
+
+                <!-- ══ MONITOR EN VIVO ═══════════════════════════════════════ -->
+                <div id="view-monitor" class="flex flex-col gap-6">
+
+                    <!-- KPIs y controles -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex gap-3 flex-wrap">
+                            <div class="bg-white border border-slate-200 rounded-xl px-5 py-3 shadow-sm text-center min-w-[90px]">
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total</p>
+                                <p id="kpi-total" class="text-3xl font-black text-slate-800">—</p>
+                            </div>
+                            <div class="bg-white border border-emerald-200 rounded-xl px-5 py-3 shadow-sm text-center min-w-[90px]">
+                                <p class="text-xs font-bold text-emerald-500 uppercase tracking-wider">Presente</p>
+                                <p id="kpi-presente" class="text-3xl font-black text-emerald-600">—</p>
+                            </div>
+                            <div class="bg-white border border-amber-200 rounded-xl px-5 py-3 shadow-sm text-center min-w-[90px]">
+                                <p class="text-xs font-bold text-amber-500 uppercase tracking-wider">Esperado</p>
+                                <p id="kpi-esperado" class="text-3xl font-black text-amber-600">—</p>
+                            </div>
+                            <div class="bg-white border border-red-200 rounded-xl px-5 py-3 shadow-sm text-center min-w-[90px]">
+                                <p class="text-xs font-bold text-red-400 uppercase tracking-wider">Ausente</p>
+                                <p id="kpi-ausente" class="text-3xl font-black text-red-500">—</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <input type="date" id="monitor-date"
+                                class="px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+                            <button id="btn-refresh-monitor"
+                                class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors shadow-sm">
+                                <span class="material-symbols-outlined text-[16px]">refresh</span>
+                                Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla monitor -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-4 py-3">Empleado</th>
+                                        <th class="px-4 py-3">Núm. Empleado</th>
+                                        <th class="px-4 py-3">Turno</th>
+                                        <th class="px-4 py-3">Zona / Piso</th>
+                                        <th class="px-4 py-3">Horario</th>
+                                        <th class="px-4 py-3 text-center">Estado</th>
+                                        <th class="px-4 py-3">Check-in</th>
+                                        <th class="px-4 py-3">Fuente</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-monitor-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ HISTORIAL ═════════════════════════════════════════════ -->
+                <div id="view-historial" class="hidden flex flex-col gap-6">
+
+                    <!-- Filtros -->
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap gap-4 items-end">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">DESDE</label>
+                            <input type="date" id="hist-start"
+                                class="px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">HASTA</label>
+                            <input type="date" id="hist-end"
+                                class="px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">NÚM. EMPLEADO (opcional)</label>
+                            <input type="text" id="hist-employee" placeholder="Ej. 80219601"
+                                class="px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono w-40">
+                        </div>
+                        <button id="btn-search-historial"
+                            class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2 rounded-lg transition-colors shadow-sm">
+                            Buscar
+                        </button>
+                    </div>
+
+                    <!-- Tabla historial -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-4 py-3">Fecha</th>
+                                        <th class="px-4 py-3">Empleado</th>
+                                        <th class="px-4 py-3">Turno</th>
+                                        <th class="px-4 py-3">Zona</th>
+                                        <th class="px-4 py-3 text-center">Estado</th>
+                                        <th class="px-4 py-3">Check-in</th>
+                                        <th class="px-4 py-3">Fuente</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-historial-body">
+                                    <tr>
+                                        <td colspan="7" class="px-4 py-8 text-center text-slate-400 text-sm">
+                                            Selecciona un rango de fechas y presiona Buscar.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ CATÁLOGO DE TURNOS ════════════════════════════════════ -->
+                <div id="view-turnos" class="hidden flex flex-col gap-6">
+
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Formulario nuevo turno -->
+                        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex-1">
+                            <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-indigo-600">add_circle</span>
+                                Nuevo Turno
+                            </h3>
+                            <form id="form-admin-turno" class="flex flex-col gap-4">
+                                <div class="flex gap-4 flex-wrap">
+                                    <div class="flex-1 min-w-[120px]">
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">CÓDIGO</label>
+                                        <input type="text" id="turno-code" required placeholder="MATUTINO"
+                                            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg uppercase font-mono outline-none focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                    <div class="flex-[2] min-w-[160px]">
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">NOMBRE</label>
+                                        <input type="text" id="turno-name" required placeholder="Turno Matutino"
+                                            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                </div>
+                                <div class="flex gap-4 flex-wrap">
+                                    <div class="flex-1 min-w-[120px]">
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">HORA INICIO</label>
+                                        <input type="time" id="turno-start" required
+                                            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+                                    </div>
+                                    <div class="flex-1 min-w-[120px]">
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">HORA FIN</label>
+                                        <input type="time" id="turno-end" required
+                                            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors shadow-sm">
+                                        Crear Turno
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Lista de turnos existentes -->
+                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex-1 overflow-hidden">
+                            <div class="p-4 border-b border-slate-100">
+                                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-slate-500">schedule</span>
+                                    Turnos Registrados
+                                </h3>
+                            </div>
+                            <ul id="list-turnos" class="divide-y divide-slate-100 max-h-80 overflow-y-auto"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ SEGURIDAD / RESET PIN ═════════════════════════════════ -->
+                <div id="view-seguridad" class="hidden flex justify-center">
+                    <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm w-full max-w-md">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2 text-lg">
+                            <span class="material-symbols-outlined text-red-500">lock_reset</span>
+                            Restablecer PIN de Empleado
+                        </h3>
+                        <p class="text-sm text-slate-500 mb-6">Sobreescribe el PIN del empleado. La acción es inmediata e irreversible.</p>
+
+                        <form id="form-reset-pin" class="flex flex-col gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">NÚM. EMPLEADO</label>
+                                <input type="text" id="pin-employee-number" required placeholder="Ej. 80219601"
+                                    class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">NUEVO PIN (4–6 dígitos)</label>
+                                <input type="password" id="pin-new-value" required placeholder="••••"
+                                    maxlength="6" pattern="\d{4,6}"
+                                    class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono text-lg tracking-widest outline-none focus:ring-2 focus:ring-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">CONFIRMAR PIN</label>
+                                <input type="password" id="pin-confirm-value" required placeholder="••••"
+                                    maxlength="6" pattern="\d{4,6}"
+                                    class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono text-lg tracking-widest outline-none focus:ring-2 focus:ring-red-400">
+                            </div>
+                            <button type="submit"
+                                class="mt-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-6 py-2.5 rounded-lg transition-colors shadow-sm w-full">
+                                🔐 Restablecer PIN
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Template fila: Monitor de asistencia -->
+<template id="tpl-row-monitor">
+    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
+        <td class="px-4 py-3 font-medium text-slate-800 col-nombre"></td>
+        <td class="px-4 py-3 font-mono text-xs text-slate-500 col-employee-number"></td>
+        <td class="px-4 py-3 text-slate-700 col-shift"></td>
+        <td class="px-4 py-3 text-slate-600 col-zone"></td>
+        <td class="px-4 py-3 font-mono text-xs text-slate-500 col-horario whitespace-nowrap"></td>
+        <td class="px-4 py-3 text-center">
+            <span class="col-status-badge px-2.5 py-1 text-xs font-bold rounded-full"></span>
+        </td>
+        <td class="px-4 py-3 text-xs text-slate-500 col-checkin whitespace-nowrap"></td>
+        <td class="px-4 py-3">
+            <span class="col-source-badge text-[10px] font-bold px-2 py-0.5 rounded uppercase"></span>
+        </td>
+    </tr>
+</template>
+
+<!-- Template item: Catálogo de turnos -->
+<template id="tpl-item-turno">
+    <li class="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-indigo-400 text-lg">schedule</span>
+            <div>
+                <p class="font-bold text-slate-800 text-sm col-name"></p>
+                <p class="text-xs text-slate-500 col-horario font-mono"></p>
+            </div>
+        </div>
+        <span class="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded col-code"></span>
+    </li>
+</template>

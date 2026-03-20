@@ -9,7 +9,7 @@
 // El JWT incluye: employeeNumber, roleCode, areaCode, type ('session'|'pin')
 // ============================================================
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getUserForLogin, getUserForPin } from '../models/auth.model.js';
 

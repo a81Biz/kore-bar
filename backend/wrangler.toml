@@ -1,8 +1,15 @@
-name = "kore-bar-backend"
+# ============================================================
+# wrangler.toml — Kore Bar API (Cloudflare Worker)
+#
+# Variables de entorno sensibles se configuran como secrets:
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put JWT_SECRET
+# ============================================================
+
+name = "kore-bar-api"
 main = "src/index.js"
 compatibility_date = "2024-03-03"
+compatibility_flags = ["nodejs_compat"]
 
-[[d1_databases]]
-binding = "DB"
-database_name = "kore_db"
-database_id = "mock-id" # We will mock the D1 binding locally for now over Node
+[vars]
+NODE_ENV = "production"

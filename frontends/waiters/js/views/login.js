@@ -14,20 +14,12 @@ export async function mount(container) {
 
     // ── Cargar empleados elegibles para el POS ────────────────────────────
     try {
-        const res = await fetchData(ENDPOINTS.admin.get.employees);
+        const res = await fetchData(ENDPOINTS.waiters.get.waiters);
         if (res.success && res.data) {
             res.data.forEach(emp => {
-                // ✅ Bug de precedencia corregido:
-                // Antes: emp.is_active && role==='Mesero' || role==='Administrador'
-                // → los admins pasaban SIN verificar is_active
-                // Ahora: is_active verificado para ambos roles
-                const isEligible = emp.is_active &&
-                    (emp.system_role === 'Mesero' || emp.system_role === 'Administrador');
-                if (!isEligible) return;
-
                 const option = document.createElement('option');
                 option.value = emp.employee_number;
-                option.textContent = `${emp.first_name} ${emp.last_name || ''}`.trim();
+                option.textContent = emp.nombre.trim();
                 employeeSelect.appendChild(option);
             });
         }

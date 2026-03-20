@@ -9,12 +9,9 @@ export const ENDPOINTS = {
     // ──────────────────────────────────────────────────────────────────────────
     waiters: {
         get: {
+            waiters: '/waiters',
             layout: '/waiters/layout',
             orderStatus: '/waiters/tables/:tableCode/order',
-            // FIX #15: Endpoint propio de meseros para stock de piso.
-            // Apunta al nuevo schema waiter-floor-stock.schema.json (GET /waiters/floor-stock).
-            // Reemplaza ENDPOINTS.inventory.get.floorStock en order.js para que el micrositio
-            // de meseros no dependa del dominio de inventario admin.
             floorStock: '/waiters/floor-stock'
         },
         post: {

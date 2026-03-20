@@ -39,7 +39,8 @@ const render = {
         state.dom.tplResumen = document.querySelector('#tpl-fila-resumen');
 
         if (state.dom.inputFecha) {
-            const hoy = new Date().toISOString().split('T')[0];
+            const dateOpt = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            const hoy = new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
             state.dom.inputFecha.setAttribute('min', hoy);
             if (!state.dom.inputFecha.value) state.dom.inputFecha.value = hoy;
         }
@@ -82,7 +83,7 @@ const render = {
 
         state.dom.selectMesero.textContent = '';
         state.dom.selectMesero.appendChild(new Option('Selecciona Empleado...', '', true, true)).disabled = true;
-        
+
         empleadosFiltrados.forEach(m => {
             const num = m.employeeNumber || m.employee_number;
             const nombre = `${m.firstName || m.first_name || ''} ${m.lastName || m.last_name || ''}`.trim();
@@ -180,7 +181,7 @@ const logic = {
             const fecha = state.dom.inputFecha.value;
             const url = `${ENDPOINTS.admin.get.assignments}?date=${fecha}`;
             const res = await fetchData(url).catch(() => null);
-            const arraySeguro = Array.isArray(res?.data) ? res.data : [];
+            const arraySeguro = Array.isArray(res?.data?.assignments) ? res.data.assignments : [];
 
             state.datos.asignaciones = arraySeguro.map(a => ({ ...a, waiterId: a.employeeNumber }));
             render.listasYResumen();

@@ -63,7 +63,7 @@ const logic = {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.zones).catch(() => null);
             const dataRaw = res?.data || res || [];
-            state.datos.lista = Array.isArray(dataRaw) ? dataRaw : [];
+            state.datos.lista = Array.isArray(dataRaw.zones) ? dataRaw.zones : [];
 
             render.lista();
             PubSub.publish('ZONAS_ACTUALIZADAS', state.datos.lista);

@@ -215,3 +215,16 @@ export const getWaiterOrderStatus = async (state, c) => {
         throw new AppError('Error al obtener el estado de la orden', 500);
     }
 };
+
+export const getWaiters = async (state, c) => {
+    try {
+        const waiters = await waiterModel.getWaiters(c);
+
+        if (waiters.length == 0) throw new AppError("No hay zonas y mesas asignadas", 500);
+
+        state.data = waiters;
+        return { status: 'COMPLETED' };
+    } catch (error) {
+        throw new AppError("Error al obtener el directorio de empleados", 500);
+    }
+};

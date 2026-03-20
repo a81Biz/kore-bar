@@ -104,7 +104,8 @@ import {
     waiterCollectItem,
     waiterDeliverItem,
     getWaiterOrderStatus,
-    getWaiterFloorStock
+    getWaiterFloorStock,
+    getWaiters
 } from '../helpers/waiter.helper.js';
 
 // ── CAJA ─────────────────────────────────────────────────────
@@ -232,6 +233,7 @@ export const ActionRegistry = {
     waiterDeliverItem,
     getWaiterOrderStatus,
     getWaiterFloorStock,
+    getWaiters,
 
     // Caja
     getCashierBoard: getBoard,

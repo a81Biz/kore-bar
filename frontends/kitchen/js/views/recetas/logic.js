@@ -16,9 +16,9 @@ export const _data = {
                 fetchData(ENDPOINTS.kitchen.get.finishedDishes),
                 fetchData(ENDPOINTS.kitchen.get.ingredients)
             ]);
-            state.data.pendientes = resPendientes.data || [];
-            state.data.terminados = resTerminados.data || [];
-            state.data.insumosCache = resInsumos.data || [];
+            state.data.pendientes = resPendientes.data.dishes || [];
+            state.data.terminados = resTerminados.data.dishes || [];
+            state.data.insumosCache = resInsumos.data.ingredients || [];
 
             if (state.dom.datalistCodes && state.dom.datalistNames) {
                 state.dom.datalistCodes.innerHTML = '';

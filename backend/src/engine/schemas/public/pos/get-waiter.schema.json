@@ -1,0 +1,21 @@
+{
+    "id": "get_waiters",
+    "name": "Obtener Meseros",
+    "description": "Devuelve el lista de personal que tienen mesa y zona asignada, son meseros",
+    "api": {
+        "method": "GET",
+        "path": "/waiters",
+        "tags": [
+            "Waiters"
+        ]
+    },
+    "startAt": "fetch_waiters",
+    "nodes": {
+        "fetch_waiters": {
+            "type": "action",
+            "handler": "getWaiters",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

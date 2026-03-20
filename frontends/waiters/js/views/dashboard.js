@@ -28,8 +28,8 @@ export async function mount(container, authData) {
     const fetchTables = async () => {
         try {
             const res = await fetchData(ENDPOINTS.waiters.get.layout);
-            if (res.success && res.data?.length > 0) {
-                const allTables = res.data.flatMap(zone => zone.tables);
+            if (res.success && res.data?.body?.layout.length > 0) {
+                const allTables = res.data.body.layout.flatMap(zone => zone.tables);
                 renderTables(allTables);
             }
         } catch (e) {

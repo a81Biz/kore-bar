@@ -92,7 +92,7 @@ const logic = {
     cargarMesas: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.tables).catch(() => null);
-            const arraySeguro = Array.isArray(res?.data) ? res.data : [];
+            const arraySeguro = Array.isArray(res?.data.tables) ? res.data.tables : [];
             state.datos.mesas = arraySeguro.map(m => ({ ...m, number: m.tableId }));
             render.mesas();
             PubSub.publish('MESAS_ACTUALIZADAS', state.datos.mesas);

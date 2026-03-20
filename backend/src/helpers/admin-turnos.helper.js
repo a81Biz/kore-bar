@@ -75,6 +75,9 @@ export const resetEmployeePin = async (state, c) => {
         if (error.code === 'P0002' || error.message?.includes('no encontrado')) {
             throw new AppError(`Empleado '${employeeNumber}' no encontrado o inactivo`, 404);
         }
+        if (error.code === '23505' || error.message?.includes('pin_code')) {
+            throw new AppError(`El PIN indicado ya está en uso por otro empleado. Elige uno diferente.`, 409);
+        }
         throw new AppError('Error al resetear el PIN', 500);
     }
 };

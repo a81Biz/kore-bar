@@ -8,13 +8,15 @@ const BASE_DOMAIN = currentHost.split('.').length > 1 && !currentHost.match(/^\d
 
 const IS_DEV = currentHost.includes('localhost') || currentHost === '127.0.0.1';
 
+const PROTOCOL = IS_DEV ? 'http' : 'https';
+
 export const KORE_CONFIG = {
 
     ENV: IS_DEV ? 'development' : 'production',
     DEBUG: IS_DEV,
 
     API: {
-        BASE_URL: `http://api.${BASE_DOMAIN}/api`
+        BASE_URL: `${PROTOCOL}://api.${BASE_DOMAIN}/api`
     },
 
     // ── Registro de micrositios ──────────────────────────────────────────────
@@ -24,7 +26,7 @@ export const KORE_CONFIG = {
         KITCHEN: { enabled: true, host: `kitchen.${BASE_DOMAIN}` },
         MENU: { enabled: true, host: `menu.${BASE_DOMAIN}` },
         WAITERS: { enabled: true, host: `waiters.${BASE_DOMAIN}` },
-        INVOICE: { enabled: false, host: `invoice.${BASE_DOMAIN}` },
+        INVOICE: { enabled: true, host: `invoice.${BASE_DOMAIN}` },
         API_DOCS: { enabled: true, host: `api.${BASE_DOMAIN}/api/docs` }
     },
 
