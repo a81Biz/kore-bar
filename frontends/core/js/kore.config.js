@@ -12,6 +12,8 @@ const IS_DEV = currentHost.includes('localhost') || currentHost === '127.0.0.1';
 const PROTOCOL = IS_DEV ? 'http' : 'https';
 export const KORE_CONFIG = {
 
+    BASE_DOMAIN: BASE_DOMAIN,
+
     ENV: IS_DEV ? 'development' : 'production',
     DEBUG: IS_DEV,
 
