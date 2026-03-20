@@ -152,19 +152,16 @@ jobs:
       # ── 1. Empaquetar recursos compartidos (Core y Shared) ────────────
       - name: Prepare Frontend Assets
         run: |
-          cp -r frontends/core frontends/admin/core
-          cp -r frontends/core frontends/menu/core
-          cp -r frontends/core frontends/waiters/core
-          cp -r frontends/core frontends/kitchen/core
-          cp -r frontends/core frontends/cashier/core
-          cp -r frontends/core frontends/invoice/core
-          
-          cp -r frontends/shared frontends/admin/shared
-          cp -r frontends/shared frontends/menu/shared
-          cp -r frontends/shared frontends/waiters/shared
-          cp -r frontends/shared frontends/kitchen/shared
-          cp -r frontends/shared frontends/cashier/shared
-          cp -r frontends/shared frontends/invoice/shared
+          for dir in admin menu waiters kitchen cashier invoice; do
+            mkdir -p frontends/$dir/core frontends/$dir/shared
+            cp -a frontends/core/. frontends/$dir/core/
+            cp -a frontends/shared/. frontends/$dir/shared/
+          done
+
+          mkdir -p build_portal/core build_portal/shared
+          cp -a frontends/core/. build_portal/
+          cp -a frontends/core/. build_portal/core/
+          cp -a frontends/shared/. build_portal/shared/
 
       # ── 2. Deploy PORTAL MAESTRO (El Dashboard Raíz) ────────────
       - name: Deploy Portal Maestro (Core)
@@ -173,7 +170,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler pages project create kore-portal --production-branch main || true
-          npx wrangler pages deploy frontends/core --project-name=kore-portal
+          npx wrangler pages deploy build_portal --project-name=kore-portal
 
       # ── 3. Deploy de los 6 Micrositios ────────────
       - name: Deploy Admin frontend
