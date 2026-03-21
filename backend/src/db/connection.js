@@ -1,15 +1,17 @@
 // src/db/connection.js
-// ============================================================
-// Adaptador de Base de Datos Híbrido (Pooler Optimizado)
-// ============================================================
-
 let _pgPromise = null;
-let _pool = null;
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
     if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
     return null;
+};
+
+// Detectar si estamos en Cloudflare Workers
+const isCloudflareWorker = () => {
+    // Método confiable: verificar existencia de c.env (típico de Workers)
+    // o verificar que no hay process (los workers no tienen process global)
+    return typeof process === 'undefined' && typeof window === 'undefined';
 };
 
 const getPg = async () => {
@@ -28,57 +30,93 @@ export const executeQuery = async (c, query, params = []) => {
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
     const pg = await getPg();
+    const isCloudflare = isCloudflareWorker();
 
-    const isCloudflare = typeof WebSocketPair !== 'undefined';
-    const isLocalDb = !dbUrl.includes('supabase');
-
-    // ─── RUTA A: LOCAL / DOCKER / TESTS (Pool) ───
+    // ─── RUTA A: LOCAL / DOCKER / TESTS ───
     if (!isCloudflare) {
-        if (!_pool) {
-            _pool = new pg.Pool({
+        // Solo mantener un pool en desarrollo local
+        if (!global._pgPool) {
+            const isLocalDb = !dbUrl.includes('supabase');
+            global._pgPool = new pg.Pool({
                 connectionString: dbUrl,
                 max: 15,
-                // Si es local apagamos SSL, si es Supabase dejamos que la URL actúe
-                ssl: isLocalDb ? false : undefined
+                // Para Supabase desde local, necesitas SSL pero con opciones específicas
+                ssl: isLocalDb ? false : { rejectUnauthorized: false }
             });
         }
-        const result = await _pool.query(pgQuery, params);
+        const result = await global._pgPool.query(pgQuery, params);
         return result.rows;
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS (Cliente Efímero) ───
+    // ─── RUTA B: CLOUDFLARE WORKERS ───
+    // IMPORTANTE: En Workers, usamos el pooler de Supabase y configuramos SSL correctamente
+
+    // Verificar que usamos la URL con pooler (port 6543) y no la directa (port 5432)
+    let connectionUrl = dbUrl;
+
+    // Si es Supabase y no está usando el pooler, sugerir cambio
+    if (dbUrl.includes('supabase') && !dbUrl.includes(':6543')) {
+        console.warn('[DB] Sugerencia: Usa el pooler de Supabase (puerto 6543) para Cloudflare Workers');
+        // Convertir automáticamente a pooler si es necesario
+        connectionUrl = dbUrl.replace(':5432', ':6543');
+    }
+
     let attempts = 0;
     const maxAttempts = 3;
+    let lastError = null;
 
     while (attempts < maxAttempts) {
         attempts++;
 
-        // 🟢 CRÍTICO: Cero configuración SSL manual. La URL (?sslmode=require) hace el trabajo.
+        // Para Cloudflare Workers, necesitamos configuración SSL específica
         const client = new pg.Client({
-            connectionString: dbUrl,
-            connectionTimeoutMillis: 10000,
-            query_timeout: 15000
+            connectionString: connectionUrl,
+            connectionTimeoutMillis: 15000,
+            query_timeout: 20000,
+            // Configuración SSL específica para Supabase + Cloudflare
+            ssl: {
+                rejectUnauthorized: false,  // Necesario para Workers
+                ca: undefined,               // Dejar que maneje la CA automáticamente
+                // Para Supabase, a veces necesita estas opciones
+                checkServerIdentity: () => undefined
+            }
         });
 
         try {
             await client.connect();
+            console.log(`[DB] Connected successfully (attempt ${attempts})`);
+
             const result = await client.query(pgQuery, params);
             return result.rows;
 
         } catch (error) {
+            lastError = error;
             const errMsg = error.message || '';
-            if (errMsg.includes('terminated unexpectedly') || errMsg.includes('ECONNRESET') || errMsg.includes('closed')) {
-                if (attempts >= maxAttempts) throw error;
-                await new Promise(resolve => setTimeout(resolve, 200 * attempts));
+            console.error(`[DB] Attempt ${attempts} failed:`, errMsg);
+
+            // Errores recuperables
+            if (errMsg.includes('terminated unexpectedly') ||
+                errMsg.includes('ECONNRESET') ||
+                errMsg.includes('closed') ||
+                errMsg.includes('timeout')) {
+
+                if (attempts >= maxAttempts) break;
+
+                // Backoff exponencial
+                const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
+                await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
-            console.error('[DB] Cloudflare Query Error:', error);
-            throw error;
 
+            // Errores no recuperables
+            throw error;
         } finally {
-            await client.end().catch(() => { });
+            // Importante: cerrar la conexión siempre
+            await client.end().catch(e => console.error('[DB] Error closing:', e));
         }
     }
+
+    throw new Error(`[DB] Failed after ${maxAttempts} attempts. Last error: ${lastError?.message || 'Unknown'}`);
 };
 
 export const executeStoredProcedure = async (c, procedureName, params = {}, types = {}) => {
