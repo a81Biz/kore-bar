@@ -1,6 +1,9 @@
 import { AppError } from '../utils/errors.util.js';
 import * as modelEmployee from '../models/admin-employee.model.js';
 
+// 🟢 SOLUCIÓN SERVERLESS: Micro-pausa para evitar "Connection Bombing" en Supabase
+const throttle = (ms = 50) => new Promise(resolve => setTimeout(resolve, ms));
+
 // ==========================================
 // 1. INTEGRACIONES HR (Webhooks y Sincronización)
 // ==========================================
@@ -19,6 +22,8 @@ export const syncHrCatalogs = async (state, c) => {
 
         try {
             await modelEmployee.upsertHrCatalog(c, { areaId, areaName, jobTitleId, jobTitleName });
+            // 🟢 Evitamos saturar el Pooler en transacciones masivas
+            await throttle();
         } catch (err) {
             console.error(`[HR Sync] Error sincronizando catálogo:`, err);
             throw new AppError("Error ejecutando SP de catálogos", 500);
@@ -37,7 +42,6 @@ export const processHrWebhook = async (state, c) => {
     const jobTitleId = String(empData.codigo_puesto || empData.jobTitleId || empData.codigoPuesto || '');
     const hireDate = empData.fecha_llegada || empData.fecha_alta || empData.arrivalDate || empData.hire_date;
 
-    // Evaluamos el estado activo considerando también la nueva propiedad 'action'
     let isActive = empData.is_active !== undefined ? empData.is_active : (empData.isActive !== undefined ? empData.isActive : true);
     if (action === 'baja') {
         isActive = false;
@@ -54,7 +58,6 @@ export const processHrWebhook = async (state, c) => {
         throw new AppError(`Rechazado: La posición '${positionCode}' no existe.`, 400);
     }
 
-    // Regla MDM: Protección contra datos antiguos
     const existing = await modelEmployee.checkEmployeeExists(c, employeeNumber);
     if (existing) {
         const dbDate = existing.hireDate ? new Date(existing.hireDate).toISOString().split('T')[0] : '1900-01-01';
@@ -108,7 +111,6 @@ export const saveEmployee = async (state, c) => {
     payload.employeeNumber = payload.employeeNumber;
     payload.hireDate = payload.hireDate || new Date().toISOString().split('T')[0];
 
-    // Creación: requiere todos los campos
     if (!payload.employeeNumber || !payload.firstName || !payload.areaId || !payload.jobTitleId) {
         throw new AppError("Faltan propiedades requeridas para guardar el empleado", 400);
     }
@@ -125,7 +127,6 @@ export const updateEmployee = async (state, c) => {
     const payload = state.payload;
     payload.employeeNumber = state.params?.employeeNumber;
 
-    // Actualización: solo necesita saber a quién tocar
     if (!payload.employeeNumber) {
         throw new AppError("Se requiere employeeNumber para actualizar", 400);
     }
@@ -156,13 +157,11 @@ export const bulkSaveEmployees = async (state, c) => {
     for (const emp of employees) {
         if (!emp.employeeNumber || !emp.firstName || !emp.areaId || !emp.jobTitleId) continue;
 
-        // Regla MDM fusionada desde el antiguo hr.helper
         const existing = await modelEmployee.checkEmployeeExists(c, emp.employeeNumber);
         if (existing) {
             const dbDate = existing.hireDate ? new Date(existing.hireDate).toISOString().split('T')[0] : '1900-01-01';
             const payloadDate = emp.hireDate ? new Date(emp.hireDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
-            // Si el payload es más viejo que la BD, lo ignoramos para proteger los datos
             if (payloadDate < dbDate) continue;
         }
 
@@ -175,6 +174,9 @@ export const bulkSaveEmployees = async (state, c) => {
             hireDate: emp.hireDate || new Date().toISOString().split('T')[0],
             isActive: emp.isActive !== undefined ? emp.isActive : true
         });
+
+        // 🟢 Respiración entre empleados para no ahogar la base de datos
+        await throttle();
     }
 
     return { status: 'COMPLETED' };
@@ -211,6 +213,8 @@ export const bulkUpdateAreas = async (state, c) => {
     for (const area of areas) {
         if (area.code && area.areaName) {
             await modelEmployee.updateAreaModel(c, area.code, area.areaName);
+            // 🟢 Respiración para guardado masivo
+            await throttle();
         }
     }
     return { status: 'COMPLETED' };
@@ -253,6 +257,8 @@ export const bulkUpdateJobTitles = async (state, c) => {
     for (const jt of jobTitles) {
         if (jt.code && jt.jobTitleName) {
             await modelEmployee.updateJobTitleModel(c, jt.code, jt.jobTitleName);
+            // 🟢 Respiración para guardado masivo
+            await throttle();
         }
     }
     return { status: 'COMPLETED' };
