@@ -3,18 +3,16 @@
 // Adaptador Unificado de Base de Datos (Cloudflare & Local)
 // ============================================================
 
-/**
- * Función segura para encontrar la URL sin importar dónde estemos
- */
+// Usamos un Pool global (Singleton) para reutilizar conexiones
+// y evitar abrir/cerrar sockets en cada petición, lo que causaba los "Hangs".
+let _pool = null;
+
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
     if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
     return null;
 };
 
-/**
- * Ejecuta una query SQL con un Cliente Efímero (A prueba de Serverless)
- */
 export const executeQuery = async (c, query, params = []) => {
     const dbUrl = getDbUrl(c);
 
@@ -27,31 +25,34 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // Importación dinámica cacheada
-    const { default: pg } = await import('pg');
+    // Inicialización Lazy del Pool
+    if (!_pool) {
+        const { default: pg } = await import('pg');
+        const { Pool } = pg;
 
-    // USAMOS CLIENT EN LUGAR DE POOL PARA EVITAR CONEXIONES ZOMBIS EN CLOUDFLARE
-    const client = new pg.Client({
-        connectionString: dbUrl,
-        connectionTimeoutMillis: 10000 // Si Supabase no responde en 10s, aborta en lugar de colgarse
-    });
+        // 🟢 NUEVO: Detectamos si es una base de datos local (Docker/Vitest) para apagar el SSL
+        const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db') || dbUrl.includes('@postgres');
+
+        _pool = new Pool({
+            connectionString: dbUrl,
+            max: 5,
+            idleTimeoutMillis: 10000,
+            connectionTimeoutMillis: 10000,
+            // Si es local apagamos el SSL, si es la nube lo exigimos pero sin validar certificado
+            ssl: isLocalDb ? false : { rejectUnauthorized: false }
+        });
+    }
 
     try {
-        await client.connect();
-        const result = await client.query(pgQuery, params);
+        // Ejecutamos la consulta. El Pool maneja la conexión y la devuelve automáticamente.
+        const result = await _pool.query(pgQuery, params);
         return result.rows;
     } catch (error) {
         console.error('PostgreSQL Query Error:', error);
         throw error;
-    } finally {
-        // CRÍTICO: Cerrar la conexión para que el Worker de Cloudflare pueda terminar exitosamente
-        await client.end().catch(err => console.error('Error closing DB client:', err));
     }
 };
 
-/**
- * Ejecuta un Procedimiento Almacenado (Mutación)
- */
 export const executeStoredProcedure = async (c, procedureName, params = {}, types = {}) => {
     const entries = Object.entries(params);
     const values = entries.map(([_, v]) => v);
