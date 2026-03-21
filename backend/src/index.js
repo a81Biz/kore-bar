@@ -14,33 +14,36 @@ app.use('/*', cors());
 
 // 🟢 ENDPOINT DE DIAGNÓSTICO CRUDO
 app.get('/api/test-db', async (c) => {
-  const dbUrl = c.env?.DATABASE_URL || process.env.DATABASE_URL;
+  // Las 3 puertas de Supabase
+  const urls = {
+    "PUERTA_1_DIRECTA_IPV6": "postgresql://postgres:Enha4Ed70peqP57C@db.qbkmacwexphsitaiekvy.supabase.co:5432/postgres",
+    "PUERTA_2_POOLER_6543": "postgresql://postgres.qbkmacwexphsitaiekvy:Enha4Ed70peqP57C@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
+    "PUERTA_3_POOLER_5432": "postgresql://postgres.qbkmacwexphsitaiekvy:Enha4Ed70peqP57C@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+  };
 
-  if (!dbUrl) return c.json({ error: 'No se detectó DATABASE_URL en Cloudflare' }, 400);
+  const resultados = {};
 
-  const client = new pg.Client({
-    connectionString: dbUrl,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 5000
-  });
+  for (const [nombre, url] of Object.entries(urls)) {
+    // Si es la directa, le forzamos el SSL de Node. Si es el pooler, dejamos que la URL actúe.
+    const sslConfig = nombre.includes('DIRECTA') ? { rejectUnauthorized: false } : undefined;
 
-  try {
-    await client.connect();
-    const result = await client.query('SELECT 1 as success, current_database() as db_name');
-    await client.end();
-    return c.json({
-      status: 'CONEXION EXITOSA',
-      datos: result.rows,
-      url_usada: dbUrl.substring(0, 30) + '...' // Solo vemos el inicio para confirmar cuál está usando
+    const client = new pg.Client({
+      connectionString: url,
+      ssl: sslConfig,
+      connectionTimeoutMillis: 5000
     });
-  } catch (error) {
-    return c.json({
-      status: 'ERROR FATAL',
-      mensaje: error.message,
-      connectionString: dbUrl,
-      codigo: error.code
-    }, 500);
+
+    try {
+      await client.connect();
+      const res = await client.query('SELECT 1 as exito');
+      await client.end();
+      resultados[nombre] = "✅ CONEXION PERFECTA";
+    } catch (error) {
+      resultados[nombre] = "❌ " + (error.message || "Error desconocido");
+    }
   }
+
+  return c.json(resultados);
 });
 
 app.get('/', (c) => { return c.text('Kore Bar API running') });
