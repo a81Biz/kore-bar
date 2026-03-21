@@ -18,6 +18,7 @@ app.get('/api/test-db', async (c) => {
   const urls = {
     "PUERTA_1_DIRECTA_IPV6": "postgresql://postgres:Enha4Ed70peqP57C@db.qbkmacwexphsitaiekvy.supabase.co:5432/postgres",
     "PUERTA_2_POOLER_6543": "postgresql://postgres.qbkmacwexphsitaiekvy:Enha4Ed70peqP57C@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
+    "PUERTA_2_POOLER_6543_NoSSL": "postgresql://postgres.qbkmacwexphsitaiekvy:Enha4Ed70peqP57C@aws-1-us-east-1.pooler.supabase.com:6543/postgres",
     "PUERTA_3_POOLER_5432": "postgresql://postgres.qbkmacwexphsitaiekvy:Enha4Ed70peqP57C@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
   };
 
