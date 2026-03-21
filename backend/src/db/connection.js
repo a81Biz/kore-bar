@@ -19,10 +19,11 @@ let _pool = null;
  * En Workers el userAgent del navegador global es 'Cloudflare-Workers'.
  * Con nodejs_compat, process existe como polyfill pero process.versions.node no.
  */
-function isCloudflareEnv(c) {
-    return !!(c?.env?.DATABASE_URL) && typeof process?.versions?.node !== 'string';
-}
+const dbUrl = (c && c.env && c.env.DATABASE_URL) || (typeof process !== 'undefined' ? process.env.DATABASE_URL : null);
 
+if (!dbUrl) {
+    throw new Error('No database connection configuration found. Set DATABASE_URL.');
+}
 /**
  * Ejecuta una query SQL.
  *
