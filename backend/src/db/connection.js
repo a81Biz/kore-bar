@@ -1,20 +1,9 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador Condicional de Base de Datos
-//
-// Switch inteligente según el entorno de ejecución:
-//   • Cloudflare Workers → @neondatabase/serverless (HTTP/WebSocket)
-//   • Local / Vitest / CI → pg (TCP socket estándar, import dinámico)
+// Adaptador Unificado de Base de Datos (Cloudflare & Local)
 // ============================================================
 
 let _pool = null;
-
-/**
- * Detecta si estamos corriendo dentro de Cloudflare Workers.
- */
-const isCloudflareEnv = (c) => {
-    return typeof WebSocketPair !== 'undefined' || (c && c.env !== undefined);
-};
 
 /**
  * Función segura para encontrar la URL sin importar dónde estemos
@@ -41,28 +30,13 @@ export const executeQuery = async (c, query, params = []) => {
         throw new Error('No database connection configuration found. Set DATABASE_URL.');
     }
 
-    // ── Normalizar placeholders ? → $1, $2... ────────────────
+    // Normalizar placeholders ? → $1, $2...
     let pgQuery = query;
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // ── Ruta A: Cloudflare Workers ───────────────────────────
-    if (isCloudflareEnv(c)) {
-        const { neon } = await import('@neondatabase/serverless');
-        // Usamos dbUrl directamente para evitar problemas de contexto
-        const sql = neon(dbUrl);
-
-        try {
-            const results = await sql(pgQuery, params);
-            return results;
-        } catch (error) {
-            console.error('Neon (Serverless) Query Error:', error);
-            throw error;
-        }
-    }
-
-    // ── Ruta B: Node.js local / Vitest / CI (TCP) ────────────
     if (!_pool) {
+        // Importación dinámica para que esbuild pase limpio y Cloudflare use nodejs_compat
         const { default: pg } = await import('pg');
         const { Pool } = pg;
         _pool = new Pool({
