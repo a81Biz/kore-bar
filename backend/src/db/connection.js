@@ -1,6 +1,6 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos Híbrido - Funciona en Local y Cloudflare
+// Adaptador de Base de Datos - CON PARSER MEJORADO PARA JOINs
 // ============================================================
 
 let _pgPromise = null;
@@ -8,7 +8,7 @@ let _pool = null;
 let _supabaseClient = null;
 let _requestCounter = 0;
 
-// Detectar Cloudflare Workers de forma confiable
+// Detectar Cloudflare Workers
 const isCloudflareWorker = () => {
     const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
     if (!hasWorkerGlobals) return false;
@@ -25,14 +25,124 @@ const getDbUrl = (c) => {
     return null;
 };
 
-// Función para convertir consulta SQL simple a Supabase format
-const convertToSupabaseQuery = (query) => {
-    // Normalizar query
-    const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+// Limpiar query (remover saltos de línea y múltiples espacios)
+const cleanQuery = (query) => {
+    return query.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+};
 
-    // Patrón para SELECT simple (incluyendo WHERE y ORDER BY)
-    const selectRegex = /^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER BY\s+(.+?))?$/i;
-    const match = normalizedQuery.match(selectRegex);
+// Extraer alias de un campo (formato: campo AS "alias" o campo AS alias)
+const extractAlias = (field) => {
+    const aliasMatch = field.match(/(.+?)\s+AS\s+["']?([^"'\s]+)["']?$/i);
+    if (aliasMatch) {
+        return {
+            field: aliasMatch[1].trim(),
+            alias: aliasMatch[2].trim()
+        };
+    }
+    return { field: field.trim(), alias: null };
+};
+
+// Convertir consulta con JOIN a formato Supabase
+const convertJoinQuery = (query) => {
+    const cleaned = cleanQuery(query);
+
+    // Patrón para SELECT con JOIN
+    // Ejemplo: SELECT t.code AS "tableId", z.code AS "zoneCode" FROM restaurant_tables t JOIN restaurant_zones z ON t.zone_id = z.id WHERE ...
+    const joinRegex = /^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+JOIN\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+ON\s+(.+?)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER BY\s+(.+?))?$/i;
+    const match = cleaned.match(joinRegex);
+
+    if (!match) {
+        return null;
+    }
+
+    const [, fields, table1, alias1, table2, alias2, onClause, whereClause, orderByClause] = match;
+
+    console.log(`[DB-DEBUG] JOIN query detected:`);
+    console.log(`[DB-DEBUG]   Tables: ${table1} (${alias1}) JOIN ${table2} (${alias2})`);
+
+    // Parsear campos seleccionados
+    const selectFields = fields.split(',').map(f => f.trim());
+    const parsedFields = selectFields.map(f => extractAlias(f));
+
+    // Construir la consulta de Supabase
+    // Para JOINs, necesitamos usar la tabla principal y luego expandir con relaciones
+    // En Supabase, podemos hacer .select('*, relacion(*, ...)')
+
+    let selectStr = '*';
+
+    // Si tenemos alias específicos, construir select con relaciones
+    if (table2) {
+        // Determinar la relación basada en ON clause
+        const onMatch = onClause.match(/(?:(\w+)\.(\w+))\s*=\s*(?:(\w+)\.(\w+))/i);
+        if (onMatch) {
+            const [, leftTable, leftField, rightTable, rightField] = onMatch;
+
+            // Mapear alias a tablas reales
+            const leftTableName = leftTable === alias1 ? table1 : (leftTable === alias2 ? table2 : leftTable);
+            const rightTableName = rightTable === alias1 ? table1 : (rightTable === alias2 ? table2 : rightTable);
+
+            console.log(`[DB-DEBUG]   Relation: ${leftTableName}.${leftField} = ${rightTableName}.${rightField}`);
+
+            // Construir select con la relación
+            selectStr = `*, ${rightTableName}(*)`;
+        }
+    }
+
+    const result = {
+        type: 'select',
+        table: table1,
+        select: selectStr,
+        relations: [{ table: table2, on: onClause }]
+    };
+
+    // Parsear WHERE si existe
+    if (whereClause) {
+        const conditions = [];
+        const whereParts = whereClause.split(/\s+AND\s+/i);
+
+        for (const part of whereParts) {
+            // Manejar campo con alias = valor
+            const eqMatch = part.match(/(?:(\w+)\.)?(\w+)\s*=\s*'?([^']*)'?/i);
+            if (eqMatch) {
+                const [, tableAlias, field, value] = eqMatch;
+                conditions.push({ field, value, table: tableAlias });
+            }
+
+            // Manejar IS TRUE/FALSE
+            const isMatch = part.match(/(?:(\w+)\.)?(\w+)\s+IS\s+(TRUE|FALSE)/i);
+            if (isMatch) {
+                const [, tableAlias, field, boolValue] = isMatch;
+                conditions.push({ field, value: boolValue === 'TRUE', table: tableAlias });
+            }
+        }
+
+        if (conditions.length > 0) {
+            result.where = conditions;
+        }
+    }
+
+    // Parsear ORDER BY
+    if (orderByClause) {
+        const orderFields = orderByClause.split(',').map(f => f.trim());
+        result.orderBy = orderFields.map(field => {
+            const [fieldName, direction] = field.split(/\s+/);
+            return {
+                field: fieldName,
+                ascending: !direction || direction.toUpperCase() !== 'DESC'
+            };
+        });
+    }
+
+    return result;
+};
+
+// Convertir consulta SQL simple a formato Supabase
+const convertSimpleQuery = (query) => {
+    const cleaned = cleanQuery(query);
+
+    // Patrón para SELECT simple (sin JOIN)
+    const simpleRegex = /^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER BY\s+(.+?))?$/i;
+    const match = cleaned.match(simpleRegex);
 
     if (!match) {
         return null;
@@ -40,25 +150,29 @@ const convertToSupabaseQuery = (query) => {
 
     const [, fields, tableName, whereClause, orderByClause] = match;
 
+    // Procesar campos (limpiar comillas dobles y alias)
+    let processedFields = fields;
+    // Remover comillas dobles de los alias
+    processedFields = processedFields.replace(/"([^"]+)"/g, '$1');
+    // Limpiar espacios
+    processedFields = processedFields.replace(/\s+/g, ' ').trim();
+
     const result = {
         type: 'select',
         table: tableName,
-        select: fields
+        select: processedFields
     };
 
-    // Parsear WHERE si existe
+    // Parsear WHERE
     if (whereClause) {
         const conditions = [];
-        // Dividir por AND (soporte básico)
-        const parts = whereClause.split(/\s+AND\s+/i);
+        const whereParts = whereClause.split(/\s+AND\s+/i);
 
-        for (const part of parts) {
+        for (const part of whereParts) {
             // Manejar campo = valor
-            const eqMatch = part.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?:'([^']*)'|([^'\s]+))/i);
+            const eqMatch = part.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*'?([^']*)'?/i);
             if (eqMatch) {
-                const field = eqMatch[1];
-                const value = eqMatch[2] !== undefined ? eqMatch[2] : eqMatch[3];
-                conditions.push({ field, operator: 'eq', value });
+                conditions.push({ field: eqMatch[1], operator: 'eq', value: eqMatch[2] });
                 continue;
             }
 
@@ -75,7 +189,7 @@ const convertToSupabaseQuery = (query) => {
         }
     }
 
-    // Parsear ORDER BY si existe
+    // Parsear ORDER BY
     if (orderByClause) {
         const orderFields = orderByClause.split(',').map(f => f.trim());
         result.orderBy = orderFields.map(field => {
@@ -92,28 +206,32 @@ const convertToSupabaseQuery = (query) => {
 
 // Ejecutar consulta en Cloudflare con Supabase
 const executeCloudflareQuery = async (supabase, query, params) => {
-    // Intentar convertir a formato Supabase
-    const supabaseQuery = convertToSupabaseQuery(query);
+    // Primero intentar como JOIN query
+    let parsedQuery = convertJoinQuery(query);
 
-    if (!supabaseQuery) {
-        // Si no se puede convertir, fallar con mensaje claro
-        throw new Error(`Unsupported query in Cloudflare: ${query.substring(0, 100)}. Only simple SELECT statements are supported.`);
+    // Si no es JOIN, intentar como simple
+    if (!parsedQuery) {
+        parsedQuery = convertSimpleQuery(query);
     }
 
-    console.log(`[DB-DEBUG] Converting SQL to Supabase query on table: ${supabaseQuery.table}`);
+    if (!parsedQuery) {
+        throw new Error(`Unsupported query in Cloudflare: ${query.substring(0, 100)}. Only SELECT with optional JOIN, WHERE and ORDER BY are supported.`);
+    }
 
-    let dbQuery = supabase.from(supabaseQuery.table).select(supabaseQuery.select);
+    console.log(`[DB-DEBUG] Converting SQL to Supabase query on table: ${parsedQuery.table}`);
+
+    let dbQuery = supabase.from(parsedQuery.table).select(parsedQuery.select);
 
     // Aplicar WHERE
-    if (supabaseQuery.where) {
-        for (const condition of supabaseQuery.where) {
+    if (parsedQuery.where) {
+        for (const condition of parsedQuery.where) {
             dbQuery = dbQuery.eq(condition.field, condition.value);
         }
     }
 
     // Aplicar ORDER BY
-    if (supabaseQuery.orderBy) {
-        for (const order of supabaseQuery.orderBy) {
+    if (parsedQuery.orderBy) {
+        for (const order of parsedQuery.orderBy) {
             dbQuery = dbQuery.order(order.field, { ascending: order.ascending });
         }
     }
@@ -132,7 +250,7 @@ export const executeQuery = async (c, query, params = []) => {
     const requestId = _requestCounter;
 
     console.log(`\n[DB-DEBUG] ========== QUERY #${requestId} START ==========`);
-    console.log(`[DB-DEBUG] Query: ${query.substring(0, 150)}...`);
+    console.log(`[DB-DEBUG] Query: ${query.substring(0, 200)}...`);
     console.log(`[DB-DEBUG] Params count: ${params.length}`);
 
     const isCloudflare = isCloudflareWorker();
@@ -143,7 +261,6 @@ export const executeQuery = async (c, query, params = []) => {
         const dbUrl = getDbUrl(c);
         if (!dbUrl) throw new Error('No database connection configuration found.');
 
-        // Convertir ? a $1, $2, etc. para PostgreSQL
         let pgQuery = query;
         let paramIndex = 1;
         pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
@@ -178,7 +295,6 @@ export const executeQuery = async (c, query, params = []) => {
     console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client)`);
 
     try {
-        // Inicializar Supabase client si no existe
         if (!_supabaseClient) {
             const { createClient } = await import('@supabase/supabase-js');
 
@@ -206,7 +322,6 @@ export const executeQuery = async (c, query, params = []) => {
             });
         }
 
-        // Ejecutar consulta en Cloudflare
         const result = await executeCloudflareQuery(_supabaseClient, query, params);
         console.log(`[DB-DEBUG] ✅ Rows returned: ${result?.length || 0}`);
         return result;
