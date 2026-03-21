@@ -1,10 +1,9 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador Unificado de Base de Datos con Auto-Sanación (Self-Healing)
+// Adaptador de Base de Datos Estricto para Cloudflare Workers
 // ============================================================
 
-let _pool = null;
-let _pgModule = null; // Caché del import para velocidad extrema
+let _pgModule = null; // Caché del import para velocidad
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
@@ -21,67 +20,50 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
+    // Importación dinámica segura
     if (!_pgModule) {
         _pgModule = await import('pg');
     }
     const pg = _pgModule.default;
 
-    const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db') || dbUrl.includes('@postgres');
+    const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db');
 
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
         attempts++;
+
+        // 🟢 Cero Pools. Usamos un Cliente Efímero para no dejar "zombis" en Cloudflare.
+        const client = new pg.Client({
+            connectionString: dbUrl,
+            ssl: isLocalDb ? false : { rejectUnauthorized: false },
+            connectionTimeoutMillis: 10000,
+            query_timeout: 15000 // Aborta si la consulta tarda demasiado
+        });
+
         try {
-            // 1. Inicialización del Pool con Auto-Sanación
-            if (!_pool) {
-                _pool = new pg.Pool({
-                    connectionString: dbUrl,
-                    max: 5, // Límite bajo. Reutilizará estas conexiones para todo el bucle
-                    idleTimeoutMillis: 30000,
-                    connectionTimeoutMillis: 10000,
-                    ssl: isLocalDb ? false : { rejectUnauthorized: false }
-                });
-
-                // 2. Si el Pool detecta un error de fondo (ej. socket cerrado por Supabase), lo reseteamos
-                _pool.on('error', (err) => {
-                    console.warn('[DB] Socket inactivo cerrado por el servidor. Limpiando pool...');
-                    _pool = null;
-                });
-            }
-
-            // 3. Ejecutamos la consulta. El Pool reutiliza la conexión activa.
-            const result = await _pool.query(pgQuery, params);
-            return result.rows;
+            await client.connect();
+            const result = await client.query(pgQuery, params);
+            return result.rows; // Éxito: devolvemos los datos
 
         } catch (error) {
             const errMsg = error.message || '';
 
-            // 4. Si chocamos con un socket "Zombi", destruimos el Pool y reintentamos
-            if (errMsg.includes('terminated unexpectedly') ||
-                errMsg.includes('ECONNRESET') ||
-                errMsg.includes('Client was closed') ||
-                errMsg.includes('socket closed')) {
-
-                console.warn(`[DB] Conexión zombi detectada. Sanando el pool e intentando de nuevo (${attempts}/${maxAttempts})...`);
-
-                // Destruir el pool corrupto para forzar uno nuevo limpio
-                if (_pool) {
-                    _pool.end().catch(() => { });
-                    _pool = null;
-                }
-
+            // Si hay un micro-corte de red, reintentamos silenciosamente
+            if (errMsg.includes('terminated unexpectedly') || errMsg.includes('ECONNRESET') || errMsg.includes('Client was closed')) {
                 if (attempts >= maxAttempts) throw error;
-
-                // Micro-pausa de seguridad antes de reconectar
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 200 * attempts));
                 continue;
             }
 
-            // Si es un error real (ej. sintaxis SQL mala), lo lanzamos
             console.error('PostgreSQL Query Error:', error);
             throw error;
+
+        } finally {
+            // 🟢 CRÍTICO: El 'await' aquí asegura que el socket se destruya por completo
+            // ANTES de que Cloudflare termine la petición, erradicando el error de "Hung Code".
+            await client.end().catch(() => { });
         }
     }
 };
