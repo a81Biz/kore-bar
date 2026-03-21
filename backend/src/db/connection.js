@@ -1,17 +1,15 @@
 // src/db/connection.js
+// ============================================================
+// Adaptador de Base de Datos Híbrido (Semáforo + SSL Forzado)
+// ============================================================
+
 let _pgPromise = null;
+let _pool = null;
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
     if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
     return null;
-};
-
-// Detectar si estamos en Cloudflare Workers
-const isCloudflareWorker = () => {
-    // Método confiable: verificar existencia de c.env (típico de Workers)
-    // o verificar que no hay process (los workers no tienen process global)
-    return typeof process === 'undefined' && typeof window === 'undefined';
 };
 
 const getPg = async () => {
@@ -21,102 +19,86 @@ const getPg = async () => {
     return await _pgPromise;
 };
 
+// 🚦 SEMÁFORO: Previene que tu frontend sature a Supabase abriendo 4 conexiones de golpe
+class Mutex {
+    constructor() { this.queue = []; this.locked = false; }
+    async lock() {
+        return new Promise(resolve => {
+            if (!this.locked) { this.locked = true; resolve(); }
+            else { this.queue.push(resolve); }
+        });
+    }
+    unlock() {
+        if (this.queue.length > 0) { const next = this.queue.shift(); next(); }
+        else { this.locked = false; }
+    }
+}
+const dbMutex = new Mutex();
+
 export const executeQuery = async (c, query, params = []) => {
     const dbUrl = getDbUrl(c);
-    if (!dbUrl) throw new Error('No database connection configuration found. Set DATABASE_URL.');
+    if (!dbUrl) throw new Error('No database connection configuration found.');
 
     let pgQuery = query;
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
     const pg = await getPg();
-    const isCloudflare = isCloudflareWorker();
 
-    // ─── RUTA A: LOCAL / DOCKER / TESTS ───
+    const isCloudflare = typeof WebSocketPair !== 'undefined';
+    const isLocalDb = !dbUrl.includes('supabase');
+
+    // ─── RUTA A: LOCAL / DOCKER / TESTS (Pool) ───
     if (!isCloudflare) {
-        // Solo mantener un pool en desarrollo local
-        if (!global._pgPool) {
-            const isLocalDb = !dbUrl.includes('supabase');
-            global._pgPool = new pg.Pool({
+        if (!_pool) {
+            _pool = new pg.Pool({
                 connectionString: dbUrl,
                 max: 15,
-                // Para Supabase desde local, necesitas SSL pero con opciones específicas
                 ssl: isLocalDb ? false : { rejectUnauthorized: false }
             });
         }
-        const result = await global._pgPool.query(pgQuery, params);
+        const result = await _pool.query(pgQuery, params);
         return result.rows;
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS ───
-    // IMPORTANTE: En Workers, usamos el pooler de Supabase y configuramos SSL correctamente
+    // ─── RUTA B: CLOUDFLARE WORKERS (Semáforo + Cliente Efímero) ───
+    await dbMutex.lock(); // 🚦 Solo pasa una petición a la vez
 
-    // Verificar que usamos la URL con pooler (port 6543) y no la directa (port 5432)
-    let connectionUrl = dbUrl;
+    try {
+        let attempts = 0;
+        const maxAttempts = 3;
 
-    // Si es Supabase y no está usando el pooler, sugerir cambio
-    if (dbUrl.includes('supabase') && !dbUrl.includes(':6543')) {
-        console.warn('[DB] Sugerencia: Usa el pooler de Supabase (puerto 6543) para Cloudflare Workers');
-        // Convertir automáticamente a pooler si es necesario
-        connectionUrl = dbUrl.replace(':5432', ':6543');
-    }
+        while (attempts < maxAttempts) {
+            attempts++;
 
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError = null;
+            const client = new pg.Client({
+                connectionString: dbUrl,
+                ssl: { rejectUnauthorized: false }, // 🟢 OBLIGATORIO para Supabase Pooler
+                connectionTimeoutMillis: 10000,
+                query_timeout: 15000
+            });
 
-    while (attempts < maxAttempts) {
-        attempts++;
+            try {
+                await client.connect();
+                const result = await client.query(pgQuery, params);
+                return result.rows;
 
-        // Para Cloudflare Workers, necesitamos configuración SSL específica
-        const client = new pg.Client({
-            connectionString: connectionUrl,
-            connectionTimeoutMillis: 15000,
-            query_timeout: 20000,
-            // Configuración SSL específica para Supabase + Cloudflare
-            ssl: {
-                rejectUnauthorized: false,  // Necesario para Workers
-                ca: undefined,               // Dejar que maneje la CA automáticamente
-                // Para Supabase, a veces necesita estas opciones
-                checkServerIdentity: () => undefined
+            } catch (error) {
+                const errMsg = error.message || '';
+                if (errMsg.includes('terminated') || errMsg.includes('ECONNRESET') || errMsg.includes('closed')) {
+                    if (attempts >= maxAttempts) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 300 * attempts));
+                    continue;
+                }
+                throw error;
+
+            } finally {
+                await client.end().catch(() => { });
             }
-        });
-
-        try {
-            await client.connect();
-            console.log(`[DB] Connected successfully (attempt ${attempts})`);
-
-            const result = await client.query(pgQuery, params);
-            return result.rows;
-
-        } catch (error) {
-            lastError = error;
-            const errMsg = error.message || '';
-            console.error(`[DB] Attempt ${attempts} failed:`, errMsg);
-
-            // Errores recuperables
-            if (errMsg.includes('terminated unexpectedly') ||
-                errMsg.includes('ECONNRESET') ||
-                errMsg.includes('closed') ||
-                errMsg.includes('timeout')) {
-
-                if (attempts >= maxAttempts) break;
-
-                // Backoff exponencial
-                const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue;
-            }
-
-            // Errores no recuperables
-            throw error;
-        } finally {
-            // Importante: cerrar la conexión siempre
-            await client.end().catch(e => console.error('[DB] Error closing:', e));
         }
+    } finally {
+        dbMutex.unlock(); // 🚦 Libera el pase para la siguiente petición
     }
-
-    throw new Error(`[DB] Failed after ${maxAttempts} attempts. Last error: ${lastError?.message || 'Unknown'}`);
 };
 
 export const executeStoredProcedure = async (c, procedureName, params = {}, types = {}) => {
