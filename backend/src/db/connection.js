@@ -1,6 +1,6 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos Híbrido - DETECCIÓN CORREGIDA
+// Adaptador de Base de Datos Híbrido - CON DETECCIÓN CORREGIDA
 // ============================================================
 
 let _pgPromise = null;
@@ -8,33 +8,34 @@ let _postgresPromise = null;
 let _pool = null;
 let _requestCounter = 0;
 
-// Detectar Cloudflare Workers de forma CORRECTA
+// 🔑 Detectar Cloudflare Workers CORRECTAMENTE incluso con nodejs_compat
 const isCloudflareWorker = () => {
-    // 🔑 Método CORRECTO para detectar Cloudflare Workers
-    // En Cloudflare Workers NO existe process ni navigator
+    // Método #1: Verificar si estamos en un entorno Worker por la presencia de caches y WebSocketPair
+    // Y además, si el script se ejecuta desde un Worker (no desde un navegador)
+    const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
 
-    // Si estamos en Node.js (local, tests, etc.)
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    if (!hasWorkerGlobals) {
         return false;
     }
 
-    // Si estamos en un navegador
-    if (typeof window !== 'undefined') {
-        return false;
-    }
+    // Método #2: En Workers, incluso con nodejs_compat, existe una variable global 'navigator'
+    // pero NO existe 'window' ni 'document'. En Node.js puro, 'navigator' no existe.
+    const hasBrowserGlobals = typeof window !== 'undefined' || typeof document !== 'undefined';
 
-    // Si estamos en Cloudflare Workers
-    // Características únicas de Workers
-    if (typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined') {
-        // Verificar que NO es Node.js con nodejs_compat
-        // En Workers con nodejs_compat, process existe pero es limitado
-        // La presencia de caches y WebSocketPair sin navigator es clave
-        if (typeof navigator === 'undefined') {
-            return true;
-        }
-    }
+    // Método #3: En Workers con nodejs_compat, 'process' existe pero NO tiene 'process.versions.node'
+    // En Node.js real, 'process.versions.node' existe y contiene la versión
+    const isRealNode = typeof process !== 'undefined' && process.versions && process.versions.node;
 
-    return false;
+    // Si tiene worker globals, NO tiene browser globals, y NO es Node.js real → es Cloudflare Worker
+    const isCloudflare = hasWorkerGlobals && !hasBrowserGlobals && !isRealNode;
+
+    console.log(`[DB-DEBUG] Detección Cloudflare:`);
+    console.log(`[DB-DEBUG]   hasWorkerGlobals: ${hasWorkerGlobals}`);
+    console.log(`[DB-DEBUG]   hasBrowserGlobals: ${hasBrowserGlobals}`);
+    console.log(`[DB-DEBUG]   isRealNode: ${isRealNode}`);
+    console.log(`[DB-DEBUG]   result: ${isCloudflare}`);
+
+    return isCloudflare;
 };
 
 const getDbUrl = (c) => {
@@ -42,24 +43,23 @@ const getDbUrl = (c) => {
     if (isCloudflareWorker() && c && c.env) {
         // Usar el pooler de Supabase (puerto 6543) OBLIGATORIO en Workers
         if (c.env.DATABASE_URL_POOLER) {
+            console.log(`[DB-DEBUG] Using DATABASE_URL_POOLER for Cloudflare`);
             return c.env.DATABASE_URL_POOLER;
         }
         if (c.env.DATABASE_URL) {
-            // Si solo hay DATABASE_URL, asegurarse que usa pooler
-            const url = c.env.DATABASE_URL;
-            if (!url.includes('pooler') && !url.includes(':6543')) {
-                console.warn('[DB] ⚠️ WARNING: Using direct connection in Cloudflare. Use pooler (port 6543) for better performance');
-            }
-            return url;
+            console.log(`[DB-DEBUG] Using DATABASE_URL for Cloudflare`);
+            return c.env.DATABASE_URL;
         }
     }
 
     // Para local o desarrollo (Node.js)
     if (c && c.env && c.env.DATABASE_URL) {
+        console.log(`[DB-DEBUG] Using DATABASE_URL from c.env for Node.js`);
         return c.env.DATABASE_URL;
     }
 
     if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) {
+        console.log(`[DB-DEBUG] Using DATABASE_URL from process.env for Node.js`);
         return process.env.DATABASE_URL;
     }
 
@@ -87,11 +87,7 @@ export const executeQuery = async (c, query, params = []) => {
 
     const isCloudflare = isCloudflareWorker();
 
-    console.log(`[DB-DEBUG] isCloudflare: ${isCloudflare}`);
-    console.log(`[DB-DEBUG] has process: ${typeof process !== 'undefined'}`);
-    console.log(`[DB-DEBUG] has navigator: ${typeof navigator !== 'undefined'}`);
-    console.log(`[DB-DEBUG] has caches: ${typeof caches !== 'undefined'}`);
-    console.log(`[DB-DEBUG] has WebSocketPair: ${typeof WebSocketPair !== 'undefined'}`);
+    console.log(`[DB-DEBUG] isCloudflare FINAL: ${isCloudflare}`);
     console.log(`[DB-DEBUG] dbUrl port: ${dbUrl.match(/:([0-9]+)\//)?.[1] || 'default'}`);
 
     // ─── RUTA A: NODE.JS (LOCAL / DOCKER / TESTS) ───
@@ -105,6 +101,7 @@ export const executeQuery = async (c, query, params = []) => {
 
         if (!_pool) {
             const isLocalDb = !dbUrl.includes('supabase');
+            console.log(`[DB-DEBUG] Creating pg.Pool, isLocalDb: ${isLocalDb}`);
             _pool = new pg.Pool({
                 connectionString: dbUrl,
                 max: 15,
@@ -112,9 +109,14 @@ export const executeQuery = async (c, query, params = []) => {
             });
         }
 
-        const result = await _pool.query(pgQuery, params);
-        console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
-        return result.rows;
+        try {
+            const result = await _pool.query(pgQuery, params);
+            console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
+            return result.rows;
+        } catch (error) {
+            console.error(`[DB-DEBUG] ❌ pg.Pool error:`, error.message);
+            throw error;
+        }
     }
 
     // ─── RUTA B: CLOUDFLARE WORKERS (postgres.js) ───
@@ -126,27 +128,35 @@ export const executeQuery = async (c, query, params = []) => {
     const postgres = await _postgresPromise;
 
     // Configuración OPTIMIZADA para Cloudflare
-    const sql = postgres(dbUrl, {
+    const sqlOptions = {
         ssl: 'require',
-        max: 1,                    // Una conexión por consulta
-        idle_timeout: 0,           // No mantener conexiones
+        max: 1,
+        idle_timeout: 0,
         connect_timeout: 10,
         timeout: 30000,
-        prepare: false,            // No usar prepared statements
+        prepare: false,
         onnotice: () => { },
-        connection: {
-            attempts: 1
-        }
-    });
+    };
+
+    console.log(`[DB-DEBUG] Creating postgres.js connection with options:`, sqlOptions);
+
+    const sql = postgres(dbUrl, sqlOptions);
 
     try {
+        console.log(`[DB-DEBUG] Executing unsafe query...`);
         const result = await sql.unsafe(pgQuery, params);
         const rows = Array.isArray(result) ? result : (result ? [result] : []);
         console.log(`[DB-DEBUG] ✅ Rows returned: ${rows.length}`);
         return rows;
 
+    } catch (error) {
+        console.error(`[DB-DEBUG] ❌ postgres.js error:`, error.message);
+        throw error;
+
     } finally {
-        await sql.end({ timeout: 5 }).catch(() => { });
+        console.log(`[DB-DEBUG] Closing connection...`);
+        await sql.end({ timeout: 5 }).catch(e => console.error(`[DB-DEBUG] Error closing:`, e.message));
+        console.log(`[DB-DEBUG] Connection closed`);
     }
 };
 
