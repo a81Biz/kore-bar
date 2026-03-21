@@ -4,12 +4,44 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { generateOpenAPISpec } from './engine/swagger.js';
 import { buildRoutes } from './engine/schemaRouter.js';
 import { RouteRegistry } from './engine/route-registry.js';
+import pg from 'pg';
 
 
 const app = new Hono();
 
 // Enable CORS for frontend applications
 app.use('/*', cors());
+
+// 🟢 ENDPOINT DE DIAGNÓSTICO CRUDO
+app.get('/api/test-db', async (c) => {
+  const dbUrl = c.env?.DATABASE_URL || process.env.DATABASE_URL;
+
+  if (!dbUrl) return c.json({ error: 'No se detectó DATABASE_URL en Cloudflare' }, 400);
+
+  const client = new pg.Client({
+    connectionString: dbUrl,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000
+  });
+
+  try {
+    await client.connect();
+    const result = await client.query('SELECT 1 as success, current_database() as db_name');
+    await client.end();
+    return c.json({
+      status: 'CONEXION EXITOSA',
+      datos: result.rows,
+      url_usada: dbUrl.substring(0, 30) + '...' // Solo vemos el inicio para confirmar cuál está usando
+    });
+  } catch (error) {
+    return c.json({
+      status: 'ERROR FATAL',
+      mensaje: error.message,
+      connectionString: dbUrl,
+      codigo: error.code
+    }, 500);
+  }
+});
 
 app.get('/', (c) => { return c.text('Kore Bar API running') });
 
