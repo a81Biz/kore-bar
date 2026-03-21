@@ -3,7 +3,6 @@
 // Adaptador de Base de Datos Híbrido Anti-Deadlocks
 // ============================================================
 
-// 🟢 PROMESA SINGLETON: Evita que peticiones concurrentes traben a Cloudflare
 let _pgPromise = null;
 let _pool = null;
 
@@ -13,10 +12,10 @@ const getDbUrl = (c) => {
     return null;
 };
 
-// Función de carga segura: todas las peticiones esperan a la misma promesa
+// 🟢 CORRECCIÓN VITEST: Asegura que encuentre 'pg' tanto en Docker como en Cloudflare
 const getPg = async () => {
     if (!_pgPromise) {
-        _pgPromise = import('pg').then(m => m.default);
+        _pgPromise = import('pg').then(m => m.default || m);
     }
     return await _pgPromise;
 };
@@ -29,10 +28,10 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // Cargamos la librería de forma 100% segura contra concurrencia
     const pg = await getPg();
 
-    const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db');
+    // 🟢 REGLA INFALIBLE: Si la URL no dice 'supabase', apagamos el SSL porque es tu Docker
+    const isLocalDb = !dbUrl.includes('supabase');
     const isCloudflare = typeof WebSocketPair !== 'undefined';
 
     // ─── RUTA A: LOCAL / DOCKER / TESTS (Pool Nativo) ───
@@ -40,7 +39,7 @@ export const executeQuery = async (c, query, params = []) => {
         if (!_pool) {
             _pool = new pg.Pool({
                 connectionString: dbUrl,
-                max: 15, // Perfecto para tests paralelos
+                max: 15,
                 idleTimeoutMillis: 30000,
                 ssl: isLocalDb ? false : { rejectUnauthorized: false }
             });
@@ -75,8 +74,7 @@ export const executeQuery = async (c, query, params = []) => {
 
         } catch (error) {
             const errMsg = error.message || '';
-
-            if (errMsg.includes('terminated unexpectedly') || errMsg.includes('ECONNRESET') || errMsg.includes('closed')) {
+            if (errMsg.includes('terminated unexpectedly') || errMsg.includes('ECONNRESET') || errMsg.includes('closed') || errMsg.includes('Connection terminated')) {
                 if (attempts >= maxAttempts) {
                     console.error('[DB] FATAL - Rechazo tras 3 reintentos:', error);
                     throw error;
@@ -84,12 +82,10 @@ export const executeQuery = async (c, query, params = []) => {
                 await new Promise(resolve => setTimeout(resolve, 200 * attempts));
                 continue;
             }
-
             console.error('[DB] Cloudflare Query Error:', error);
             throw error;
 
         } finally {
-            // Cerramos la llave con candado para no dejar conexiones Zombis
             await client.end().catch(() => { });
         }
     }
