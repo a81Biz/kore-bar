@@ -24,14 +24,16 @@ for (const [subDir, prefix] of Object.entries(RouteRegistry)) {
 }
 
 // ── Arranque local (Node.js) ──────────────────────────────────
-// En Cloudflare Workers, el runtime usa directamente `export default app`
-// En desarrollo local, iniciamos el servidor con @hono/node-server
-if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.CF_PAGES) {
+// Detectamos si estamos en Cloudflare Workers de forma infalible
+const isCloudflare = typeof WebSocketPair !== 'undefined';
+
+if (!isCloudflare && typeof process !== 'undefined' && process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.CF_PAGES) {
+  // Solo se ejecuta en tu computadora (Docker/Local)
   import('@hono/node-server').then(({ serve }) => {
     const port = 8000;
     console.log(`Server is running on port ${port}`);
     serve({ fetch: app.fetch, port });
-  });
+  }).catch(err => console.error("Error arrancando el servidor local:", err));
 }
 
 // Export para Cloudflare Workers (el runtime consume este default export)
