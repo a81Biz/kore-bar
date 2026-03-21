@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MexiPOS Admin - Sistema de Gestión Restaurantera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"],
+                        "sans": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-link { background-color: rgba(236, 91, 19, 0.1); color: #ec5b13; border-left: 4px solid #ec5b13; }
+        /* Hide scrollbars but allow scrolling */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+    <div id="root"></div>
+
+    <!-- React and related libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            const navItems = [
+                { path: '/', label: 'Dashboard', icon: 'dashboard' },
+                { path: '/menu', label: 'Menú', icon: 'menu_book' },
+                { path: '/staff', label: 'Personal y Mesas', icon: 'groups' },
+                { path: '/inventory', label: 'Inventario', icon: 'inventory_2' },
+                { path: '/reports', label: 'Reportes', icon: 'bar_chart' }
+            ];
+
+            return (
+                <aside class="w-64 bg-slate-900 dark:bg-black text-white flex flex-col flex-shrink-0 h-screen sticky top-0">
+                    <div class="p-6 flex items-center gap-3 border-b border-slate-800">
+                        <div class="bg-primary p-2 rounded-lg">
+                            <span class="material-symbols-outlined text-white">restaurant_menu</span>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg leading-none">SIR Mexican</h1>
+                            <span class="text-xs text-slate-400">Admin Panel</span>
+                        </div>
+                    </div>
+                    <nav class="flex-1 mt-6 px-3 space-y-1">
+                        {navItems.map(item => (
+                            <Link 
+                                key={item.path}
+                                to={item.path} 
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path) ? 'bg-primary/10 text-primary font-semibold border-l-4 border-primary' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                            >
+                                <span class="material-symbols-outlined">{item.icon}</span>
+                                <span>{item.label}</span>
+                            </Link>
+                        ))}
+                    </nav>
+                    <div class="p-4 border-t border-slate-800">
+                        <div class="flex items-center gap-3 p-2">
+                            <div class="size-10 rounded-full bg-slate-700 overflow-hidden">
+                                <img class="w-full h-full object-cover" alt="Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzdOGRzqck7hrP7s3V8ufRJNBmcUaMKji0GCxOgjItkjGlC01eJm-2LoZ2n0l19rq09gHMz6lmSFeLOFpjQJQw41Spzloz88O31aW4GiXfFWRnrwjNdUn6sBLGFQy5NmVEu0L6POry3D3hpnHw8HDTZ8pNbnQS--JD27IB1LoyFGW4BlCyyswCLnFCT9ZzEMjjhOff7AzwhWFDsQZRzg3QMEIG6AGZ0xsXJPq4LayIwECZaVO5178ZOqlFXoQ_YtT4GURQ3zk0ZLKR" />
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-sm font-medium truncate">Gerente General</p>
+                                <p class="text-xs text-slate-500 truncate">gerencia@mexipos.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const TopBar = ({ title }) => (
+            <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 z-10 sticky top-0">
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                        <input class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-primary text-sm" placeholder="Buscar pedidos, productos, personal..." type="text" />
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                        <span class="material-symbols-outlined">notifications</span>
+                        <span class="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                    </button>
+                    <button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
+                </div>
+            </header>
+        );
+
+        // --- Pages ---
+
+        const DashboardPage = () => {
+            return (
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <TopBar title="Dashboard Principal" />
+                    <main class="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Principal</h2>
+                                <p class="text-slate-500">Resumen de operaciones de hoy, 24 de Mayo</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium">
+                                    <span class="material-symbols-outlined text-sm">calendar_today</span> Hoy
+                                </button>
+                                <button class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
+                                    <span class="material-symbols-outlined text-sm">download</span> Exportar Reporte
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {[
+                                { label: 'Ventas del Día', val: '$15,420.00', trend: '+12.5%', color: 'emerald', icon: 'payments' },
+                                { label: 'Órdenes Completadas', val: '84', trend: '+5.2%', color: 'blue', icon: 'receipt_long' },
+                                { label: 'Mesas Activas', val: '6/20', trend: '30% Capacidad', color: 'orange', icon: 'table_restaurant' },
+                                { label: 'Alertas de Inventario', val: '3 críticas', trend: 'Acción Requerida', color: 'red', icon: 'warning' }
+                            ].map((kpi, idx) => (
+                                <div key={idx} className={`bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${kpi.color === 'red' ? 'ring-1 ring-red-500/20' : ''}`}>
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div className={`p-2 bg-${kpi.color}-100 dark:bg-${kpi.color}-900/30 text-${kpi.color}-600 rounded-lg`}>
+                                            <span class="material-symbols-outlined">{kpi.icon}</span>
+                                        </div>
+                                        <span className={`text-xs font-bold text-${kpi.color}-600 bg-${kpi.color}-50 dark:bg-${kpi.color}-900/20 px-2 py-1 rounded`}>{kpi.trend}</span>
+                                    </div>
+                                    <p class="text-sm text-slate-500 font-medium">{kpi.label}</p>
+                                    <h3 className={`text-2xl font-bold mt-1 ${kpi.color === 'red' ? 'text-red-600' : ''}`}>{kpi.val}</h3>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-lg">Ventas de la Semana</h3>
+                                <select class="bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm px-4 py-2 focus:ring-primary">
+                                    <option>Últimos 7 días</option>
+                                    <option>Este mes</option>
+                                </select>
+                            </div>
+                            <div class="h-64 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex items-end justify-between px-10 pb-4 relative overflow-hidden">
+                                <div class="absolute inset-0 flex flex-col justify-between opacity-10">
+                                    {[1,2,3,4].map(i => <div key={i} class="border-b border-slate-400 w-full h-0"></div>)}
+                                </div>
+                                <div class="w-12 bg-primary/20 rounded-t-lg h-[40%] group relative"></div>
+                                <div class="w-12 bg-primary/40 rounded-t-lg h-[60%]"></div>
+                                <div class="w-12 bg-primary/30 rounded-t-lg h-[50%]"></div>
+                                <div class="w-12 bg-primary/70 rounded-t-lg h-[85%]"></div>
+                                <div class="w-12 bg-primary/50 rounded-t-lg h-[70%]"></div>
+                                <div class="w-12 bg-primary/90 rounded-t-lg h-[95%]"></div>
+                                <div class="w-12 bg-primary rounded-t-lg h-[65%]"></div>
+                            </div>
+                            <div class="flex justify-between px-10 mt-4 text-xs font-medium text-slate-400">
+                                <span>LUN</span><span>MAR</span><span>MIE</span><span>JUE</span><span>VIE</span><span>SAB</span><span>DOM</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                            <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                                <h3 class="font-bold text-lg">Actividad Reciente</h3>
+                                <button class="text-primary text-sm font-semibold hover:underline">Ver todo</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-xs font-bold">
+                                        <tr>
+                                            <th class="px-6 py-4">Mesa</th>
+                                            <th class="px-6 py-4">Mesero</th>
+                                            <th class="px-6 py-4">Estado</th>
+                                            <th class="px-6 py-4">Total</th>
+                                            <th class="px-6 py-4">Hora</th>
+                                            <th class="px-6 py-4 text-right">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                                        {[
+                                            { mesa: 'Mesa 04', waiter: 'Juan P.', status: 'EN PREPARACIÓN', color: 'amber', total: '$850.00', time: '14:20' },
+                                            { mesa: 'Mesa 12', waiter: 'Maria G.', status: 'PAGADO', color: 'emerald', total: '$1,240.00', time: '14:05' },
+                                            { mesa: 'Mesa 02', waiter: 'Carlos L.', status: 'SERVIR', color: 'blue', total: '$450.00', time: '13:58' },
+                                            { mesa: 'Llevar #45', waiter: 'Sistemas', status: 'PENDIENTE', color: 'slate', total: '$320.00', time: '13:45' }
+                                        ].map((row, idx) => (
+                                            <tr key={idx} class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                                <td class="px-6 py-4 font-bold">{row.mesa}</td>
+                                                <td class="px-6 py-4">{row.waiter}</td>
+                                                <td class="px-6 py-4">
+                                                    <span className={`px-2 py-1 bg-${row.color}-100 text-${row.color}-700 dark:bg-${row.color}-900/30 dark:text-${row.color}-400 rounded-full text-[10px] font-bold`}>{row.status}</span>
+                                                </td>
+                                                <td class="px-6 py-4 font-medium">{row.total}</td>
+                                                <td class="px-6 py-4 text-slate-500">{row.time}</td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <button class="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"><span class="material-symbols-outlined text-sm">more_vert</span></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const MenuPage = () => (
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <TopBar />
+                <main class="flex-1 overflow-y-auto p-8 no-scrollbar">
+                    <header class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Catálogo de Platillos</h2>
+                            <p class="text-slate-500 dark:text-slate-400">Gestiona los productos y precios de tu menú digital.</p>
+                        </div>
+                        <button class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:brightness-110 transition-all">
+                            <span class="material-symbols-outlined">add</span> Nuevo Platillo
+                        </button>
+                    </header>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-800">
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Imagen</th>
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Nombre del Platillo</th>
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Precio</th>
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider text-center">IVA</th>
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">Categoría</th>
+                                        <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {[
+                                        { name: 'Tacos al Pastor', sub: 'Orden de 5 piezas', price: '$85.00', cat: 'Antojitos', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBATPaneq3ylWjIx84LlevzxFcqQSC6Bi29S2c99iOmjcg8YHGYGGAhxQKZEW2_wvFrK6VeyzZcZncHhjAwo05D0JXHgYJuj2kvuhrCJNM2upXLeM3VCZC-46FZegEXGi1kS0sJk7w-wGHpjK9MpTUJfCeAlUFA5gdQsyn2UJ_mcoYNDtgjx3SpvnIBagZGMKaHnzFa5VwQ5Zkz6LgJN99PA1I2oPClTclHJsr7iYC4X57-9MmSegbGCem0i4rs1mse4JeaTYR_W2cF' },
+                                        { name: 'Enchiladas Verdes', sub: 'Con pollo y crema', price: '$120.00', cat: 'Platillo Fuerte', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCAbTBh7xHU_-bQzRLzyjr-mqiFtHyX_F3_nLD-3LVjyohIAIM4JspdrPbaDCXm8c_bMSGINr1gtLQ1XwQfvQmzoVDJIWAD1VT2npd7szGGoLjSNgmxpm5g_Q9sO-iKHalXNF9ZkPNQA8dnH-A-e1wlhz_eukrzxb__HcOU8DESR9-wcezkbfxBk7kIjNaUqbhN0zzTzn78oe-0L-MJ40VuVgDj8GdhGDGhXHJyR49R-4PiKwVxs2oF_u7rG6e9rTRUaRHRNWi6_8cZ' },
+                                        { name: 'Guacamole Especial', sub: 'Con totopos artesanales', price: '$95.00', cat: 'Entradas', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDJXmckS4uz6v_xE7j37tLtvRnMN8T8Tl76ZVGlfbXyTCUhm_C-3gYZvkWroh7pLjqF6-GONMvy_ihogdY4VErsfnKEb5ex-sZWoXhD6kste_zOExqBpgKjbl6yxchqyTSrYqnd1u9gHRPgxn6yp4KTXhhK3uZY67tWlo9xPcTVBizAk3Q8Oi4uZd7sy6jt0TG40iRV8rrmSd4-JXzv31MuylqOxT5PBDxZQhEGg325tctKsFuTMGvN88uDtT42j5kTzvlE0gR0eH6C' },
+                                        { name: 'Flan Casero', sub: 'Receta tradicional', price: '$60.00', cat: 'Postres', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBqbWKUdCQMRaRFB1TQ9UAADfp0oZDG9kUzWhgkbfZBLCwXBZ0_Cqzvz6AohKTA5-fwWb22RebaonI6-qFp9LTH9T1UGAnNY6XarHUCBzTXc1D-FXdDLJaj6w5CADwR8zuPEwp9MBEkWTzr2T27gj7a-oBcpbk7Mv5D5xVg5acSbLXsWjl8I8U6T35B_5dXSIaUSS7A1337x68BiSyPCNMlRRK-8FmQgskTGgQiyT9063yanWc6Z3dQhiVo2uFO70dUe4frX_oYB5Nu' }
+                                    ].map((item, idx) => (
+                                        <tr key={idx} class="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors">
+                                            <td class="px-6 py-4"><div class="w-12 h-12 rounded-lg bg-cover bg-center" style={{backgroundImage: `url('${item.img}')`}}></div></td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-bold text-slate-900 dark:text-white">{item.name}</div>
+                                                <div class="text-xs text-slate-500 italic">{item.sub}</div>
+                                            </td>
+                                            <td class="px-6 py-4"><span class="text-sm font-bold text-primary">{item.price}</span></td>
+                                            <td class="px-6 py-4 text-center"><span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded">16%</span></td>
+                                            <td class="px-6 py-4"><span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">{item.cat}</span></td>
+                                            <td class="px-6 py-4 text-right space-x-2">
+                                                <button class="p-2 text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-xl">edit</span></button>
+                                                <button class="p-2 text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-xl">delete</span></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const StaffPage = () => {
+            const [selectedWaiter, setSelectedWaiter] = useState('Juan P.');
+            const [assignedTables, setAssignedTables] = useState([1, 2, 3, 4, 8]);
+
+            const toggleTable = (id) => {
+                if (assignedTables.includes(id)) {
+                    setAssignedTables(assignedTables.filter(t => t !== id));
+                } else {
+                    setAssignedTables([...assignedTables, id]);
+                }
+            };
+
+            return (
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <TopBar />
+                    <main class="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestión de Personal y Mesas</h2>
+                            <p class="text-slate-500 mt-1">Control administrativo de turnos, inasistencias y zonificación de servicio.</p>
+                        </div>
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                            <section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                    <h3 class="text-lg font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary">badge</span> Recursos Humanos</h3>
+                                    <button class="text-primary text-sm font-bold hover:underline">Ver todos</button>
+                                </div>
+                                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {[
+                                        { name: 'Juan P.', role: 'Capitán de Meseros', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNjQf1zQXJzHFBk9pMT09GX0HIot1ERDdSjAQA3_yv7yI2T4VQG02IISeCUZb6KnRQOMciEog_2pf773-FTAADhy4NOaiIEO5EqQbk2bGyrJiTsmIDVbNYnTEuTUZY4qo8wwAYzt3g8TvsSSknDiL-ROJfyylwaDXiECGNaxsJkwzUUSEFpSLjkotlqldBYloPA7swCcmjHhcw0J0jq7Jtc4mQYLJc8qfpIefvjjC0ThBYXa3GTqQ8RErXyXX71OMqIRlzA1xYtxfo' },
+                                        { name: 'Maria G.', role: 'Mesera A', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDjnhfH2N8kUqTRszjwFVRrfccMWw_GIqkrLvL1DwH_QUDby1fOCC7D3N4hmnt7Neby5QQDvr4jO2EgZ7j0bTq2ahitaA2Up8LCS0sb4znQk_ptZShzgTtfAvbUArU1PzDQVhy59m_RhfSOUOzzvlU-WKvOVROwf0Cc9YDh0l3aRDuIrPRnD3UJlDgL8JX2R9PRgj28Hze7Sa535m9XqnV3zNbSl064TbN492nnWflgU9xZu9CSzPsDyMjT3P9eOEUW6mP6-JNOAlf7' },
+                                        { name: 'Carlos L.', role: 'Mesero B', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPYaJaVfEUKpBMPnjiCxAPSP69-IWIY2U9WNk4P7zsIC4j4K5yA_m0PAVDMrumtcp1tHhF-QX1iUCuqsxabhqmZY_J-xwjzDCfhOm8iR6Szgqjwv3STGwrdKSMaDv6rjayUt8LJJebnSFqffFq16nip9g6Lv7e4jHblROpN8Q0LKcJTjUxpcVieehO1GQAF23PK_ZLudYNZLEgTVTBosfeI8tHlURqC-05jyD7ANGGkwJ4I_jY1RZJ_ibe9ccu6ThEH1hh1Itkl9n7' }
+                                    ].map((emp, i) => (
+                                        <div key={i} onClick={() => setSelectedWaiter(emp.name)} class={`p-6 flex items-center justify-between cursor-pointer transition-colors ${selectedWaiter === emp.name ? 'bg-primary/5' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                            <div class="flex items-center gap-4">
+                                                <div class="size-12 rounded-full border-2 border-slate-200 dark:border-slate-700 overflow-hidden">
+                                                    <img class="w-full h-full object-cover" src={emp.img} />
+                                                </div>
+                                                <div><p class="font-bold text-slate-900 dark:text-white">{emp.name}</p><span class="text-xs text-slate-500">{emp.role}</span></div>
+                                            </div>
+                                            <button class="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm font-bold">Inasistencia</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                            <section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                                <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+                                    <h3 class="text-lg font-bold flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-primary">grid_view</span> Asignación de Mesas</h3>
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex-1 font-bold text-slate-700 dark:text-slate-300">Editando: <span class="text-primary">{selectedWaiter}</span></div>
+                                        <button class="bg-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-primary/20">Guardar Cambios</button>
+                                    </div>
+                                </div>
+                                <div class="p-6 bg-slate-50/50 dark:bg-slate-800/20">
+                                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                        {Array.from({length: 20}, (_, i) => i + 1).map(num => (
+                                            <div key={num} onClick={() => toggleTable(num)} className={`h-16 flex flex-col items-center justify-center border-2 rounded-xl transition-all cursor-pointer relative ${assignedTables.includes(num) ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}>
+                                                <span class="text-[10px] font-bold">Mesa</span>
+                                                <span class="text-xl font-black">{num}</span>
+                                                {assignedTables.includes(num) && (
+                                                    <div class="absolute -top-1 -right-1"><span class="material-symbols-outlined text-primary bg-white dark:bg-slate-900 rounded-full text-lg">check_circle</span></div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const InventoryPage = () => (
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <TopBar />
+                <main class="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
+                    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Gestión de Inventario</h2>
+                            <p class="text-slate-500 dark:text-slate-400 mt-1">Supervisa niveles de stock y genera pedidos a proveedores.</p>
+                        </div>
+                        <button class="bg-primary text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
+                            <span class="material-symbols-outlined">add_circle</span><span>Nuevo Insumo</span>
+                        </button>
+                    </header>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                            { label: 'Insumos Bajos', val: '2', icon: 'error', color: 'red', trend: '+15% vs ayer' },
+                            { label: 'Pedidos Pendientes', val: '5', icon: 'pending_actions', color: 'primary', trend: 'Sin cambios' },
+                            { label: 'Total Proveedores', val: '12', icon: 'group', color: 'blue', trend: 'Activos' }
+                        ].map((stat, i) => (
+                            <div key={i} class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-wider">{stat.label}</p>
+                                    <span className={`material-symbols-outlined ${stat.color === 'primary' ? 'text-primary bg-primary/10' : `text-${stat.color}-500 bg-${stat.color}-100 dark:bg-${stat.color}-900/30`} p-2 rounded-lg`}>{stat.icon}</span>
+                                </div>
+                                <div class="flex items-end gap-3"><p class="text-4xl font-black">{stat.val}</p><p className={`text-${stat.color === 'primary' ? 'primary' : stat.color}-500 text-sm font-medium mb-1`}>{stat.trend}</p></div>
+                            </div>
+                        ))}
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500">Insumo</th>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500">Categoría</th>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500">Stock Actual</th>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500">Stock Ideal</th>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500">Proveedor</th>
+                                    <th class="px-6 py-4 text-xs font-bold uppercase text-slate-500 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tr class="bg-red-50 dark:bg-red-900/20">
+                                    <td class="px-6 py-4"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-red-600">kebab_dining</span><div><span class="block font-bold text-red-700 text-[10px]">ALERTA</span><span class="font-bold">Carne de Res</span></div></div></td>
+                                    <td class="px-6 py-4"><span class="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-full">Proteínas</span></td>
+                                    <td class="px-6 py-4 font-black text-red-600">5kg</td>
+                                    <td class="px-6 py-4">30kg</td>
+                                    <td class="px-6 py-4">Carnes San Juan</td>
+                                    <td class="px-6 py-4 text-right"><button class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Generar Pedido</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 font-bold">Tortillas</td>
+                                    <td class="px-6 py-4"><span class="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-full">Abarrotes</span></td>
+                                    <td class="px-6 py-4 font-bold text-emerald-600">50kg</td>
+                                    <td class="px-6 py-4">60kg</td>
+                                    <td class="px-6 py-4">Tortillería La Fe</td>
+                                    <td class="px-6 py-4 text-right"><button class="text-primary font-bold">Editar</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
+            </div>
+        );
+
+        // --- Main App ---
+
+        const App = () => {
+            return (
+                <div class="flex h-screen overflow-hidden">
+                    <Sidebar />
+                    <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/menu" element={<MenuPage />} />
+                        <Route path="/staff" element={<StaffPage />} />
+                        <Route path="/inventory" element={<InventoryPage />} />
+                        <Route path="/reports" element={<DashboardPage />} /> {/* Simplified for demo */}
+                    </Routes>
+                </div>
+            );
+        };
+
+        const Root = () => (
+            <MemoryRouter>
+                <App />
+            </MemoryRouter>
+        );
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<Root />);
+    </script>
+</body>
+</html>

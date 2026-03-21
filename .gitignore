@@ -1,5 +1,5 @@
 # Directories to ignore as per user request
-docs/
+
 functional/
 
 # Sensitive files

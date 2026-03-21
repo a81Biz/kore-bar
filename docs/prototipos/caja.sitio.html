@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>MexiPOS - Sistema de Gestión</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "mexipos-navy": "#1e293b",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"],
+                        "sans": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-size: 20px; }
+        /* Hide scrollbars for a cleaner POS feel but keep functionality */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ec5b1344; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ec5b1388; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+    <div id="root"></div>
+
+    <!-- React and related libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Header = ({ title = "MexiPOS", showCenter = true }) => (
+            <header class="sticky top-0 z-50 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3">
+                <div class="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
+                    <Link to="/" class="flex items-center gap-3">
+                        <div class="bg-primary p-1.5 rounded-lg text-white">
+                            <span class="material-symbols-outlined text-2xl block">grid_view</span>
+                        </div>
+                        <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h1>
+                    </Link>
+                    
+                    {showCenter && (
+                        <div class="hidden md:flex items-center gap-6">
+                            <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                <span class="material-symbols-outlined text-sm">wb_sunny</span>
+                                <span class="text-sm font-medium">Turno Matutino</span>
+                            </div>
+                            <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                                <span class="material-symbols-outlined text-sm">schedule</span>
+                                <span class="text-sm font-bold">14:35 PM</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div class="flex items-center gap-3">
+                        <button class="flex items-center justify-center gap-2 px-4 h-10 bg-primary/10 text-primary rounded-xl font-bold text-sm hover:bg-primary/20 transition-colors">
+                            <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                            <span>Corte de Caja</span>
+                        </button>
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div class="w-7 h-7 bg-slate-300 dark:bg-slate-600 rounded-full flex items-center justify-center overflow-hidden">
+                                <span class="material-symbols-outlined text-slate-600 dark:text-slate-300">person</span>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ana G.</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+        );
+
+        // --- Screen 1: Dashboard / Main POS ---
+        const DashboardPage = () => {
+            const navigate = useNavigate();
+            const [selectedTable, setSelectedTable] = useState(4);
+
+            return (
+                <div class="min-h-screen flex flex-col">
+                    <Header />
+                    <main class="max-w-[1440px] mx-auto p-6 flex flex-col lg:flex-row gap-6 flex-1 h-[calc(100vh-80px)] overflow-hidden">
+                        {/* Left Side: Table List */}
+                        <section class="lg:w-2/5 flex flex-col gap-4 overflow-hidden">
+                            <div class="flex items-center justify-between px-2">
+                                <h2 class="text-lg font-bold">Esperando Cuenta</h2>
+                                <span class="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-full">2 pendientes</span>
+                            </div>
+                            
+                            <div class="flex border-b border-slate-200 dark:border-slate-800">
+                                <button class="flex-1 py-3 text-sm font-bold border-b-2 border-primary text-primary">Esperando Cuenta</button>
+                                <button class="flex-1 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">Cuentas Pagadas</button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto pr-2 space-y-3">
+                                <div onClick={() => setSelectedTable(4)} class={`p-4 bg-white dark:bg-slate-800 rounded-xl border-2 transition-all cursor-pointer shadow-sm flex items-center justify-between ${selectedTable === 4 ? 'border-primary' : 'border-transparent dark:border-slate-800'}`}>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-2xl">table_restaurant</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white">Mesa 4 - Juan P.</p>
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <span class="text-xs text-primary font-medium">Pendiente</span>
+                                                <span class="text-[10px] text-slate-400">•</span>
+                                                <span class="text-xs text-slate-500 dark:text-slate-400">Hace 5 min</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-lg font-bold text-slate-900 dark:text-white">$850.00</p>
+                                        <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total</span>
+                                    </div>
+                                </div>
+
+                                <div onClick={() => setSelectedTable(12)} class={`p-4 bg-white dark:bg-slate-800 rounded-xl border-2 transition-all cursor-pointer shadow-sm flex items-center justify-between ${selectedTable === 12 ? 'border-primary' : 'border-transparent dark:border-slate-800'}`}>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-xl flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-2xl">table_restaurant</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white">Mesa 12 - Maria G.</p>
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <span class="text-xs text-slate-400 font-medium">Pendiente</span>
+                                                <span class="text-[10px] text-slate-400">•</span>
+                                                <span class="text-xs text-slate-500 dark:text-slate-400">Hace 8 min</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-lg font-bold text-slate-900 dark:text-white">$1,240.00</p>
+                                        <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Right Side: Account Details */}
+                        <section class="lg:w-3/5 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
+                            <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                                <div>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Detalle de Cuenta - Mesa {selectedTable}</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                                        Comensal: {selectedTable === 4 ? 'Juan P.' : 'Maria G.'} | Mesero: Carlos M.
+                                    </p>
+                                </div>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                    <span class="material-symbols-outlined">print</span>
+                                </button>
+                            </div>
+                            
+                            <div class="flex-1 overflow-y-auto p-6">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="text-left text-xs uppercase tracking-widest text-slate-400 font-bold border-b border-slate-100 dark:border-slate-800">
+                                            <th class="pb-3 w-12">Cant.</th>
+                                            <th class="pb-3">Producto</th>
+                                            <th class="pb-3 text-right">Unitario</th>
+                                            <th class="pb-3 text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                                        <tr class="group">
+                                            <td class="py-4 font-bold text-primary">3x</td>
+                                            <td class="py-4">
+                                                <p class="font-semibold text-slate-800 dark:text-slate-100">Tacos de Pastor</p>
+                                                <p class="text-xs text-slate-500">Con piña y cilantro extra</p>
+                                            </td>
+                                            <td class="py-4 text-right text-slate-600 dark:text-slate-400">$180.00</td>
+                                            <td class="py-4 text-right font-bold text-slate-900 dark:text-white">$540.00</td>
+                                        </tr>
+                                        <tr class="group">
+                                            <td class="py-4 font-bold text-primary">2x</td>
+                                            <td class="py-4">
+                                                <p class="font-semibold text-slate-800 dark:text-slate-100">Bebidas (Refresco/Agua)</p>
+                                                <p class="text-xs text-slate-500">Limonada con chía</p>
+                                            </td>
+                                            <td class="py-4 text-right text-slate-600 dark:text-slate-400">$45.00</td>
+                                            <td class="py-4 text-right font-bold text-slate-900 dark:text-white">$90.00</td>
+                                        </tr>
+                                        <tr class="group">
+                                            <td class="py-4 font-bold text-primary">1x</td>
+                                            <td class="py-4">
+                                                <p class="font-semibold text-slate-800 dark:text-slate-100">Guacamole Especial</p>
+                                                <p class="text-xs text-slate-500">Con totopos artesanales</p>
+                                            </td>
+                                            <td class="py-4 text-right text-slate-600 dark:text-slate-400">$220.00</td>
+                                            <td class="py-4 text-right font-bold text-slate-900 dark:text-white">$220.00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="p-6 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-6">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                                            <span>Subtotal</span>
+                                            <span>$732.76</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                                            <span>Descuento (0%)</span>
+                                            <span>-$0.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                                            <span>IVA (16%)</span>
+                                            <span>$117.24</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col items-end justify-center">
+                                        <span class="text-xs uppercase font-bold text-slate-400 tracking-tighter">Gran Total a Pagar</span>
+                                        <span class="text-4xl sm:text-5xl font-black text-primary leading-none">${selectedTable === 4 ? '850.00' : '1,240.00'}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-3">
+                                    <button class="flex-1 min-w-[150px] flex items-center justify-center gap-2 h-12 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                        <span class="material-symbols-outlined text-xl">sell</span>
+                                        <span>Descuento</span>
+                                    </button>
+                                    <button onClick={() => navigate('/factura')} class="flex-1 min-w-[150px] flex items-center justify-center gap-2 h-12 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                        <span class="material-symbols-outlined text-xl">receipt_long</span>
+                                        <span>Factura</span>
+                                    </button>
+                                    <button onClick={() => navigate('/pago')} class="w-full sm:w-auto sm:px-12 flex items-center justify-center gap-2 h-14 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all active:scale-[0.98]">
+                                        <span class="material-symbols-outlined text-2xl">payments</span>
+                                        <span>Procesar Pago</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Payment Modal ---
+        const PaymentPage = () => {
+            const navigate = useNavigate();
+            const [received, setReceived] = useState("1000.00");
+            const total = 850.00;
+            const change = parseFloat(received) - total;
+
+            return (
+                <div class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center p-4">
+                    <div class="relative w-full max-w-[560px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <header class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-primary/10 text-primary rounded-lg">
+                                    <span class="material-symbols-outlined block">payments</span>
+                                </div>
+                                <h2 class="text-xl font-bold tracking-tight">Proceso de Pago</h2>
+                            </div>
+                            <button onClick={() => navigate('/')} class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                                <span class="material-symbols-outlined text-slate-500 dark:text-slate-400">close</span>
+                            </button>
+                        </header>
+
+                        <div class="flex border-b border-slate-100 dark:border-slate-800">
+                            <button class="flex-1 flex flex-col items-center justify-center py-4 border-b-4 border-primary text-primary">
+                                <span class="material-symbols-outlined mb-1">payments</span>
+                                <span class="text-sm font-bold uppercase tracking-wider">Efectivo</span>
+                            </button>
+                            <button class="flex-1 flex flex-col items-center justify-center py-4 border-b-4 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all">
+                                <span class="material-symbols-outlined mb-1">credit_card</span>
+                                <span class="text-sm font-bold uppercase tracking-wider">Terminal</span>
+                            </button>
+                        </div>
+
+                        <div class="p-6 space-y-6">
+                            <div class="text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Monto Total a Cobrar</p>
+                                <h3 class="text-4xl font-extrabold text-slate-900 dark:text-white mt-1">${total.toFixed(2)}</h3>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-bold text-slate-700 dark:text-slate-300">Efectivo Recibido</label>
+                                    <div class="relative flex items-center">
+                                        <span class="absolute left-4 text-2xl font-bold text-slate-400">$</span>
+                                        <input 
+                                            class="w-full pl-10 pr-4 py-4 text-3xl font-bold bg-white dark:bg-slate-900 border-2 border-primary rounded-xl focus:ring-0 focus:border-primary outline-none" 
+                                            placeholder="0.00" 
+                                            type="text" 
+                                            value={received}
+                                            onChange={(e) => setReceived(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-3">
+                                    <button onClick={() => setReceived("200.00")} class="py-4 bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary rounded-xl font-bold text-lg transition-all border border-transparent hover:border-primary/30">$200</button>
+                                    <button onClick={() => setReceived("500.00")} class="py-4 bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary rounded-xl font-bold text-lg transition-all border border-transparent hover:border-primary/30">$500</button>
+                                    <button onClick={() => setReceived("1000.00")} class="py-4 bg-primary text-white rounded-xl font-bold text-lg shadow-lg shadow-primary/20">$1000</button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-5 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-xl">
+                                <div>
+                                    <p class="text-sm font-bold text-green-700 dark:text-green-400 uppercase tracking-wide">Cambio para el cliente</p>
+                                    <p class="text-xs text-green-600/70 dark:text-green-500/70">Calculado automáticamente</p>
+                                </div>
+                                <div class="text-3xl font-black text-green-700 dark:text-green-400">
+                                    ${change >= 0 ? change.toFixed(2) : "0.00"}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-center gap-6 opacity-40 grayscale py-2">
+                                <img class="h-6" alt="Visa" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSTtNGytw7AOUgsHrPbW-CmGfNlVKpJJv-I6aO9PA3N6GceN-f13P_58rbWG8ee368ht0nOOx1wP6rfXZwMS4m1fMXt-Y-fZWjiOkLMpA1NJr66kwYVfjjbxPj3QO6C-dRVPRsFvEMK6ucsfiDyKz_cTqD3aTlgmvBP-TJYC2Cj88lXgnHcq64ryuFV9co6ttMMDLvY5SBbxq_vj9U8-drscLw9xL1tWjgBDNawNqox3kCR8FQsEw4pbSIPUYYROL5F3G_Ui7WBPfc"/>
+                                <img class="h-8" alt="Mastercard" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqgakIatb_b6_y3tmIs_fY3_PaUpTPOM76dPC5JWI5Jff_UxcqFNQ8qu6hmE7cMmH1wEHomMjhT6_8Uh-CvLICNWIn6g6nV82xWyA6z5yNPltLyURMiuaDQe0T0ijouAm9ixqalxv-Tm1rYR8Ra4rxwt72sfzX39EKvaSaDQBiinbHWNc6WS8hpadsy-URIrnjSJ83gJtHdMD0ZQUXE-ofLYY2Tts2Z-f_TxQHLLf2xrZwIV1Gl3voCc3oOCQgBLlYjPOt2_Mrz_Ub"/>
+                                <img class="h-8" alt="Amex" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmw1VYJn8b66SDwZCzHw_JFSdvy6AjNMY_RpCO3DrMu5uIEPb-PjjtrlWL-Q8ObXiSGR-Eke9aPMU__EY9UDNVa2gOhUAmFxuus9VUCDN7lWJbPgHrZMuvgj5BCa3SQ0-F7yzVAmhuyy9tCZhUqbGaGj52JGOHDZdT13owD1JoAIolRG0qBUuZogeegPl0ZbvTCZt2AMCYkgl2Vd_LGytfreqy1QvvhrXxdXm5z8iZsWgtsPWBrCnUq-Z-iZ09qExGFer-U_hwoaKF"/>
+                            </div>
+                        </div>
+
+                        <footer class="p-6 pt-0">
+                            <button onClick={() => navigate('/')} class="w-full flex items-center justify-center gap-3 py-5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-xl transition-all shadow-xl shadow-green-200 dark:shadow-none">
+                                <span class="material-symbols-outlined text-2xl">print</span>
+                                Confirmar Pago e Imprimir
+                            </button>
+                            <p class="text-center text-xs text-slate-400 mt-4 font-medium uppercase tracking-tighter">
+                                Ticket #8492 • 12 de Octubre, 2023
+                            </p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 3: Invoicing (CFDI) ---
+        const InvoicingPage = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center p-4">
+                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+                            {/* Left Side: Form */}
+                            <div class="flex-1 p-6 md:p-10 overflow-y-auto">
+                                <header class="mb-8">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="bg-primary/10 p-2 rounded-lg">
+                                            <span class="material-symbols-outlined text-primary">description</span>
+                                        </div>
+                                        <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Facturación Electrónica CFDI 4.0</h2>
+                                    </div>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm">Ingrese los datos fiscales del receptor para generar el comprobante.</p>
+                                </header>
+                                
+                                <form class="space-y-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="flex flex-col gap-1.5">
+                                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">RFC del Receptor</label>
+                                            <div class="relative">
+                                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">fingerprint</span>
+                                                <input class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary transition-all uppercase" placeholder="XAXX010101000" type="text"/>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5">
+                                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Código Postal Fiscal</label>
+                                            <div class="relative">
+                                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">location_on</span>
+                                                <input class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="00000" type="text"/>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5 md:col-span-2">
+                                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Régimen Fiscal</label>
+                                            <div class="relative">
+                                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">account_balance</span>
+                                                <select class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary appearance-none transition-all">
+                                                    <option value="">Seleccione un régimen...</option>
+                                                    <option value="601">601 - General de Ley Personas Morales</option>
+                                                    <option value="605">605 - Sueldos y Salarios</option>
+                                                    <option value="626">626 - Régimen Simplificado de Confianza (RESICO)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5 md:col-span-2">
+                                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Uso de CFDI</label>
+                                            <div class="relative">
+                                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">assignment_turned_in</span>
+                                                <select class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary appearance-none transition-all">
+                                                    <option value="">Seleccione el uso...</option>
+                                                    <option value="G03">G03 - Gastos en general</option>
+                                                    <option value="S01">S01 - Sin efectos fiscales</option>
+                                                    <option value="D01">D01 - Honorarios médicos</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5 md:col-span-2">
+                                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Correo Electrónico (Envío XML/PDF)</label>
+                                            <div class="relative">
+                                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">mail</span>
+                                                <input class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="cliente@ejemplo.com" type="email"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="pt-6 flex flex-col sm:flex-row gap-4">
+                                        <button onClick={() => navigate('/')} class="flex-1 bg-mexipos-navy hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95" type="button">
+                                            <span class="material-symbols-outlined">send</span>
+                                            Timbrar Factura y Enviar
+                                        </button>
+                                        <button onClick={() => navigate('/')} class="px-6 py-4 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400" type="button">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            {/* Right Side: Summary */}
+                            <div class="w-full md:w-80 bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700 p-8 flex flex-col">
+                                <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+                                    <span class="material-symbols-outlined">receipt_long</span>
+                                    Resumen del Ticket
+                                </h3>
+                                <div class="space-y-4 flex-1">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-slate-500">Folio de Venta:</span>
+                                        <span class="font-mono font-bold">#MX-94821</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm border-b border-slate-200 dark:border-slate-700 pb-4">
+                                        <span class="text-slate-500">Fecha:</span>
+                                        <span>24 Oct 2023</span>
+                                    </div>
+                                    <div class="py-2 space-y-3">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="flex-1">Consumo de Alimentos</span>
+                                            <span class="font-medium">$1,250.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="flex-1">Bebidas Artesanales</span>
+                                            <span class="font-medium">$450.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t-2 border-dashed border-slate-300 dark:border-slate-600 space-y-2">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-slate-500">Subtotal:</span>
+                                            <span class="font-medium">$1,700.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-slate-500">IVA (16%):</span>
+                                            <span class="font-medium">$272.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-xl font-bold pt-4 text-primary">
+                                            <span>Total:</span>
+                                            <span>$1,972.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-8 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-slate-400">verified_user</span>
+                                    </div>
+                                    <p class="text-[10px] text-center text-slate-400 uppercase tracking-widest font-bold">Proveedor Autorizado de Certificación</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/pago" element={<PaymentPage />} />
+                        <Route path="/factura" element={<InvoicingPage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

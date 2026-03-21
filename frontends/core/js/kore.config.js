@@ -2,14 +2,50 @@
 
 const currentHost = window.location.hostname;
 
-const parts = currentHost.split('.');
+const getBaseDomain = (currentHost) => {
+    // Caso 1: Eliminar puerto si existe (ej: localhost:3000)
+    const hostWithoutPort = currentHost.split(':')[0];
+    const parts = hostWithoutPort.split('.');
 
-const BASE_DOMAIN = parts.length > 2 && !currentHost.match(/^\d/)
-    ? parts.slice(1).join('.') // admin.kore.bar -> kore.bar
-    : currentHost;             // kore.bar -> kore.bar / localhost -> localhost
+    // Caso 2: Detectar entornos de desarrollo
+    const isLocalDev = hostWithoutPort === 'localhost' ||
+        hostWithoutPort === '127.0.0.1' ||
+        hostWithoutPort.match(/^(\d{1,3}\.){3}\d{1,3}$/); // IP
+
+    if (isLocalDev) {
+        return hostWithoutPort;
+    }
+
+    // Caso 3: admin.localhost, api.admin.localhost -> localhost (desarrollo con subdominio)
+    if (hostWithoutPort.endsWith('localhost')) {
+        return 'localhost';
+    }
+
+    // Caso 4: Para IPs con subdominio (ej: admin.127.0.0.1)
+    if (hostWithoutPort.match(/^\d/)) {
+        const ipMatch = hostWithoutPort.match(/(\d{1,3}\.){3}\d{1,3}$/);
+        if (ipMatch) {
+            return ipMatch[0];
+        }
+        return hostWithoutPort;
+    }
+
+    // Caso 5: Dominios con subdominio (ej: admin.kore.bar -> kore.bar)
+    if (parts.length > 2) {
+        // Tomar los últimos 2 segmentos como dominio base
+        // Esto funciona para: kore.bar, techic.agency, dominio.com, etc.
+        return parts.slice(-2).join('.');
+    }
+
+    // Caso 6: Sin subdominio (ej: kore.bar -> kore.bar)
+    return hostWithoutPort;
+};
+
+const BASE_DOMAIN = getBaseDomain(currentHost);
 
 const IS_DEV = currentHost.includes('localhost') || currentHost === '127.0.0.1';
 const PROTOCOL = IS_DEV ? 'http' : 'https';
+
 export const KORE_CONFIG = {
 
     BASE_DOMAIN: BASE_DOMAIN,
