@@ -3,9 +3,8 @@
 // Adaptador Unificado de Base de Datos (Cloudflare & Local)
 // ============================================================
 
-// Usamos un Pool global (Singleton) para reutilizar conexiones
-// y evitar abrir/cerrar sockets en cada petición, lo que causaba los "Hangs".
 let _pool = null;
+let _pgModule = null; // Caché del import para evitar deadlocks paralelos en la nube
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
@@ -15,41 +14,62 @@ const getDbUrl = (c) => {
 
 export const executeQuery = async (c, query, params = []) => {
     const dbUrl = getDbUrl(c);
-
-    if (!dbUrl) {
-        throw new Error('No database connection configuration found. Set DATABASE_URL.');
-    }
+    if (!dbUrl) throw new Error('No database connection configuration found. Set DATABASE_URL.');
 
     // Normalizar placeholders ? → $1, $2...
     let pgQuery = query;
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // Inicialización Lazy del Pool
-    if (!_pool) {
-        const { default: pg } = await import('pg');
-        const { Pool } = pg;
+    // Importación dinámica segura (Cacheada)
+    if (!_pgModule) {
+        _pgModule = await import('pg');
+    }
+    const pg = _pgModule.default;
 
-        // 🟢 NUEVO: Detectamos si es una base de datos local (Docker/Vitest) para apagar el SSL
-        const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db') || dbUrl.includes('@postgres');
+    const isLocalDb = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('@db') || dbUrl.includes('@postgres');
+    const isCloudflare = typeof WebSocketPair !== 'undefined';
 
-        _pool = new Pool({
-            connectionString: dbUrl,
-            max: 5,
-            idleTimeoutMillis: 10000,
-            connectionTimeoutMillis: 10000,
-            // Si es local apagamos el SSL, si es la nube lo exigimos pero sin validar certificado
-            ssl: isLocalDb ? false : { rejectUnauthorized: false }
-        });
+    // ── RUTA A: LOCAL / DOCKER / TEST (Singleton Pool) ──
+    if (!isCloudflare) {
+        if (!_pool) {
+            _pool = new pg.Pool({
+                connectionString: dbUrl,
+                max: 10,
+                idleTimeoutMillis: 30000,
+                ssl: isLocalDb ? false : { rejectUnauthorized: false }
+            });
+        }
+        const result = await _pool.query(pgQuery, params);
+        return result.rows;
     }
 
+    // ── RUTA B: CLOUDFLARE WORKERS (Cliente Efímero sin bloqueos) ──
+    const client = new pg.Client({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
+        query_timeout: 10000
+    });
+
+    await client.connect();
+
     try {
-        // Ejecutamos la consulta. El Pool maneja la conexión y la devuelve automáticamente.
-        const result = await _pool.query(pgQuery, params);
+        const result = await client.query(pgQuery, params);
         return result.rows;
     } catch (error) {
         console.error('PostgreSQL Query Error:', error);
         throw error;
+    } finally {
+        // CRÍTICO: Cerramos la conexión sin usar 'await'.
+        // Esto evita el "Worker had hung", permitiendo que el HTTP responda de inmediato.
+        const endPromise = client.end().catch(() => { });
+
+        // waitUntil le dice a Cloudflare que mantenga el proceso vivo 
+        // unos milisegundos más en el fondo para asegurar que el socket se cierre.
+        if (c && c.executionCtx && c.executionCtx.waitUntil) {
+            c.executionCtx.waitUntil(endPromise);
+        }
     }
 };
 
