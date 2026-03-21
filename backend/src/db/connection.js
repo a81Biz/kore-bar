@@ -3,25 +3,17 @@
 // Adaptador Unificado de Base de Datos (Cloudflare & Local)
 // ============================================================
 
-let _pool = null;
-
 /**
  * Función segura para encontrar la URL sin importar dónde estemos
  */
 const getDbUrl = (c) => {
-    // 1. Cloudflare Workers
-    if (c && c.env && c.env.DATABASE_URL) {
-        return c.env.DATABASE_URL;
-    }
-    // 2. Local / Docker / Vitest / CI
-    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) {
-        return process.env.DATABASE_URL;
-    }
+    if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
+    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
     return null;
 };
 
 /**
- * Ejecuta una query SQL.
+ * Ejecuta una query SQL con un Cliente Efímero (A prueba de Serverless)
  */
 export const executeQuery = async (c, query, params = []) => {
     const dbUrl = getDbUrl(c);
@@ -35,23 +27,25 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    if (!_pool) {
-        // Importación dinámica para que esbuild pase limpio y Cloudflare use nodejs_compat
-        const { default: pg } = await import('pg');
-        const { Pool } = pg;
-        _pool = new Pool({
-            connectionString: dbUrl,
-            max: 10,
-            idleTimeoutMillis: 30000
-        });
-    }
+    // Importación dinámica cacheada
+    const { default: pg } = await import('pg');
+
+    // USAMOS CLIENT EN LUGAR DE POOL PARA EVITAR CONEXIONES ZOMBIS EN CLOUDFLARE
+    const client = new pg.Client({
+        connectionString: dbUrl,
+        connectionTimeoutMillis: 10000 // Si Supabase no responde en 10s, aborta en lugar de colgarse
+    });
 
     try {
-        const result = await _pool.query(pgQuery, params);
+        await client.connect();
+        const result = await client.query(pgQuery, params);
         return result.rows;
     } catch (error) {
         console.error('PostgreSQL Query Error:', error);
         throw error;
+    } finally {
+        // CRÍTICO: Cerrar la conexión para que el Worker de Cloudflare pueda terminar exitosamente
+        await client.end().catch(err => console.error('Error closing DB client:', err));
     }
 };
 
