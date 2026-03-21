@@ -1,67 +1,65 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos Híbrido - CON DETECCIÓN CORREGIDA
+// Adaptador de Base de Datos - CON SUPABASE CLIENT (OPTIMIZADO)
 // ============================================================
 
 let _pgPromise = null;
-let _postgresPromise = null;
 let _pool = null;
+let _supabaseClient = null;
 let _requestCounter = 0;
 
-// 🔑 Detectar Cloudflare Workers CORRECTAMENTE incluso con nodejs_compat
+// Detectar Cloudflare Workers CORRECTAMENTE
 const isCloudflareWorker = () => {
-    // Método #1: Verificar si estamos en un entorno Worker por la presencia de caches y WebSocketPair
-    // Y además, si el script se ejecuta desde un Worker (no desde un navegador)
     const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
+    if (!hasWorkerGlobals) return false;
 
-    if (!hasWorkerGlobals) {
-        return false;
-    }
-
-    // Método #2: En Workers, incluso con nodejs_compat, existe una variable global 'navigator'
-    // pero NO existe 'window' ni 'document'. En Node.js puro, 'navigator' no existe.
     const hasBrowserGlobals = typeof window !== 'undefined' || typeof document !== 'undefined';
-
-    // Método #3: En Workers con nodejs_compat, 'process' existe pero NO tiene 'process.versions.node'
-    // En Node.js real, 'process.versions.node' existe y contiene la versión
     const isRealNode = typeof process !== 'undefined' && process.versions && process.versions.node;
 
-    // Si tiene worker globals, NO tiene browser globals, y NO es Node.js real → es Cloudflare Worker
-    const isCloudflare = hasWorkerGlobals && !hasBrowserGlobals && !isRealNode;
+    return hasWorkerGlobals && !hasBrowserGlobals && !isRealNode;
+};
 
-    console.log(`[DB-DEBUG] Detección Cloudflare:`);
-    console.log(`[DB-DEBUG]   hasWorkerGlobals: ${hasWorkerGlobals}`);
-    console.log(`[DB-DEBUG]   hasBrowserGlobals: ${hasBrowserGlobals}`);
-    console.log(`[DB-DEBUG]   isRealNode: ${isRealNode}`);
-    console.log(`[DB-DEBUG]   result: ${isCloudflare}`);
+const getSupabaseClient = async (c) => {
+    if (!_supabaseClient) {
+        const { createClient } = await import('@supabase/supabase-js');
 
-    return isCloudflare;
+        const supabaseUrl = c?.env?.SUPABASE_URL || process.env.SUPABASE_URL;
+        const supabaseKey = c?.env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseKey) {
+            throw new Error('Supabase credentials not configured');
+        }
+
+        console.log(`[DB-DEBUG] Creating Supabase client for Cloudflare`);
+
+        _supabaseClient = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            },
+            global: {
+                headers: {
+                    'X-Application-Name': 'kore-bar-worker'
+                }
+            },
+            // Configuración para Cloudflare
+            db: {
+                schema: 'public'
+            }
+        });
+    }
+    return _supabaseClient;
 };
 
 const getDbUrl = (c) => {
-    // Para Cloudflare Workers
     if (isCloudflareWorker() && c && c.env) {
-        // Usar el pooler de Supabase (puerto 6543) OBLIGATORIO en Workers
-        if (c.env.DATABASE_URL_POOLER) {
-            console.log(`[DB-DEBUG] Using DATABASE_URL_POOLER for Cloudflare`);
-            return c.env.DATABASE_URL_POOLER;
-        }
-        if (c.env.DATABASE_URL) {
-            console.log(`[DB-DEBUG] Using DATABASE_URL for Cloudflare`);
-            return c.env.DATABASE_URL;
-        }
+        if (c.env.DATABASE_URL_POOLER) return c.env.DATABASE_URL_POOLER;
+        if (c.env.DATABASE_URL) return c.env.DATABASE_URL;
     }
 
-    // Para local o desarrollo (Node.js)
-    if (c && c.env && c.env.DATABASE_URL) {
-        console.log(`[DB-DEBUG] Using DATABASE_URL from c.env for Node.js`);
-        return c.env.DATABASE_URL;
-    }
-
-    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) {
-        console.log(`[DB-DEBUG] Using DATABASE_URL from process.env for Node.js`);
-        return process.env.DATABASE_URL;
-    }
+    if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
+    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
 
     return null;
 };
@@ -71,27 +69,22 @@ export const executeQuery = async (c, query, params = []) => {
     const requestId = _requestCounter;
 
     console.log(`\n[DB-DEBUG] ========== QUERY #${requestId} START ==========`);
-    console.log(`[DB-DEBUG] Timestamp: ${new Date().toISOString()}`);
     console.log(`[DB-DEBUG] Query preview: ${query.substring(0, 100)}...`);
     console.log(`[DB-DEBUG] Params count: ${params.length}`);
 
-    const dbUrl = getDbUrl(c);
-    if (!dbUrl) {
-        throw new Error('No database connection configuration found.');
-    }
-
-    // Convertir ? a $1, $2, etc.
-    let pgQuery = query;
-    let paramIndex = 1;
-    pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
-
     const isCloudflare = isCloudflareWorker();
+    console.log(`[DB-DEBUG] isCloudflare: ${isCloudflare}`);
 
-    console.log(`[DB-DEBUG] isCloudflare FINAL: ${isCloudflare}`);
-    console.log(`[DB-DEBUG] dbUrl port: ${dbUrl.match(/:([0-9]+)\//)?.[1] || 'default'}`);
-
-    // ─── RUTA A: NODE.JS (LOCAL / DOCKER / TESTS) ───
+    // ─── RUTA A: LOCAL / DOCKER / TESTS (pg.Pool) ───
     if (!isCloudflare) {
+        const dbUrl = getDbUrl(c);
+        if (!dbUrl) throw new Error('No database connection configuration found.');
+
+        // Convertir ? a $1, $2, etc.
+        let pgQuery = query;
+        let paramIndex = 1;
+        pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
+
         console.log(`[DB-DEBUG] 🖥️  Using Node.js path (pg.Pool)`);
 
         if (!_pgPromise) {
@@ -101,7 +94,6 @@ export const executeQuery = async (c, query, params = []) => {
 
         if (!_pool) {
             const isLocalDb = !dbUrl.includes('supabase');
-            console.log(`[DB-DEBUG] Creating pg.Pool, isLocalDb: ${isLocalDb}`);
             _pool = new pg.Pool({
                 connectionString: dbUrl,
                 max: 15,
@@ -109,54 +101,69 @@ export const executeQuery = async (c, query, params = []) => {
             });
         }
 
-        try {
-            const result = await _pool.query(pgQuery, params);
-            console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
-            return result.rows;
-        } catch (error) {
-            console.error(`[DB-DEBUG] ❌ pg.Pool error:`, error.message);
-            throw error;
-        }
+        const result = await _pool.query(pgQuery, params);
+        console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
+        return result.rows;
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS (postgres.js) ───
-    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (postgres.js)`);
-
-    if (!_postgresPromise) {
-        _postgresPromise = import('postgres').then(m => m.default || m);
-    }
-    const postgres = await _postgresPromise;
-
-    // Configuración OPTIMIZADA para Cloudflare
-    const sqlOptions = {
-        ssl: 'require',
-        max: 1,
-        idle_timeout: 0,
-        connect_timeout: 10,
-        timeout: 30000,
-        prepare: false,
-        onnotice: () => { },
-    };
-
-    console.log(`[DB-DEBUG] Creating postgres.js connection with options:`, sqlOptions);
-
-    const sql = postgres(dbUrl, sqlOptions);
+    // ─── RUTA B: CLOUDFLARE WORKERS (Supabase Client) ───
+    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client)`);
 
     try {
-        console.log(`[DB-DEBUG] Executing unsafe query...`);
-        const result = await sql.unsafe(pgQuery, params);
-        const rows = Array.isArray(result) ? result : (result ? [result] : []);
-        console.log(`[DB-DEBUG] ✅ Rows returned: ${rows.length}`);
-        return rows;
+        const supabase = await getSupabaseClient(c);
+
+        // Detectar si es un SELECT o un CALL (stored procedure)
+        const isSelect = query.trim().toUpperCase().startsWith('SELECT');
+        const isCall = query.trim().toUpperCase().startsWith('CALL');
+
+        if (isSelect) {
+            // Para SELECT, usar .rpc con una función de SQL
+            // Primero, necesitamos una función en Supabase para ejecutar SQL
+            // Alternativa: usar el cliente REST de Supabase
+            console.log(`[DB-DEBUG] Executing SELECT via Supabase.rpc('execute_sql')`);
+
+            // Usar RPC para ejecutar SQL (necesitas crear esta función en Supabase)
+            const { data, error } = await supabase.rpc('execute_sql', {
+                query_text: query,
+                query_params: params
+            });
+
+            if (error) {
+                console.error(`[DB-DEBUG] ❌ Supabase RPC error:`, error);
+                throw error;
+            }
+
+            console.log(`[DB-DEBUG] ✅ Rows returned: ${data?.length || 0}`);
+            return data || [];
+
+        } else if (isCall) {
+            // Para CALL (stored procedures), también usar RPC
+            console.log(`[DB-DEBUG] Executing CALL via Supabase.rpc('execute_sql')`);
+
+            const { data, error } = await supabase.rpc('execute_sql', {
+                query_text: query,
+                query_params: params
+            });
+
+            if (error) throw error;
+            return data || [];
+
+        } else {
+            // Para otros tipos de queries
+            console.log(`[DB-DEBUG] Executing via Supabase.rpc('execute_sql')`);
+
+            const { data, error } = await supabase.rpc('execute_sql', {
+                query_text: query,
+                query_params: params
+            });
+
+            if (error) throw error;
+            return data || [];
+        }
 
     } catch (error) {
-        console.error(`[DB-DEBUG] ❌ postgres.js error:`, error.message);
+        console.error(`[DB-DEBUG] ❌ Supabase error:`, error.message);
         throw error;
-
-    } finally {
-        console.log(`[DB-DEBUG] Closing connection...`);
-        await sql.end({ timeout: 5 }).catch(e => console.error(`[DB-DEBUG] Error closing:`, e.message));
-        console.log(`[DB-DEBUG] Connection closed`);
     }
 };
 
