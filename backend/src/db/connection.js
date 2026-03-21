@@ -1,6 +1,6 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos - CON SUPABASE CLIENT (OPTIMIZADO)
+// Adaptador de Base de Datos - CON SUPABASE CLIENT (VERSIÓN SIMPLIFICADA)
 // ============================================================
 
 let _pgPromise = null;
@@ -8,7 +8,7 @@ let _pool = null;
 let _supabaseClient = null;
 let _requestCounter = 0;
 
-// Detectar Cloudflare Workers CORRECTAMENTE
+// Detectar Cloudflare Workers
 const isCloudflareWorker = () => {
     const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
     if (!hasWorkerGlobals) return false;
@@ -23,8 +23,11 @@ const getSupabaseClient = async (c) => {
     if (!_supabaseClient) {
         const { createClient } = await import('@supabase/supabase-js');
 
-        const supabaseUrl = c?.env?.SUPABASE_URL || process.env.SUPABASE_URL;
-        const supabaseKey = c?.env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+        let supabaseUrl = c?.env?.SUPABASE_URL || process.env.SUPABASE_URL;
+        let supabaseKey = c?.env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+        console.log(`[DB-DEBUG] SUPABASE_URL exists: ${!!supabaseUrl}`);
+        console.log(`[DB-DEBUG] SUPABASE_ANON_KEY exists: ${!!supabaseKey}`);
 
         if (!supabaseUrl || !supabaseKey) {
             throw new Error('Supabase credentials not configured');
@@ -42,26 +45,10 @@ const getSupabaseClient = async (c) => {
                 headers: {
                     'X-Application-Name': 'kore-bar-worker'
                 }
-            },
-            // Configuración para Cloudflare
-            db: {
-                schema: 'public'
             }
         });
     }
     return _supabaseClient;
-};
-
-const getDbUrl = (c) => {
-    if (isCloudflareWorker() && c && c.env) {
-        if (c.env.DATABASE_URL_POOLER) return c.env.DATABASE_URL_POOLER;
-        if (c.env.DATABASE_URL) return c.env.DATABASE_URL;
-    }
-
-    if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
-    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
-
-    return null;
 };
 
 export const executeQuery = async (c, query, params = []) => {
@@ -69,7 +56,7 @@ export const executeQuery = async (c, query, params = []) => {
     const requestId = _requestCounter;
 
     console.log(`\n[DB-DEBUG] ========== QUERY #${requestId} START ==========`);
-    console.log(`[DB-DEBUG] Query preview: ${query.substring(0, 100)}...`);
+    console.log(`[DB-DEBUG] Query: ${query.substring(0, 150)}...`);
     console.log(`[DB-DEBUG] Params count: ${params.length}`);
 
     const isCloudflare = isCloudflareWorker();
@@ -77,7 +64,7 @@ export const executeQuery = async (c, query, params = []) => {
 
     // ─── RUTA A: LOCAL / DOCKER / TESTS (pg.Pool) ───
     if (!isCloudflare) {
-        const dbUrl = getDbUrl(c);
+        const dbUrl = c?.env?.DATABASE_URL || process.env.DATABASE_URL;
         if (!dbUrl) throw new Error('No database connection configuration found.');
 
         // Convertir ? a $1, $2, etc.
@@ -101,63 +88,65 @@ export const executeQuery = async (c, query, params = []) => {
             });
         }
 
-        const result = await _pool.query(pgQuery, params);
-        console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
-        return result.rows;
+        try {
+            const result = await _pool.query(pgQuery, params);
+            console.log(`[DB-DEBUG] ✅ Rows returned: ${result.rows.length}`);
+            return result.rows;
+        } catch (error) {
+            console.error(`[DB-DEBUG] ❌ pg.Pool error:`, error.message);
+            throw error;
+        }
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS (Supabase Client) ───
-    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client)`);
+    // ─── RUTA B: CLOUDFLARE WORKERS (Supabase Client Directo) ───
+    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client Directo)`);
 
     try {
         const supabase = await getSupabaseClient(c);
 
-        // Detectar si es un SELECT o un CALL (stored procedure)
-        const isSelect = query.trim().toUpperCase().startsWith('SELECT');
-        const isCall = query.trim().toUpperCase().startsWith('CALL');
+        // Parsear la consulta SQL para extraer el nombre de la tabla/vista
+        // Para SELECT * FROM vw_directory_employees
+        const selectMatch = query.match(/SELECT\s+\*\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
 
-        if (isSelect) {
-            // Para SELECT, usar .rpc con una función de SQL
-            // Primero, necesitamos una función en Supabase para ejecutar SQL
-            // Alternativa: usar el cliente REST de Supabase
-            console.log(`[DB-DEBUG] Executing SELECT via Supabase.rpc('execute_sql')`);
+        if (selectMatch && selectMatch[1]) {
+            const tableName = selectMatch[1];
+            console.log(`[DB-DEBUG] Querying table/view: ${tableName}`);
 
-            // Usar RPC para ejecutar SQL (necesitas crear esta función en Supabase)
-            const { data, error } = await supabase.rpc('execute_sql', {
-                query_text: query,
-                query_params: params
-            });
+            // Usar el cliente de Supabase directamente
+            const { data, error } = await supabase
+                .from(tableName)
+                .select('*');
 
             if (error) {
-                console.error(`[DB-DEBUG] ❌ Supabase RPC error:`, error);
-                throw error;
+                console.error(`[DB-DEBUG] ❌ Supabase error:`, error.message);
+                console.error(`[DB-DEBUG] Error details:`, error);
+                throw new Error(`Supabase query failed: ${error.message}`);
             }
 
             console.log(`[DB-DEBUG] ✅ Rows returned: ${data?.length || 0}`);
             return data || [];
 
-        } else if (isCall) {
-            // Para CALL (stored procedures), también usar RPC
-            console.log(`[DB-DEBUG] Executing CALL via Supabase.rpc('execute_sql')`);
-
-            const { data, error } = await supabase.rpc('execute_sql', {
-                query_text: query,
-                query_params: params
-            });
-
-            if (error) throw error;
-            return data || [];
-
         } else {
-            // Para otros tipos de queries
-            console.log(`[DB-DEBUG] Executing via Supabase.rpc('execute_sql')`);
+            // Para consultas más complejas, necesitamos RPC
+            // Primero, verificar si la función existe
+            console.log(`[DB-DEBUG] Complex query detected, attempting RPC...`);
 
             const { data, error } = await supabase.rpc('execute_sql', {
-                query_text: query,
-                query_params: params
+                sql_query: query,
+                sql_params: params
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error(`[DB-DEBUG] ❌ RPC error:`, error.message);
+
+                // Si la función no existe, mostrar mensaje claro
+                if (error.message.includes('function execute_sql')) {
+                    throw new Error(`The function "execute_sql" does not exist in Supabase. Please create it first.`);
+                }
+                throw error;
+            }
+
+            console.log(`[DB-DEBUG] ✅ RPC result:`, data);
             return data || [];
         }
 
