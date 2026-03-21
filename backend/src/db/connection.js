@@ -4,7 +4,7 @@
 // ============================================================
 
 let _pool = null;
-let _pgModule = null; // Caché del import para evitar deadlocks paralelos en la nube
+let _pgModule = null; // Caché del import
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
@@ -21,7 +21,6 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    // Importación dinámica segura (Cacheada)
     if (!_pgModule) {
         _pgModule = await import('pg');
     }
@@ -44,31 +43,47 @@ export const executeQuery = async (c, query, params = []) => {
         return result.rows;
     }
 
-    // ── RUTA B: CLOUDFLARE WORKERS (Cliente Efímero sin bloqueos) ──
-    const client = new pg.Client({
-        connectionString: dbUrl,
-        ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
-        query_timeout: 10000
-    });
+    // ── RUTA B: CLOUDFLARE WORKERS (Cliente Efímero con Auto-Retry) ──
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    await client.connect();
+    while (attempts < maxAttempts) {
+        attempts++;
+        const client = new pg.Client({
+            connectionString: dbUrl,
+            ssl: { rejectUnauthorized: false },
+            connectionTimeoutMillis: 10000,
+            query_timeout: 10000
+        });
 
-    try {
-        const result = await client.query(pgQuery, params);
-        return result.rows;
-    } catch (error) {
-        console.error('PostgreSQL Query Error:', error);
-        throw error;
-    } finally {
-        // CRÍTICO: Cerramos la conexión sin usar 'await'.
-        // Esto evita el "Worker had hung", permitiendo que el HTTP responda de inmediato.
-        const endPromise = client.end().catch(() => { });
+        try {
+            await client.connect();
+            const result = await client.query(pgQuery, params);
 
-        // waitUntil le dice a Cloudflare que mantenga el proceso vivo 
-        // unos milisegundos más en el fondo para asegurar que el socket se cierre.
-        if (c && c.executionCtx && c.executionCtx.waitUntil) {
-            c.executionCtx.waitUntil(endPromise);
+            // Éxito: Cierre limpio en el fondo
+            const endPromise = client.end().catch(() => { });
+            if (c && c.executionCtx && c.executionCtx.waitUntil) c.executionCtx.waitUntil(endPromise);
+
+            return result.rows;
+
+        } catch (error) {
+            // Limpieza obligatoria del cliente fallido
+            const endPromise = client.end().catch(() => { });
+            if (c && c.executionCtx && c.executionCtx.waitUntil) c.executionCtx.waitUntil(endPromise);
+
+            const errMsg = error.message || '';
+
+            // Si Supabase cortó la conexión por saturación, reintentamos de forma invisible
+            if (errMsg.includes('terminated unexpectedly') || errMsg.includes('ECONNRESET') || errMsg.includes('socket closed')) {
+                console.warn(`[DB] Micro-corte en Supabase. Reintentando de forma invisible (${attempts}/${maxAttempts})...`);
+                if (attempts >= maxAttempts) throw error;
+                // Backoff exponencial: Espera 200ms, luego 400ms antes de reintentar
+                await new Promise(resolve => setTimeout(resolve, 200 * attempts));
+                continue;
+            }
+
+            console.error('PostgreSQL Query Error:', error);
+            throw error;
         }
     }
 };
