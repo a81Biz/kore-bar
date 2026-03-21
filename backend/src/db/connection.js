@@ -1,39 +1,18 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos Híbrido (Semáforo + SSL Forzado)
+// Adaptador de Base de Datos Híbrido (pg local + postgres.js Edge)
 // ============================================================
 
 let _pgPromise = null;
+let _postgresPromise = null;
 let _pool = null;
+let _sql = null;
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
     if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
     return null;
 };
-
-const getPg = async () => {
-    if (!_pgPromise) {
-        _pgPromise = import('pg').then(m => m.default || m);
-    }
-    return await _pgPromise;
-};
-
-// 🚦 SEMÁFORO: Previene que tu frontend sature a Supabase abriendo 4 conexiones de golpe
-class Mutex {
-    constructor() { this.queue = []; this.locked = false; }
-    async lock() {
-        return new Promise(resolve => {
-            if (!this.locked) { this.locked = true; resolve(); }
-            else { this.queue.push(resolve); }
-        });
-    }
-    unlock() {
-        if (this.queue.length > 0) { const next = this.queue.shift(); next(); }
-        else { this.locked = false; }
-    }
-}
-const dbMutex = new Mutex();
 
 export const executeQuery = async (c, query, params = []) => {
     const dbUrl = getDbUrl(c);
@@ -43,13 +22,14 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIndex = 1;
     pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
-    const pg = await getPg();
-
     const isCloudflare = typeof WebSocketPair !== 'undefined';
     const isLocalDb = !dbUrl.includes('supabase');
 
-    // ─── RUTA A: LOCAL / DOCKER / TESTS (Pool) ───
+    // ─── RUTA A: LOCAL / DOCKER / TESTS (Usamos 'pg' clásico) ───
     if (!isCloudflare) {
+        if (!_pgPromise) _pgPromise = import('pg').then(m => m.default || m);
+        const pg = await _pgPromise;
+
         if (!_pool) {
             _pool = new pg.Pool({
                 connectionString: dbUrl,
@@ -61,43 +41,28 @@ export const executeQuery = async (c, query, params = []) => {
         return result.rows;
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS (Semáforo + Cliente Efímero) ───
-    await dbMutex.lock(); // 🚦 Solo pasa una petición a la vez
+    // ─── RUTA B: CLOUDFLARE WORKERS (Usamos 'postgres.js' para Edge) ───
+    if (!_postgresPromise) _postgresPromise = import('postgres').then(m => m.default || m);
+    const postgres = await _postgresPromise;
+
+    if (!_sql) {
+        // Esta librería maneja el SSL y la concurrencia nativamente en Cloudflare
+        _sql = postgres(dbUrl, {
+            ssl: 'require',
+            max: 5,
+            idle_timeout: 10,
+            connect_timeout: 10
+        });
+    }
 
     try {
-        let attempts = 0;
-        const maxAttempts = 3;
-
-        while (attempts < maxAttempts) {
-            attempts++;
-
-            const client = new pg.Client({
-                connectionString: dbUrl,
-                ssl: { rejectUnauthorized: false }, // 🟢 OBLIGATORIO para Supabase Pooler
-                connectionTimeoutMillis: 10000,
-                query_timeout: 15000
-            });
-
-            try {
-                await client.connect();
-                const result = await client.query(pgQuery, params);
-                return result.rows;
-
-            } catch (error) {
-                const errMsg = error.message || '';
-                if (errMsg.includes('terminated') || errMsg.includes('ECONNRESET') || errMsg.includes('closed')) {
-                    if (attempts >= maxAttempts) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 300 * attempts));
-                    continue;
-                }
-                throw error;
-
-            } finally {
-                await client.end().catch(() => { });
-            }
-        }
-    } finally {
-        dbMutex.unlock(); // 🚦 Libera el pase para la siguiente petición
+        // sql.unsafe permite ejecutar querys crudos y Procedimientos Almacenados (CALL)
+        const result = await _sql.unsafe(pgQuery, params);
+        // Lo convertimos en un array estándar idéntico al que devuelve pg.Pool
+        return Array.from(result);
+    } catch (error) {
+        console.error('[DB] Cloudflare Edge Query Error:', error);
+        throw error;
     }
 };
 
