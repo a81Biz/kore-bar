@@ -1,6 +1,6 @@
 // src/db/connection.js
 // ============================================================
-// Adaptador de Base de Datos - CON SUPABASE CLIENT (VERSIÓN SIMPLIFICADA)
+// Adaptador de Base de Datos Híbrido - Funciona en Local y Cloudflare
 // ============================================================
 
 let _pgPromise = null;
@@ -8,7 +8,7 @@ let _pool = null;
 let _supabaseClient = null;
 let _requestCounter = 0;
 
-// Detectar Cloudflare Workers
+// Detectar Cloudflare Workers de forma confiable
 const isCloudflareWorker = () => {
     const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
     if (!hasWorkerGlobals) return false;
@@ -19,36 +19,112 @@ const isCloudflareWorker = () => {
     return hasWorkerGlobals && !hasBrowserGlobals && !isRealNode;
 };
 
-const getSupabaseClient = async (c) => {
-    if (!_supabaseClient) {
-        const { createClient } = await import('@supabase/supabase-js');
+const getDbUrl = (c) => {
+    if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
+    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) return process.env.DATABASE_URL;
+    return null;
+};
 
-        let supabaseUrl = c?.env?.SUPABASE_URL || process.env.SUPABASE_URL;
-        let supabaseKey = c?.env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Función para convertir consulta SQL simple a Supabase format
+const convertToSupabaseQuery = (query) => {
+    // Normalizar query
+    const normalizedQuery = query.trim().replace(/\s+/g, ' ');
 
-        console.log(`[DB-DEBUG] SUPABASE_URL exists: ${!!supabaseUrl}`);
-        console.log(`[DB-DEBUG] SUPABASE_ANON_KEY exists: ${!!supabaseKey}`);
+    // Patrón para SELECT simple (incluyendo WHERE y ORDER BY)
+    const selectRegex = /^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER BY\s+(.+?))?$/i;
+    const match = normalizedQuery.match(selectRegex);
 
-        if (!supabaseUrl || !supabaseKey) {
-            throw new Error('Supabase credentials not configured');
+    if (!match) {
+        return null;
+    }
+
+    const [, fields, tableName, whereClause, orderByClause] = match;
+
+    const result = {
+        type: 'select',
+        table: tableName,
+        select: fields
+    };
+
+    // Parsear WHERE si existe
+    if (whereClause) {
+        const conditions = [];
+        // Dividir por AND (soporte básico)
+        const parts = whereClause.split(/\s+AND\s+/i);
+
+        for (const part of parts) {
+            // Manejar campo = valor
+            const eqMatch = part.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?:'([^']*)'|([^'\s]+))/i);
+            if (eqMatch) {
+                const field = eqMatch[1];
+                const value = eqMatch[2] !== undefined ? eqMatch[2] : eqMatch[3];
+                conditions.push({ field, operator: 'eq', value });
+                continue;
+            }
+
+            // Manejar campo IS TRUE / FALSE
+            const isMatch = part.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s+IS\s+(TRUE|FALSE)/i);
+            if (isMatch) {
+                conditions.push({ field: isMatch[1], operator: 'eq', value: isMatch[2] === 'TRUE' });
+                continue;
+            }
         }
 
-        console.log(`[DB-DEBUG] Creating Supabase client for Cloudflare`);
+        if (conditions.length > 0) {
+            result.where = conditions;
+        }
+    }
 
-        _supabaseClient = createClient(supabaseUrl, supabaseKey, {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-                detectSessionInUrl: false
-            },
-            global: {
-                headers: {
-                    'X-Application-Name': 'kore-bar-worker'
-                }
-            }
+    // Parsear ORDER BY si existe
+    if (orderByClause) {
+        const orderFields = orderByClause.split(',').map(f => f.trim());
+        result.orderBy = orderFields.map(field => {
+            const [fieldName, direction] = field.split(/\s+/);
+            return {
+                field: fieldName,
+                ascending: !direction || direction.toUpperCase() !== 'DESC'
+            };
         });
     }
-    return _supabaseClient;
+
+    return result;
+};
+
+// Ejecutar consulta en Cloudflare con Supabase
+const executeCloudflareQuery = async (supabase, query, params) => {
+    // Intentar convertir a formato Supabase
+    const supabaseQuery = convertToSupabaseQuery(query);
+
+    if (!supabaseQuery) {
+        // Si no se puede convertir, fallar con mensaje claro
+        throw new Error(`Unsupported query in Cloudflare: ${query.substring(0, 100)}. Only simple SELECT statements are supported.`);
+    }
+
+    console.log(`[DB-DEBUG] Converting SQL to Supabase query on table: ${supabaseQuery.table}`);
+
+    let dbQuery = supabase.from(supabaseQuery.table).select(supabaseQuery.select);
+
+    // Aplicar WHERE
+    if (supabaseQuery.where) {
+        for (const condition of supabaseQuery.where) {
+            dbQuery = dbQuery.eq(condition.field, condition.value);
+        }
+    }
+
+    // Aplicar ORDER BY
+    if (supabaseQuery.orderBy) {
+        for (const order of supabaseQuery.orderBy) {
+            dbQuery = dbQuery.order(order.field, { ascending: order.ascending });
+        }
+    }
+
+    const { data, error } = await dbQuery;
+
+    if (error) {
+        throw error;
+    }
+
+    return data || [];
 };
 
 export const executeQuery = async (c, query, params = []) => {
@@ -64,10 +140,10 @@ export const executeQuery = async (c, query, params = []) => {
 
     // ─── RUTA A: LOCAL / DOCKER / TESTS (pg.Pool) ───
     if (!isCloudflare) {
-        const dbUrl = c?.env?.DATABASE_URL || process.env.DATABASE_URL;
+        const dbUrl = getDbUrl(c);
         if (!dbUrl) throw new Error('No database connection configuration found.');
 
-        // Convertir ? a $1, $2, etc.
+        // Convertir ? a $1, $2, etc. para PostgreSQL
         let pgQuery = query;
         let paramIndex = 1;
         pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
@@ -98,60 +174,45 @@ export const executeQuery = async (c, query, params = []) => {
         }
     }
 
-    // ─── RUTA B: CLOUDFLARE WORKERS (Supabase Client Directo) ───
-    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client Directo)`);
+    // ─── RUTA B: CLOUDFLARE WORKERS (Supabase Client) ───
+    console.log(`[DB-DEBUG] ☁️  Using Cloudflare path (Supabase Client)`);
 
     try {
-        const supabase = await getSupabaseClient(c);
+        // Inicializar Supabase client si no existe
+        if (!_supabaseClient) {
+            const { createClient } = await import('@supabase/supabase-js');
 
-        // Parsear la consulta SQL para extraer el nombre de la tabla/vista
-        // Para SELECT * FROM vw_directory_employees
-        const selectMatch = query.match(/SELECT\s+\*\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+            let supabaseUrl = c?.env?.SUPABASE_URL || process.env.SUPABASE_URL;
+            let supabaseKey = c?.env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-        if (selectMatch && selectMatch[1]) {
-            const tableName = selectMatch[1];
-            console.log(`[DB-DEBUG] Querying table/view: ${tableName}`);
+            console.log(`[DB-DEBUG] SUPABASE_URL exists: ${!!supabaseUrl}`);
+            console.log(`[DB-DEBUG] SUPABASE_ANON_KEY exists: ${!!supabaseKey}`);
 
-            // Usar el cliente de Supabase directamente
-            const { data, error } = await supabase
-                .from(tableName)
-                .select('*');
-
-            if (error) {
-                console.error(`[DB-DEBUG] ❌ Supabase error:`, error.message);
-                console.error(`[DB-DEBUG] Error details:`, error);
-                throw new Error(`Supabase query failed: ${error.message}`);
+            if (!supabaseUrl || !supabaseKey) {
+                throw new Error('Supabase credentials not configured in Cloudflare environment');
             }
 
-            console.log(`[DB-DEBUG] ✅ Rows returned: ${data?.length || 0}`);
-            return data || [];
-
-        } else {
-            // Para consultas más complejas, necesitamos RPC
-            // Primero, verificar si la función existe
-            console.log(`[DB-DEBUG] Complex query detected, attempting RPC...`);
-
-            const { data, error } = await supabase.rpc('execute_sql', {
-                sql_query: query,
-                sql_params: params
-            });
-
-            if (error) {
-                console.error(`[DB-DEBUG] ❌ RPC error:`, error.message);
-
-                // Si la función no existe, mostrar mensaje claro
-                if (error.message.includes('function execute_sql')) {
-                    throw new Error(`The function "execute_sql" does not exist in Supabase. Please create it first.`);
+            _supabaseClient = createClient(supabaseUrl, supabaseKey, {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                    detectSessionInUrl: false
+                },
+                global: {
+                    headers: {
+                        'X-Application-Name': 'kore-bar-worker'
+                    }
                 }
-                throw error;
-            }
-
-            console.log(`[DB-DEBUG] ✅ RPC result:`, data);
-            return data || [];
+            });
         }
 
+        // Ejecutar consulta en Cloudflare
+        const result = await executeCloudflareQuery(_supabaseClient, query, params);
+        console.log(`[DB-DEBUG] ✅ Rows returned: ${result?.length || 0}`);
+        return result;
+
     } catch (error) {
-        console.error(`[DB-DEBUG] ❌ Supabase error:`, error.message);
+        console.error(`[DB-DEBUG] ❌ Cloudflare query error:`, error.message);
         throw error;
     }
 };
