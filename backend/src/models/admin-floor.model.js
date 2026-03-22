@@ -14,7 +14,7 @@ export const updateZone = async (c, code, name, isActive) =>
 
 export const getActiveZones = async (c) =>
     await executeQuery(c, `
-        SELECT code , name, is_active
+        SELECT code AS "zoneCode", name, is_active AS "isActive"
         FROM restaurant_zones
         ORDER BY created_at ASC
     `);
