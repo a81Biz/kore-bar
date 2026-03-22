@@ -23,8 +23,10 @@ export const cacheDOM = (container) => {
         kardex: container.querySelector('#view-kardex')
     };
 
+    state.dom.tbodyStockBodega = container.querySelector('#table-stock-bodega-body');
+    state.dom.tbodyStockCocina = container.querySelector('#table-stock-cocina-body');
+
     // Tablas y Contenedores
-    state.dom.tbodyStock = container.querySelector('#table-stock-body');
     state.dom.tbodyKardex = container.querySelector('#table-kardex-body');
     state.dom.toggleSuggested = container.querySelector('#toggle-suggested');
     state.dom.listSuppliers = container.querySelector('#list-suppliers');
@@ -41,10 +43,8 @@ export const cacheDOM = (container) => {
     state.dom.inputLinkPrice = container.querySelector('#link-item-price');
 
     // Nuevos Filtros, Modales y Botón de Sync
-    state.dom.stockLocationFilter = container.querySelector('#stock-location-filter');
     state.dom.kardexLocationFilter = container.querySelector('#kardex-location-filter');
     state.dom.kardexItemFilter = container.querySelector('#kardex-item-filter');
-    state.dom.btnSyncPurchases = container.querySelector('#btn-sync-purchases');
 
     state.dom.modalTransfer = container.querySelector('#modal-transfer');
     state.dom.formTransfer = container.querySelector('#form-transfer');
@@ -64,6 +64,9 @@ export const cacheDOM = (container) => {
     state.dom.adjItemUnit = container.querySelector('#adj-item-unit');
     state.dom.adjItemUnitDisplay = container.querySelector('#adj-item-unit-display');
     state.dom.btnAdjustmentClosers = container.querySelectorAll('.btn-close-adjustment');
+
+    state.dom.btnSyncPurchases = container.querySelector('#btn-sync-purchases');
+    state.dom.tplStockRow = getTpl('#tpl-row-stock');
 
     // 🟢 TEMPLATES OBLIGATORIOS (Búsqueda Resiliente)
     state.dom.tplStock = getTpl('#tpl-row-stock');
@@ -173,49 +176,73 @@ export const render = {
             });
         }
     },
-    stock: () => {
-        state.dom.tbodyStock.innerHTML = '';
-        const itemsToRender = state.ui.showOnlySuggested
-            ? state.data.stock.filter(item => parseFloat(item.stock) <= parseFloat(item.minStock || 0))
-            : state.data.stock;
+    // Reemplaza render.stock() por:
 
-        // Regla UI: Mostrar Sincronizar Compras SOLO en Bodega
-        if (state.dom.btnSyncPurchases) {
-            const isBodega = !state.ui.stockLocation || state.ui.stockLocation === 'LOC-BODEGA';
-            state.dom.btnSyncPurchases.style.display = isBodega ? 'flex' : 'none';
+    _renderStockTable: (tbody, items, isBodega) => {
+        tbody.innerHTML = '';
+
+        if (!items || items.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 5;
+            td.className = 'px-4 py-6 text-center text-slate-400 text-sm';
+            td.textContent = isBodega
+                ? 'Sincroniza una compra para ver el stock de Bodega.'
+                : 'Transfiere insumos desde Bodega para ver stock en Cocina.';
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
         }
 
-        itemsToRender.forEach(item => {
+        items.forEach(item => {
             const clone = state.dom.tplStock.content.cloneNode(true);
             clone.querySelector('.col-code').textContent = item.code || item.item_code;
             clone.querySelector('.col-name').textContent = item.name || item.item_name;
-            clone.querySelector('.col-qty').textContent = `${item.stock === null ? '0' : item.stock} ${item.unit || item.recipe_unit || item.unit_measure || 'U'}`;
+            clone.querySelector('.col-qty').textContent =
+                `${item.totalStock === null ? '0' : item.totalStock} ${item.recipeUnit || 'U'}`;
 
-            const isCritical = parseFloat(item.stock || 0) <= parseFloat(item.minStock || 0);
+            const isCritical = parseFloat(item.totalStock || 0) <= parseFloat(item.minStock || 0);
             const statusConf = isCritical ? uiConfig.stockStatus.CRITICAL : uiConfig.stockStatus.OK;
 
             const badge = clone.querySelector('.col-status-badge');
             badge.className = `col-status-badge px-2 py-1 text-[10px] font-bold rounded ${statusConf.badge}`;
             badge.textContent = statusConf.label;
 
-            // Ajustar Data Attributes de los botones
             const btnAjustar = clone.querySelector('.btn-ajustar');
             if (btnAjustar) {
                 btnAjustar.setAttribute('data-code', item.code || item.item_code);
                 btnAjustar.setAttribute('data-name', item.name || item.item_name);
-                btnAjustar.setAttribute('data-unit', item.unit || item.recipe_unit || item.unit_measure || 'U');
+                btnAjustar.setAttribute('data-unit', item.unit || item.unit_measure || 'U');
                 btnAjustar.setAttribute('data-stock', item.stock);
+                // Solo Bodega tiene traspaso; en Cocina el botón Traspasar no aplica
+                btnAjustar.setAttribute('data-location', isBodega ? 'LOC-BODEGA' : 'LOC-COCINA');
             }
 
             const btnTraspasar = clone.querySelector('.btn-traspasar');
             if (btnTraspasar) {
-                btnTraspasar.setAttribute('data-code', item.code || item.item_code);
-                btnTraspasar.setAttribute('data-name', item.name || item.item_name);
-                btnTraspasar.setAttribute('data-unit', item.unit || item.recipe_unit || item.unit_measure || 'U');
+                if (!isBodega) {
+                    // Ocultar el botón de traspaso en la tabla de Cocina
+                    btnTraspasar.style.display = 'none';
+                } else {
+                    btnTraspasar.setAttribute('data-code', item.code || item.item_code);
+                    btnTraspasar.setAttribute('data-name', item.name || item.item_name);
+                    btnTraspasar.setAttribute('data-unit', item.unit || item.unit_measure || 'U');
+                }
             }
 
-            state.dom.tbodyStock.appendChild(clone);
+            tbody.appendChild(clone);
         });
+    },
+
+    stockBodega: () => {
+        const items = state.ui.showOnlySuggested
+            ? state.data.stockBodega.filter(i => parseFloat(i.stock || 0) <= parseFloat(i.minStock || 0))
+            : state.data.stockBodega;
+        render._renderStockTable(state.dom.tbodyStockBodega, items, true);
+    },
+
+    stockCocina: () => {
+        render._renderStockTable(state.dom.tbodyStockCocina, state.data.stockCocina, false);
     },
 
     kardex: () => {
@@ -237,7 +264,7 @@ export const render = {
 
             const qtyEl = clone.querySelector('.col-qty');
             const qtyNum = parseFloat(mov.quantity || 0);
-            
+
             // Lógica Pura Visual de Signo para Kardex
             let sign = '';
             if (mType === 'IN') sign = '+';
@@ -264,10 +291,10 @@ export const render = {
                 state.dom.transSourceLoc.textContent = state.ui.stockLocation;
                 state.dom.transItemUnit.textContent = unit;
                 state.dom.formTransfer.reset();
-                
+
                 // Deshabilitar la opción Origen en Destino
                 Array.from(state.dom.transTargetLoc.options).forEach(opt => {
-                    opt.disabled = (opt.value === state.ui.stockLocation);
+                    opt.disabled = (opt.value === 'LOC-BODEGA');
                 });
 
                 state.dom.modalTransfer.classList.remove('opacity-0', 'pointer-events-none');
@@ -286,7 +313,7 @@ export const render = {
                 state.dom.adjCurrentStock.textContent = currentStock;
                 state.dom.adjItemUnit.textContent = unit;
                 state.dom.adjItemUnitDisplay.textContent = unit;
-                
+
                 state.dom.formAdjustment.reset();
 
                 state.dom.modalAdjustment.classList.remove('opacity-0', 'pointer-events-none');

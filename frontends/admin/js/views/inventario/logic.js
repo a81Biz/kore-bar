@@ -18,19 +18,23 @@ export const api = {
         render.suppliers();
     },
     loadStock: async () => {
-        const query = state.ui.stockLocation ? `?location=${state.ui.stockLocation}` : '';
-        const res = await fetchData(`${ENDPOINTS.inventory.get.stock}${query}`);
-        state.data.stock = res.data?.stock || [];
-        render.stock();
+        const [resBodega, resCocina] = await Promise.all([
+            fetchData(`${ENDPOINTS.inventory.get.stock}?location=LOC-BODEGA`),
+            fetchData(`${ENDPOINTS.inventory.get.stock}?location=LOC-COCINA`)
+        ]);
+        state.data.stockBodega = resBodega.data?.stock || [];
+        state.data.stockCocina = resCocina.data?.stock || [];
+        render.stockBodega();
+        render.stockCocina();
     },
     loadKardex: async () => {
         const params = new URLSearchParams();
         if (state.ui.kardexLocation) params.append('location', state.ui.kardexLocation);
         if (state.ui.kardexSearchQuery) params.append('item', state.ui.kardexSearchQuery);
-        
+
         const qStr = params.toString();
         const query = qStr ? `?${qStr}` : '';
-        
+
         const res = await fetchData(`${ENDPOINTS.inventory.get.kardex}${query}`);
         state.data.kardex = res.data?.kardex || [];
         render.kardex();
@@ -54,6 +58,7 @@ export const api = {
     saveTransfer: async (payload) => {
         await postData(ENDPOINTS.inventory.post.transfers, payload);
         showSuccessModal('Traspaso efectuado exitosamente.');
+        // Refrescar AMBAS tablas simultáneamente
         await api.loadStock();
         await api.loadKardex();
     },
@@ -68,7 +73,7 @@ export const api = {
         const mockRes = await fetch('/shared/mock/initial_purchase.json');
         if (!mockRes.ok) throw new Error("No se pudo leer el documento base inicial.");
         const payload = await mockRes.json();
-        
+
         await postData(ENDPOINTS.inventory.post.sync, payload);
         showSuccessModal('Mercancía sincronizada correctamente.');
         await api.loadStock();
@@ -96,13 +101,6 @@ export const bindEvents = () => {
         });
     }
 
-    // Filtros de Ubicación Stock
-    if (state.dom.stockLocationFilter) {
-        state.dom.stockLocationFilter.addEventListener('change', (e) => {
-            state.ui.stockLocation = e.target.value;
-            api.loadStock();
-        });
-    }
 
     // Filtros de Kardex
     if (state.dom.kardexLocationFilter) {
@@ -143,20 +141,17 @@ export const bindEvents = () => {
     }
 
     // Guardar Traspaso
-    bindForm('form-transfer', async (e) => {
-        const form = e.target;
+    bindForm('form-transfer', async () => {
         const targetLoc = state.dom.transTargetLoc.value;
         const qty = parseFloat(state.dom.formTransfer.querySelector('#trans-qty').value);
         const itemCode = state.dom.transItemCode.value;
 
-        if (!targetLoc) throw new Error("Debes seleccionar una ubicación destino.");
+        if (!targetLoc) throw new Error('Debes seleccionar una ubicación destino.');
 
         const payload = {
-            sourceLocation: state.ui.stockLocation,
+            sourceLocation: 'LOC-BODEGA',   // ← siempre Bodega (único origen de traspasos)
             targetLocation: targetLoc,
-            items: [
-                { itemCode: itemCode, qty: qty }
-            ]
+            items: [{ itemCode, qty }]
         };
 
         await api.saveTransfer(payload);
@@ -182,6 +177,44 @@ export const bindEvents = () => {
             btn.addEventListener('click', () => render.modals.adjustment.close());
         });
     }
+
+    if (state.dom.tbodyStockBodega) {
+        state.dom.tbodyStockBodega.addEventListener('click', (e) => {
+            const btnT = e.target.closest('.btn-traspasar');
+            if (btnT) {
+                render.modals.transfer.open(
+                    btnT.getAttribute('data-code'),
+                    btnT.getAttribute('data-name'),
+                    btnT.getAttribute('data-unit')
+                );
+            }
+            const btnA = e.target.closest('.btn-ajustar');
+            if (btnA) {
+                render.modals.adjustment.open(
+                    btnA.getAttribute('data-code'),
+                    btnA.getAttribute('data-name'),
+                    btnA.getAttribute('data-unit'),
+                    btnA.getAttribute('data-stock')
+                );
+            }
+        });
+    }
+
+    // Cocina solo tiene ajuste, no traspaso
+    if (state.dom.tbodyStockCocina) {
+        state.dom.tbodyStockCocina.addEventListener('click', (e) => {
+            const btnA = e.target.closest('.btn-ajustar');
+            if (btnA) {
+                render.modals.adjustment.open(
+                    btnA.getAttribute('data-code'),
+                    btnA.getAttribute('data-name'),
+                    btnA.getAttribute('data-unit'),
+                    btnA.getAttribute('data-stock')
+                );
+            }
+        });
+    }
+
 
     // 🟢 Nuevo: Guardar Ajuste Físico
     bindForm('form-adjustment', async (e) => {
@@ -210,7 +243,7 @@ export const bindEvents = () => {
             const textSpan = btn.querySelector('.btn-text');
             const iconSpan = btn.querySelector('.btn-icon');
             const originalText = textSpan ? textSpan.textContent : 'Sincronizar Compras';
-            
+
             try {
                 // Estado Visual: Loading
                 btn.disabled = true;

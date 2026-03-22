@@ -44,6 +44,24 @@
       "conversionFactor": 12,
       "unitCost": 240.00,
       "quantityPurchased": 1
+    },
+    {
+      "itemCode": "INS-CAFE",
+      "itemName": "Cafe de Grano",
+      "purchaseUnit": "Cotal 1kg",
+      "recipeUnit": "KG",
+      "conversionFactor": 10,
+      "unitCost": 240.00,
+      "quantityPurchased": 1
+    },
+    {
+      "itemCode": "INS-AZ",
+      "itemName": "Azucar refinada",
+      "purchaseUnit": "Cotal 8kg",
+      "recipeUnit": "KG",
+      "conversionFactor": 5,
+      "unitCost": 240.00,
+      "quantityPurchased": 1
     }
   ],
   "notes": "Carga inicial de inventario e hidratación de catálogo maestro."

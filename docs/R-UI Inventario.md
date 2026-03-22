@@ -60,6 +60,24 @@ Este documento define el comportamiento estricto del frontend y la experiencia d
 * *Regla:* En la tabla de Stock, agregaremos un *switch* o botón que diga "Ver solo sugerencias de compra".
 * *Efecto:* Al activarlo, el frontend filtra la tabla para mostrar únicamente los insumos en números rojos y le añade una columna dinámica que dice "Comprar a: [Nombre del Proveedor]".
 
+* **R-UI-INV-05: Vista Split Bodega / Cocina (Tabla Dual):**
+  * *Regla:* La pestaña "Existencias" muestra SIEMPRE dos paneles
+    simultáneos: `LOC-BODEGA` a la izquierda y `LOC-COCINA` a la derecha.
+    Nunca son la misma tabla con un filtro.
+  * *Efecto:* El gerente ve el estado completo de ambas ubicaciones 
+    sin hacer ningún clic adicional.
+
+* **R-UI-INV-06: Origen de Traspasos siempre es LOC-BODEGA:**
+  * *Regla:* El botón "Traspasar" solo existe en el panel de Bodega.
+    El payload siempre envía `sourceLocation: 'LOC-BODEGA'`.
+  * *Efecto:* Al confirmar un traspaso, AMBAS tablas se refrescan 
+    simultáneamente (Bodega baja, Cocina sube).
+
+* **R-UI-INV-07: Ajuste físico disponible en ambas ubicaciones:**
+  * *Regla:* El botón "Ajustar" existe en los dos paneles.
+    El payload incluye `locationCode` que toma el valor del panel 
+    desde donde se abre la modal (`LOC-BODEGA` o `LOC-COCINA`).
+  * *Efecto:* Se puede registrar merma en cocina sin tocar el stock de bodega.
 
 * **R-FIN-INV-04: Actualización de Inventario Físico (El Ajuste Rápido):**
 * *Regla:* Para hacer los "Ajustes de Merma" o registrar cuando Compras entregue la mercancía, en la misma fila del insumo habrá un botón de `+/- Ajustar`.

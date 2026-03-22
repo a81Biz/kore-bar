@@ -2,11 +2,15 @@
 
 export const state = {
     dom: {},
-    data: { suppliers: [], stock: [], kardex: [] },
+    data: {
+        suppliers: [],
+        stockBodega: [],
+        stockCocina: [],
+        kardex: []
+    },
     ui: {
         showOnlySuggested: false,
         selectedSupplierCode: null,
-        stockLocation: 'LOC-BODEGA',
         kardexLocation: '',
         kardexSearchQuery: ''
     }
