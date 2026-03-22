@@ -158,8 +158,8 @@ erDiagram
     }
 
     inventory_stock_locations {
-        UUID    item_id     PK_FK
-        UUID    location_id PK_FK
+        UUID    item_id     PK
+        UUID    location_id PK
         DECIMAL stock
     }
 
@@ -270,13 +270,13 @@ erDiagram
     tickets {
         UUID    id          PK
         VARCHAR folio       UK
-        UUID    order_id    FK_UK
+        UUID    order_id    FK
         DECIMAL subtotal
         DECIMAL tax
         DECIMAL tip_total
         DECIMAL total
         BOOLEAN is_invoiced
-        JSONB   invoice_data
+        JSON    invoice_data
     }
 
     order_headers   ||--o{ payments   : "cobrado_por"
