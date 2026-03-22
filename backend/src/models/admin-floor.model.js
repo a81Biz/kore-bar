@@ -7,14 +7,14 @@ export const createZone = async (c, code, name) =>
 
 export const updateZone = async (c, code, name, isActive) =>
     await executeStoredProcedure(c, 'sp_update_zone', {
-        p_code:      code,
-        p_name:      name,
+        p_code: code,
+        p_name: name,
         p_is_active: isActive
     });
 
 export const getActiveZones = async (c) =>
     await executeQuery(c, `
-        SELECT code AS "zoneCode", name, is_active AS "isActive"
+        SELECT code , name, is_active
         FROM restaurant_zones
         ORDER BY created_at ASC
     `);
@@ -28,16 +28,16 @@ export const deleteZoneSmart = async (c, code) =>
 export const createTable = async (c, code, zoneCode, capacity) =>
     await executeStoredProcedure(c, 'sp_create_table', {
         p_table_code: code,
-        p_zone_code:  zoneCode,
-        p_capacity:   capacity
+        p_zone_code: zoneCode,
+        p_capacity: capacity
     });
 
 export const updateTable = async (c, code, zoneCode, capacity, isActive) =>
     await executeStoredProcedure(c, 'sp_update_table', {
         p_table_code: code,
-        p_zone_code:  zoneCode,
-        p_capacity:   capacity,
-        p_is_active:  isActive
+        p_zone_code: zoneCode,
+        p_capacity: capacity,
+        p_is_active: isActive
     });
 
 export const getActiveTables = async (c) =>
@@ -59,11 +59,11 @@ export const createAssignmentRange = async (c, empNum, zoneCode, shift, startDat
         c,
         'sp_create_assignment_range',
         {
-            p_emp:        empNum,
-            p_zone:       zoneCode,
-            p_shift:      shift,
+            p_emp: empNum,
+            p_zone: zoneCode,
+            p_shift: shift,
             p_start_date: startDate,
-            p_end_date:   endDate
+            p_end_date: endDate
         },
         { p_start_date: 'DATE', p_end_date: 'DATE' }
     );
