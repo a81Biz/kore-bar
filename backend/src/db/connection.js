@@ -106,10 +106,14 @@ export const executeQuery = async (c, query, params = []) => {
     finalQuery = finalQuery.replace(/\?/g, () => `$${paramIdx++}`);
     finalQuery = interpolateQuery(finalQuery, params);
 
+    console.error(`[DB Cloudflare =>] Query: ${finalQuery.substring(0, 100)}...`);
+
     // 2. Enviamos el SQL crudo a nuestra función Proxy
     const { data, error } = await _supabaseClient.rpc('kore_exec_sql', {
         query_string: finalQuery
     });
+
+    console.error(`[DB Cloudflare =>] Data: ${data}...`);
 
     if (error) {
         console.error(`[DB Cloudflare Error] Query: ${finalQuery.substring(0, 100)}...`);
