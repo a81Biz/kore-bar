@@ -20,6 +20,7 @@
 \ir migrations/06_cashier.sql
 \ir migrations/07_operations.sql
 \ir migrations/08_turnos_asistencia.sql
+\ir migrations/09_employee_schedules.sql
 
 \echo '── [2/4] Procedures ──────────────────────────────────────'
 \ir procedures/sp_hr.sql

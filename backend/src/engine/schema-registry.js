@@ -51,6 +51,9 @@ import hrWebhook from './schemas/admin/employee/hr-webhook.schema.json'         
 import resetEmployeePin from './schemas/admin/employee/reset-employee-pin.schema.json'    assert { type: 'json' };
 import syncCatalogs from './schemas/admin/employee/sync-catalogs.schema.json'         assert { type: 'json' };
 import updateEmployee from './schemas/admin/employee/update-employee.schema.json'       assert { type: 'json' };
+import createSchedule from './schemas/admin/employee/create-schedule.schema.json'  assert { type: 'json' };
+import getSchedules from './schemas/admin/employee/get-schedules.schema.json'     assert { type: 'json' };
+import deleteSchedule from './schemas/admin/employee/delete-schedule.schema.json'  assert { type: 'json' };
 
 // ── ADMIN / MENU ──────────────────────────────────────────────
 import createMenuCategory from './schemas/admin/menu/create-menu-category.schema.json'   assert { type: 'json' };
@@ -139,6 +142,7 @@ export const schemasBySubDir = {
         getMenuCategories, getMenuDishes, updateMenuCategory, updateMenuDish,
         createTable, deleteTable, getTables, updateTable,
         createZone, deleteZone, getZones, updateZone,
+        createSchedule, getSchedules, deleteSchedule,
     ],
 
     inventory: [

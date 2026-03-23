@@ -130,7 +130,10 @@ import {
     getShifts,
     createShift,
     getAttendance,
-    resetEmployeePin
+    resetEmployeePin,
+    createScheduleRange,
+    getSchedules,
+    deleteSchedule
 } from '../helpers/admin-turnos.helper.js';
 
 
@@ -252,5 +255,8 @@ export const ActionRegistry = {
     getShifts,
     createShift,
     getAttendance,
-    resetEmployeePin
+    resetEmployeePin,
+    createScheduleRange,
+    getSchedules,
+    deleteSchedule
 };

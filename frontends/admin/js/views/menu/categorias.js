@@ -66,7 +66,7 @@ const logic = {
     cargarCategorias: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.menuCategories);
-            state.datos.categorias = Array.isArray(res?.data) ? res.data : [];
+            state.datos.categorias = Array.isArray(res?.data.categories) ? res.data.categories : [];
             render.categorias();
             // Avisar al orquestador que tenemos nuevas categorías
             PubSub.publish('CATEGORIAS_ACTUALIZADAS', state.datos.categorias);

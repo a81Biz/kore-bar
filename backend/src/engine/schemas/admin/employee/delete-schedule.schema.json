@@ -1,0 +1,21 @@
+{
+    "id": "delete_employee_schedule",
+    "name": "Eliminar Horario de Empleado",
+    "description": "Elimina un registro individual de horario por su UUID. El SP lanza P0002 si el registro no existe. Para eliminar un rango completo, invocar este endpoint por cada día del rango.",
+    "api": {
+        "method": "DELETE",
+        "path": "/schedules/:id",
+        "tags": [
+            "Admin / Turnos"
+        ]
+    },
+    "startAt": "remove_schedule",
+    "nodes": {
+        "remove_schedule": {
+            "type": "action",
+            "handler": "deleteSchedule",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

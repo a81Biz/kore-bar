@@ -1,0 +1,57 @@
+{
+    "id": "create_employee_schedule",
+    "name": "Crear Horario de Empleado",
+    "description": "Asigna un turno a un empleado (cajero, cocinero u otro staff) con soporte de recurrencia: DIA (solo ese día), SEMANA (7 días), MES (30 días). El SP inserta un registro por cada día del rango; ON CONFLICT DO NOTHING hace el proceso idempotente.",
+    "api": {
+        "method": "POST",
+        "path": "/schedules",
+        "tags": [
+            "Admin / Turnos"
+        ],
+        "body": {
+            "required": [
+                "employeeNumber",
+                "shiftCode",
+                "scheduleDate",
+                "recurrence"
+            ],
+            "properties": {
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "80219603"
+                },
+                "shiftCode": {
+                    "type": "string",
+                    "example": "MATUTINO"
+                },
+                "scheduleDate": {
+                    "type": "string",
+                    "example": "2026-03-24"
+                },
+                "recurrence": {
+                    "type": "string",
+                    "enum": ["DIA", "SEMANA", "MES"],
+                    "example": "SEMANA"
+                }
+            }
+        }
+    },
+    "startAt": "save_schedule",
+    "nodes": {
+        "save_schedule": {
+            "type": "action",
+            "handler": "createScheduleRange",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 201,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

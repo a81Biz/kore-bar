@@ -7,7 +7,9 @@ import { fetchData, postData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { bindForm } from '/shared/js/formEngine.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
-
+import { HorariosController } from './horarios.js';
+import { viewManager } from '/shared/js/viewManager.js';
+import { KORE_CONFIG } from '/core/js/kore.config.js';
 // ==========================================================================
 // 2. ESTADO PRIVADO
 // ==========================================================================
@@ -382,9 +384,11 @@ const _bindEvents = () => {
 // ==========================================================================
 export const TurnosController = {
     mount: async (container) => {
+        const horariosContainer = viewManager.mount(KORE_CONFIG.DOM.ADMIN.TEMPLATES.HORARIOS);
         _cacheDOM(container);
         _bindEvents();
         // Monitor es la tab por defecto — cargarlo al montar
         await _logic.loadMonitor();
+        await HorariosController.mount(horariosContainer);
     }
 };

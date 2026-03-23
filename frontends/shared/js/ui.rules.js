@@ -81,6 +81,11 @@ export const UIRules = {
         // ⚠️ IDs verificados contra _turnos.html: #turno-code, #turno-name, #turno-start, #turno-end
         preserveFields: []
     },
+    'form-employee-schedule': {
+        // Preservar empleado y turno para captura rápida en ráfaga
+        // ⚠️ IDs verificados contra _horarios.html
+        preserveFields: ['sch-employee', 'sch-shift', 'sch-recurrence']
+    },
 
     'form-reset-pin': {
         // Formulario de planchado de PIN.

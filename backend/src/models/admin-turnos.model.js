@@ -88,3 +88,63 @@ export const recordAttendance = async (c, employeeNumber, source) =>
         p_employee_number: employeeNumber,
         p_source: source
     });
+
+// ── MÓDULO HORARIOS (employee_schedules) ──────────────────────
+
+export const createEmployeeSchedule = async (c, employeeNumber, shiftCode, startDate, endDate) =>
+    await executeStoredProcedure(c, 'sp_create_employee_schedule', {
+        p_employee_number: employeeNumber,
+        p_shift_code: shiftCode,
+        p_start_date: startDate,
+        p_end_date: endDate
+    }, { p_start_date: 'DATE', p_end_date: 'DATE' });
+
+export const deleteEmployeeSchedule = async (c, id) =>
+    await executeStoredProcedure(c, 'sp_delete_employee_schedule', {
+        p_id: id
+    }, { p_id: 'UUID' });
+
+// Misma firma que getAttendance para consistencia en el helper.
+// Lee desde vw_schedule_monitor (misma estructura de columnas).
+export const getSchedules = async (c, { date, startDate, endDate, employeeNumber } = {}) => {
+    const conditions = [];
+    const params = [];
+
+    if (startDate && endDate) {
+        params.push(startDate);
+        conditions.push(`assignment_date >= $${params.length}`);
+        params.push(endDate);
+        conditions.push(`assignment_date <= $${params.length}`);
+    } else {
+        params.push(date || new Date().toISOString().split('T')[0]);
+        conditions.push(`assignment_date = $${params.length}`);
+    }
+
+    if (employeeNumber) {
+        params.push(employeeNumber);
+        conditions.push(`employee_number = $${params.length}`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    return await executeQuery(c, `
+        SELECT  assignment_id       AS "assignmentId",
+                employee_number     AS "employeeNumber",
+                first_name          AS "firstName",
+                last_name           AS "lastName",
+                shift,
+                shift_name          AS "shiftName",
+                start_time          AS "startTime",
+                end_time            AS "endTime",
+                assignment_date     AS "assignmentDate",
+                zone_name           AS "zoneName",
+                zone_code           AS "zoneCode",
+                attendance_id       AS "attendanceId",
+                check_in_at         AS "checkInAt",
+                source,
+                attendance_status   AS "attendanceStatus"
+        FROM    vw_schedule_monitor
+        ${where}
+        ORDER BY assignment_date DESC, shift, last_name ASC
+    `, params);
+};

@@ -1,0 +1,55 @@
+{
+    "id": "get_employee_schedules",
+    "name": "Obtener Horarios de Personal",
+    "description": "Devuelve los horarios programados cruzados con asistencia real. Filtrable por fecha exacta (default: hoy), rango de fechas o número de empleado. Misma estructura de respuesta que el Monitor de Asistencia para unificación en frontend.",
+    "api": {
+        "method": "GET",
+        "path": "/schedules",
+        "tags": [
+            "Admin / Turnos"
+        ],
+        "query": {
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-03-24",
+                    "description": "Fecha exacta YYYY-MM-DD. Default: hoy."
+                },
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "80219603",
+                    "description": "Filtra por número de empleado específico."
+                },
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-03-01",
+                    "description": "Inicio del rango (requiere también endDate)."
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-03-31",
+                    "description": "Fin del rango."
+                }
+            }
+        }
+    },
+    "startAt": "fetch_schedules",
+    "nodes": {
+        "fetch_schedules": {
+            "type": "action",
+            "handler": "getSchedules",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "records": "{{state.data.records}}",
+                    "stats":   "{{state.data.stats}}"
+                }
+            }
+        }
+    }
+}

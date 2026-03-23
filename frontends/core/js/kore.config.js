@@ -86,7 +86,8 @@ export const KORE_CONFIG = {
                 '_construccion.html',
                 '_menu.html',
                 '_inventario.html',
-                '_turnos.html'
+                '_turnos.html',
+                '_horarios.html'
             ],
             CONTAINERS: {
                 ROOT: '#app-root',
@@ -100,7 +101,8 @@ export const KORE_CONFIG = {
                 WIP: 'tpl-en-construccion',
                 MENU: 'tpl-admin-menu',
                 INVENTARIO: 'tpl-admin-inventario',
-                TURNOS: 'tpl-admin-turnos'
+                TURNOS: 'tpl-admin-turnos',
+                HORARIOS: 'tpl-admin-horarios'
             }
         },
 
