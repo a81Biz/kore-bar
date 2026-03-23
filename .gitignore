@@ -21,3 +21,4 @@ yarn-error.log*
 Thumbs.db
 
 *.txt
+docs/jira/exportar_jira.py
