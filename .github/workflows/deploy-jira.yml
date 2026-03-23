@@ -1,0 +1,40 @@
+name: Deploy Jira Archive to Pages
+
+on:
+  push:
+    branches: ["main"] # Cambia "main" por "master" si tu rama principal se llama diferente
+    paths:
+      - 'doc/jira/**' # Esto hace que el Action solo corra si modificas algo en esta carpeta
+
+# Permisos necesarios para que el Action pueda publicar
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita que múltiples despliegues choquen entre sí
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Empaquetar SOLO la carpeta doc/jira
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './doc/jira'
+
+      - name: Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
