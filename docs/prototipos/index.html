@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌮 La Casa Mexicana - Sistema de Gestión</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Pantalla de Login/Selección de Rol -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <div class="logo">
+                <i class="fas fa-pepper-hot"></i>
+                <h1>La Casa Mexicana</h1>
+                <p>Sistema de Gestión Integral</p>
+            </div>
+            <div class="role-selector">
+                <h2>Seleccione su rol:</h2>
+                <div class="role-cards">
+                    <div class="role-card" data-role="admin">
+                        <i class="fas fa-user-tie"></i>
+                        <h3>Administrador</h3>
+                        <p>Gerencia y configuración</p>
+                    </div>
+                    <div class="role-card" data-role="waiter">
+                        <i class="fas fa-user-clock"></i>
+                        <h3>Mesero</h3>
+                        <p>Gestión de pedidos</p>
+                    </div>
+                    <div class="role-card" data-role="kitchen">
+                        <i class="fas fa-utensils"></i>
+                        <h3>Cocina</h3>
+                        <p>Preparación de platillos</p>
+                    </div>
+                    <div class="role-card" data-role="customer">
+                        <i class="fas fa-qrcode"></i>
+                        <h3>Comensal</h3>
+                        <p>Menú digital QR</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Administrador -->
+    <div id="admin-screen" class="screen">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-pepper-hot"></i>
+                <span>Admin Panel</span>
+            </div>
+            <div class="nav-user">
+                <span id="admin-name">Ing. Luis García</span>
+                <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </nav>
+        
+        <div class="admin-content">
+            <aside class="sidebar">
+                <ul class="nav-menu">
+                    <li class="active" data-view="dashboard"><i class="fas fa-chart-line"></i> Dashboard</li>
+                    <li data-view="tables"><i class="fas fa-chair"></i> Mesas</li>
+                    <li data-view="waiters"><i class="fas fa-users"></i> Meseros</li>
+                    <li data-view="menu"><i class="fas fa-book-menu"></i> Menú</li>
+                    <li data-view="reports"><i class="fas fa-file-alt"></i> Reportes</li>
+                    <li data-view="attendance"><i class="fas fa-calendar-check"></i> Asistencias</li>
+                    <li data-view="inventory"><i class="fas fa-boxes"></i> Inventario</li>
+                </ul>
+            </aside>
+            
+            <main class="main-content">
+                <!-- Dashboard -->
+                <div id="view-dashboard" class="view active">
+                    <h2>📊 Dashboard General</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-chair"></i>
+                            <div>
+                                <h3 id="total-tables">20</h3>
+                                <p>Mesas Totales</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <h3 id="active-waiters">12</h3>
+                                <p>Meseros Activos</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-receipt"></i>
+                            <div>
+                                <h3 id="today-orders">45</h3>
+                                <p>Pedidos Hoy</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-dollar-sign"></i>
+                            <div>
+                                <h3 id="today-revenue">$18,450</h3>
+                                <p>Ventas Hoy</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-sections">
+                        <div class="section">
+                            <h3>📈 Ventas por Turno</h3>
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                        <div class="section">
+                            <h3>🔔 Notificaciones Recientes</h3>
+                            <ul class="notifications-list" id="admin-notifications">
+                                <li><i class="fas fa-exclamation-triangle"></i> Stock bajo: Carne de res</li>
+                                <li><i class="fas fa-user-slash"></i> Ausencia: Juan Pérez (Matutino)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestión de Mesas -->
+                <div id="view-tables" class="view">
+                    <h2>🪑 Configuración de Mesas</h2>
+                    <div class="toolbar">
+                        <select id="shift-select">
+                            <option value="matutino">Turno Matutino (7:30-15:30)</option>
+                            <option value="vespertino">Turno Vespertino (14:30-22:30)</option>
+                        </select>
+                        <button class="btn-primary" onclick="addTable()"><i class="fas fa-plus"></i> Nueva Mesa</button>
+                        <button class="btn-secondary" onclick="saveTableConfig()"><i class="fas fa-save"></i> Guardar</button>
+                    </div>
+                    <div class="tables-grid" id="tables-container">
+                        <!-- Se llena dinámicamente con JS -->
+                    </div>
+                </div>
+
+                <!-- Gestión de Meseros -->
+                <div id="view-waiters" class="view">
+                    <h2>👥 Asignación de Meseros</h2>
+                    <div class="toolbar">
+                        <input type="text" id="waiter-search" placeholder="Buscar mesero por ID o nombre...">
+                        <button class="btn-primary" onclick="syncWaiters()"><i class="fas fa-sync"></i> Sincronizar RRHH</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Apellido</th>
+                                <th>Turno</th>
+                                <th>Mesa Asignada</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="waiters-table-body">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Gestión de Menú -->
+                <div id="view-menu" class="view">
+                    <h2>📋 Gestión de Platillos</h2>
+                    <div class="toolbar">
+                        <button class="btn-primary" onclick="showAddDishModal()"><i class="fas fa-plus"></i> Nuevo Platillo</button>
+                        <select id="menu-filter">
+                            <option value="all">Todos</option>
+                            <option value="entradas">Entradas</option>
+                            <option value="platos">Platos Fuertes</option>
+                            <option value="bebidas">Bebidas</option>
+                            <option value="postres">Postres</option>
+                        </select>
+                    </div>
+                    <div class="menu-grid" id="menu-container">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Reportes -->
+                <div id="view-reports" class="view">
+                    <h2>📊 Reportes de Ventas</h2>
+                    <div class="filters">
+                        <label>Fecha Inicio: <input type="date" id="report-start"></label>
+                        <label>Fecha Fin: <input type="date" id="report-end"></label>
+                        <label>Turno: 
+                            <select id="report-shift">
+                                <option value="all">Todos</option>
+                                <option value="matutino">Matutino</option>
+                                <option value="vespertino">Vespertino</option>
+                            </select>
+                        </label>
+                        <button class="btn-primary" onclick="generateReport()"><i class="fas fa-search"></i> Generar</button>
+                        <button class="btn-secondary" onclick="exportReport('pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn-secondary" onclick="exportReport('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mesa</th>
+                                <th>Mesero</th>
+                                <th>Turno</th>
+                                <th>Pedidos</th>
+                                <th>Total</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table-body">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Asistencias -->
+                <div id="view-attendance" class="view">
+                    <h2>📅 Registro de Asistencias</h2>
+                    <div class="toolbar">
+                        <input type="date" id="attendance-date">
+                        <select id="attendance-shift">
+                            <option value="matutino">Matutino</option>
+                            <option value="vespertino">Vespertino</option>
+                        </select>
+                        <button class="btn-primary" onclick="loadAttendance()"><i class="fas fa-search"></i> Cargar</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Turno</th>
+                                <th>Estado</th>
+                                <th>Justificante</th>
+                                <th>Descuento</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Inventario -->
+                <div id="view-inventory" class="view">
+                    <h2>📦 Inventario y Aprovisionamiento</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <h3 id="low-stock-count">5</h3>
+                                <p>Stock Bajo</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-truck"></i>
+                            <div>
+                                <h3 id="pending-orders">3</h3>
+                                <p>Pedidos Proveedor</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="calculateDailyConsumption()"><i class="fas fa-calculator"></i> Calcular Consumo Diario</button>
+                    <button class="btn-secondary" onclick="generateSupplierOrders()"><i class="fas fa-shopping-cart"></i> Generar Pedidos Proveedor</button>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Alimento</th>
+                                <th>Unidad</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Consumo Hoy</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Panel de Mesero (Tableta) -->
+    <div id="waiter-screen" class="screen">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-user-clock"></i>
+                <span id="waiter-name">Mesero: María López</span>
+            </div>
+            <div class="nav-user">
+                <span id="waiter-shift">Turno: Matutino</span>
+                <span id="waiter-tables">Mesas: 1-5</span>
+                <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </nav>
+        
+        <div class="waiter-content">
+            <aside class="tables-list">
+                <h3>Mis Mesas</h3>
+                <ul id="waiter-tables-list">
+                    <!-- Se llena dinámicamente -->
+                </ul>
+            </aside>
+            
+            <main class="order-content">
+                <div id="order-panel">
+                    <div class="order-header">
+                        <h2 id="current-table">Mesa #1</h2>
+                        <div class="order-status">
+                            <span class="status-badge" id="order-status">Abierta</span>
+                        </div>
+                    </div>
+                    
+                    <div class="order-sections">
+                        <div class="menu-section">
+                            <h3>📋 Menú</h3>
+                            <div class="menu-categories">
+                                <button class="cat-btn active" data-cat="todos">Todos</button>
+                                <button class="cat-btn" data-cat="entradas">Entradas</button>
+                                <button class="cat-btn" data-cat="platos">Platos</button>
+                                <button class="cat-btn" data-cat="bebidas">Bebidas</button>
+                                <button class="cat-btn" data-cat="postres">Postres</button>
+                            </div>
+                            <div class="menu-items-grid" id="waiter-menu-items">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                        
+                        <div class="current-order">
+                            <h3>🛒 Pedido Actual</h3>
+                            <div class="order-items" id="current-order-items">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                            <div class="order-total">
+                                <div class="total-row">
+                                    <span>Subtotal:</span>
+                                    <span id="order-subtotal">$0.00</span>
+                                </div>
+                                <div class="total-row">
+                                    <span>IVA (16%):</span>
+                                    <span id="order-iva">$0.00</span>
+                                </div>
+                                <div class="total-row total">
+                                    <span>Total:</span>
+                                    <span id="order-total">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="order-actions">
+                                <button class="btn-primary" onclick="sendOrder()"><i class="fas fa-paper-plane"></i> Enviar a Cocina</button>
+                                <button class="btn-secondary" onclick="printBill()"><i class="fas fa-print"></i> Imprimir Cuenta</button>
+                                <button class="btn-warning" onclick="showInvoiceModal()"><i class="fas fa-file-invoice"></i> Facturar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="notifications-panel" class="notifications-panel">
+                    <h3>🔔 Notificaciones</h3>
+                    <ul id="waiter-notifications">
+                        <!-- Se llena dinámicamente -->
+                    </ul>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Panel de Cocina (Pizarra Interactiva) -->
+    <div id="kitchen-screen" class="screen">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-utensils"></i>
+                <span>Pizarra de Cocina</span>
+            </div>
+            <div class="nav-user">
+                <span id="kitchen-chef">Jefe: Carlos Hernández</span>
+                <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </nav>
+        
+        <div class="kitchen-content">
+            <div class="kitchen-toolbar">
+                <select id="kitchen-sort">
+                    <option value="time">Ordenar por Hora</option>
+                    <option value="table">Ordenar por Mesa</option>
+                    <option value="urgency">Ordenar por Urgencia</option>
+                </select>
+                <div class="filter-toggles">
+                    <label><input type="checkbox" checked> Pendientes</label>
+                    <label><input type="checkbox" checked> En Proceso</label>
+                    <label><input type="checkbox"> Listos</label>
+                </div>
+            </div>
+            
+            <div class="kitchen-board" id="kitchen-board">
+                <!-- Se llena dinámicamente con las órdenes -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Menú Comensal (QR) -->
+    <div id="customer-screen" class="screen">
+        <div class="customer-header">
+            <div class="logo">
+                <i class="fas fa-pepper-hot"></i>
+                <h1>La Casa Mexicana</h1>
+            </div>
+            <div class="table-info">
+                <span id="customer-table">Mesa #1</span>
+                <span id="customer-qr">QR: ABC123</span>
+            </div>
+        </div>
+        
+        <div class="customer-content">
+            <nav class="customer-nav">
+                <button class="nav-btn active" data-cat="todos">🍽️ Todos</button>
+                <button class="nav-btn" data-cat="entradas">🥗 Entradas</button>
+                <button class="nav-btn" data-cat="platos">🌮 Platos</button>
+                <button class="nav-btn" data-cat="bebidas">🥤 Bebidas</button>
+                <button class="nav-btn" data-cat="postres">🍰 Postres</button>
+            </nav>
+            
+            <div class="customer-menu" id="customer-menu-items">
+                <!-- Se llena dinámicamente -->
+            </div>
+            
+            <div class="customer-cart">
+                <div class="cart-summary">
+                    <h3>🛒 Tu Pedido</h3>
+                    <div id="cart-items"></div>
+                    <div class="cart-total">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+                <button class="btn-primary btn-large" onclick="requestBill()"><i class="fas fa-receipt"></i> Solicitar Cuenta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Facturación -->
+    <div id="invoice-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📄 Datos de Facturación</h3>
+                <button class="modal-close" onclick="closeModal('invoice-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="invoice-form">
+                    <div class="form-group">
+                        <label>RFC *</label>
+                        <input type="text" id="inv-rfc" required pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}">
+                    </div>
+                    <div class="form-group">
+                        <label>Razón Social / Nombre *</label>
+                        <input type="text" id="inv-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Código Postal *</label>
+                        <input type="text" id="inv-zip" required pattern="[0-9]{5}">
+                    </div>
+                    <div class="form-group">
+                        <label>Régimen Fiscal *</label>
+                        <select id="inv-regime" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="601">General de Ley Personas Morales</option>
+                            <option value="603">Personas Morales con Fines no Lucrativos</option>
+                            <option value="605">Sueldos y Salarios e Ingresos Asimilados</option>
+                            <option value="606">Arrendamiento</option>
+                            <option value="608">Empresarial por Honorarios</option>
+                            <option value="610">Residentes en el Extranjero</option>
+                            <option value="612">Personas Físicas con Actividades Empresariales</option>
+                            <option value="614">Ingresos por Dividendos</option>
+                            <option value="616">Sin obligaciones fiscales</option>
+                            <option value="620">Socios e Integrantes de Sociedades</option>
+                            <option value="621">Incorporación Fiscal</option>
+                            <option value="622">Actividades Agrícolas</option>
+                            <option value="623">Régimen Simplificado de Confianza</option>
+                            <option value="626">Régimen Simplificado de Confianza para el arrendamiento</option>
+                            <option value="628">Hidrocarburos</option>
+                            <option value="629">Régimen de las Personas Físicas con Actividades Empresariales</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Uso de CFDI *</label>
+                        <select id="inv-use" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="G01">Adquisición de mercancías</option>
+                            <option value="G02">Devoluciones, descuentos o bonificaciones</option>
+                            <option value="G03">Gastos en general</option>
+                            <option value="I01">Construcciones</option>
+                            <option value="I02">Mobiliario y equipo de oficina</option>
+                            <option value="I03">Equipo de transporte</option>
+                            <option value="I04">Equipo de computo y accesorios</option>
+                            <option value="I05">Dados, troqueles, moldes, matrices y herramental</option>
+                            <option value="I06">Comunicaciones telefónicas</option>
+                            <option value="I07">Comunicaciones satelitales</option>
+                            <option value="I08">Otra maquinaria y equipo</option>
+                            <option value="D01">Honorarios médicos, dentales y hospitalarios</option>
+                            <option value="D02">Gastos médicos por discapacidad</option>
+                            <option value="D03">Gastos funerarios</option>
+                            <option value="D04">Donativos</option>
+                            <option value="D05">Intereses reales efectivamente pagados por créditos hipotecarios</option>
+                            <option value="D06">Aportaciones voluntarias a SAR</option>
+                            <option value="D07">Primas por seguros de gastos médicos</option>
+                            <option value="D08">Gastos de transporte (obligatorio para el uso del servicio)</option>
+                            <option value="D09">Depósitos en cuentas para el ahorro, primas que tengan como base planes de pensiones</option>
+                            <option value="D10">Pagos por servicios educativos (colegiaturas)</option>
+                            <option value="CP01">Pagos definidos en el artículo 20, fracción I de la Ley del ISR</option>
+                            <option value="S01">Sin efectos fiscales</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico *</label>
+                        <input type="email" id="inv-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="inv-payment">
+                            <option value="PUE">Pago en Una Exhibición</option>
+                            <option value="PPD">Pago en Parcialidades o Diferido</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de Pago</label>
+                        <select id="inv-form">
+                            <option value="01">Efectivo</option>
+                            <option value="03">Transferencia electrónica</option>
+                            <option value="04">Tarjeta de crédito</option>
+                            <option value="05">Monedero electrónico</option>
+                            <option value="28">Tarjeta de débito</option>
+                            <option value="99">Por definir</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('invoice-modal')">Cancelar</button>
+                <button class="btn-primary" onclick="generateInvoice()"><i class="fas fa-file-invoice"></i> Generar Factura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Nuevo Platillo -->
+    <div id="dish-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🍽️ Registrar Nuevo Platillo</h3>
+                <button class="modal-close" onclick="closeModal('dish-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="dish-form">
+                    <div class="form-group">
+                        <label>Nombre del Platillo *</label>
+                        <input type="text" id="dish-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="dish-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Categoría *</label>
+                            <select id="dish-category" required>
+                                <option value="entradas">Entradas</option>
+                                <option value="platos">Platos Fuertes</option>
+                                <option value="bebidas">Bebidas</option>
+                                <option value="postres">Postres</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Precio ($) *</label>
+                            <input type="number" id="dish-price" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>IVA Incluido</label>
+                        <input type="checkbox" id="dish-iva" checked>
+                    </div>
+                    <div class="form-group">
+                        <label>Tiempo Preparación (min)</label>
+                        <input type="number" id="dish-time" value="15">
+                    </div>
+                    <div class="form-group">
+                        <label>Ingredientes (separados por coma)</label>
+                        <textarea id="dish-ingredients" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Alérgenos</label>
+                        <input type="text" id="dish-allergens" placeholder="Ej: gluten, lácteos, nueces">
+                    </div>
+                    <div class="form-group">
+                        <label>Disponible</label>
+                        <input type="checkbox" id="dish-available" checked>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('dish-modal')">Cancelar</button>
+                <button class="btn-primary" onclick="saveDish()"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/waiter.js"></script>
+    <script src="js/kitchen.js"></script>
+</body>
+</html>

@@ -8,10 +8,9 @@ import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { bindForm } from '/shared/js/formEngine.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
 import { HorariosController } from './horarios.js';
-import { viewManager } from '/shared/js/viewManager.js';
-import { KORE_CONFIG } from '/core/js/kore.config.js';
+
 // ==========================================================================
-// 2. ESTADO PRIVADO
+// 2. ESTADO PRIVADO Y CONFIGURACIÓN
 // ==========================================================================
 const state = {
     dom: {},
@@ -25,7 +24,7 @@ const state = {
     }
 };
 
-// Diccionario UI — cero lógica de negocio en el renderizado
+// Diccionario UI — cero lógica de negocio en el render
 const _uiConfig = {
     attendanceStatus: {
         'PRESENTE': { badge: 'bg-emerald-100 text-emerald-800', label: 'Presente' },
@@ -49,18 +48,20 @@ const _uiConfig = {
 const _cacheDOM = (container) => {
     state.dom.root = container;
 
-    // Tabs
+    // Tabs — incluye el 5° tab de Horarios
     state.dom.tabs = {
         monitor: container.querySelector('#tab-monitor'),
         historial: container.querySelector('#tab-historial'),
         turnos: container.querySelector('#tab-turnos'),
-        seguridad: container.querySelector('#tab-seguridad')
+        seguridad: container.querySelector('#tab-seguridad'),
+        horarios: container.querySelector('#tab-horarios')
     };
     state.dom.views = {
         monitor: container.querySelector('#view-monitor'),
         historial: container.querySelector('#view-historial'),
         turnos: container.querySelector('#view-turnos'),
-        seguridad: container.querySelector('#view-seguridad')
+        seguridad: container.querySelector('#view-seguridad'),
+        horarios: container.querySelector('#view-horarios')
     };
 
     // Monitor
@@ -80,7 +81,7 @@ const _cacheDOM = (container) => {
     state.dom.btnSearchHistorial = container.querySelector('#btn-search-historial');
     state.dom.tableHistorialBody = container.querySelector('#table-historial-body');
 
-    // Turnos
+    // Catálogo de Turnos
     state.dom.formAdminTurno = container.querySelector('#form-admin-turno');
     state.dom.turnoCode = container.querySelector('#turno-code');
     state.dom.turnoName = container.querySelector('#turno-name');
@@ -95,7 +96,7 @@ const _cacheDOM = (container) => {
     state.dom.pinNewValue = container.querySelector('#pin-new-value');
     state.dom.pinConfirmValue = container.querySelector('#pin-confirm-value');
 
-    // Inicializar fecha del monitor a hoy
+    // Fecha inicial del monitor
     const hoy = new Date().toISOString().split('T')[0];
     if (state.dom.monitorDate) state.dom.monitorDate.value = hoy;
 };
@@ -108,17 +109,23 @@ const _render = {
         state.ui.activeTab = tabKey;
         Object.keys(state.dom.tabs).forEach(key => {
             const isActive = key === tabKey;
-            state.dom.tabs[key].className = isActive ? _uiConfig.tabs.active : _uiConfig.tabs.inactive;
-            state.dom.views[key].classList.toggle('hidden', !isActive);
+            if (state.dom.tabs[key]) {
+                state.dom.tabs[key].className = isActive
+                    ? _uiConfig.tabs.active
+                    : _uiConfig.tabs.inactive;
+            }
+            if (state.dom.views[key]) {
+                state.dom.views[key].classList.toggle('hidden', !isActive);
+            }
         });
     },
 
     kpis: () => {
         const s = state.data.stats;
-        state.dom.kpiTotal.textContent = s.total;
-        state.dom.kpiPresente.textContent = s.presente;
-        state.dom.kpiEsperado.textContent = s.esperado;
-        state.dom.kpiAusente.textContent = s.ausente;
+        if (state.dom.kpiTotal) state.dom.kpiTotal.textContent = s.total;
+        if (state.dom.kpiPresente) state.dom.kpiPresente.textContent = s.presente;
+        if (state.dom.kpiEsperado) state.dom.kpiEsperado.textContent = s.esperado;
+        if (state.dom.kpiAusente) state.dom.kpiAusente.textContent = s.ausente;
     },
 
     monitorRows: (records) => {
@@ -127,7 +134,7 @@ const _render = {
         if (records.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 7;
+            td.colSpan = 8;
             td.className = 'px-4 py-8 text-center text-slate-400 text-sm';
             td.textContent = 'No hay asignaciones para la fecha seleccionada.';
             tr.appendChild(td);
@@ -142,11 +149,12 @@ const _render = {
             clone.querySelector('.col-nombre').textContent = nombre;
             clone.querySelector('.col-employee-number').textContent = rec.employeeNumber;
             clone.querySelector('.col-shift').textContent = rec.shiftName || rec.shift;
-            clone.querySelector('.col-zone').textContent = rec.zoneName;
+            clone.querySelector('.col-zone').textContent = rec.zoneName || '—';
             clone.querySelector('.col-horario').textContent = rec.startTime && rec.endTime
                 ? `${rec.startTime} – ${rec.endTime}` : '—';
 
-            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus] || _uiConfig.attendanceStatus.ESPERADO;
+            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus]
+                || _uiConfig.attendanceStatus.ESPERADO;
             const badge = clone.querySelector('.col-status-badge');
             badge.textContent = statusCfg.label;
             badge.className = `col-status-badge px-2.5 py-1 text-xs font-bold rounded-full ${statusCfg.badge}`;
@@ -185,16 +193,18 @@ const _render = {
         records.forEach(rec => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50 border-b border-slate-100 text-sm';
-
             const nombre = `${rec.firstName || ''} ${rec.lastName || ''}`.trim();
-            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus] || _uiConfig.attendanceStatus.ESPERADO;
-            const srcCfg = rec.source ? (_uiConfig.source[rec.source] || { badge: 'bg-slate-100 text-slate-600', label: rec.source }) : null;
+            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus]
+                || _uiConfig.attendanceStatus.ESPERADO;
+            const srcCfg = rec.source
+                ? (_uiConfig.source[rec.source] || { badge: 'bg-slate-100 text-slate-600', label: rec.source })
+                : null;
 
             [
                 { text: rec.assignmentDate, cls: 'px-4 py-3 text-slate-500' },
                 { text: `${nombre} (${rec.employeeNumber})`, cls: 'px-4 py-3 font-medium text-slate-800' },
                 { text: rec.shiftName || rec.shift, cls: 'px-4 py-3 text-slate-600' },
-                { text: rec.zoneName, cls: 'px-4 py-3 text-slate-600' }
+                { text: rec.zoneName || '—', cls: 'px-4 py-3 text-slate-600' }
             ].forEach(({ text, cls }) => {
                 const td = document.createElement('td');
                 td.className = cls;
@@ -202,7 +212,6 @@ const _render = {
                 tr.appendChild(td);
             });
 
-            // Estado badge
             const tdStatus = document.createElement('td');
             tdStatus.className = 'px-4 py-3 text-center';
             const badgeEl = document.createElement('span');
@@ -211,7 +220,6 @@ const _render = {
             tdStatus.appendChild(badgeEl);
             tr.appendChild(tdStatus);
 
-            // Check-in
             const tdCheckin = document.createElement('td');
             tdCheckin.className = 'px-4 py-3 text-xs text-slate-500';
             tdCheckin.textContent = rec.checkInAt
@@ -219,7 +227,6 @@ const _render = {
                 : '—';
             tr.appendChild(tdCheckin);
 
-            // Fuente
             const tdSource = document.createElement('td');
             tdSource.className = 'px-4 py-3';
             if (srcCfg) {
@@ -270,7 +277,7 @@ const _logic = {
             _render.kpis();
             _render.monitorRows(state.data.records);
         } catch (err) {
-            showErrorModal(err.message || 'Error cargando el monitor de asistencia.', 'Error de conexión');
+            showErrorModal(err.message || 'Error cargando el monitor de asistencia.');
         }
     },
 
@@ -280,7 +287,7 @@ const _logic = {
         const employeeNumber = state.dom.histEmployee?.value?.trim();
 
         if (!startDate || !endDate) {
-            showErrorModal('Selecciona un rango de fechas completo (Desde y Hasta).', 'Rango requerido');
+            showErrorModal('Selecciona un rango de fechas completo (Desde y Hasta).');
             return;
         }
 
@@ -291,7 +298,7 @@ const _logic = {
             const res = await fetchData(url);
             _render.historialRows(res.data?.records || []);
         } catch (err) {
-            showErrorModal(err.message || 'Error cargando el historial.', 'Error de conexión');
+            showErrorModal(err.message || 'Error cargando el historial.');
         }
     },
 
@@ -301,7 +308,7 @@ const _logic = {
             state.data.shifts = res.data?.shifts || [];
             _render.shiftsList();
         } catch (err) {
-            showErrorModal(err.message || 'Error cargando los turnos.', 'Error de conexión');
+            showErrorModal(err.message || 'Error cargando los turnos.');
         }
     },
 
@@ -312,9 +319,8 @@ const _logic = {
             startTime: state.dom.turnoStart.value,
             endTime: state.dom.turnoEnd.value
         };
-
         await postData(ENDPOINTS.admin.post.shift, payload);
-        showSuccessModal('Turno creado exitosamente en el catálogo.', 'Turno Guardado');
+        showSuccessModal('Turno creado exitosamente en el catálogo.');
         await _logic.loadShifts();
     },
 
@@ -331,16 +337,12 @@ const _logic = {
         }
 
         const confirmed = await confirmAction(
-            `¿Estás seguro de planchar el PIN del empleado ${employeeNumber}? Esta acción no se puede deshacer.`
+            `¿Estás seguro de restablecer el PIN del empleado ${employeeNumber}? Esta acción no se puede deshacer.`
         );
         if (!confirmed) throw new Error('Operación cancelada.');
 
-        await putData(
-            ENDPOINTS.admin.put.resetPin,
-            { newPin },
-            { employeeNumber }
-        );
-        showSuccessModal(`El PIN del empleado ${employeeNumber} fue actualizado exitosamente.`, 'PIN Planchado');
+        await putData(ENDPOINTS.admin.put.resetPin, { newPin }, { employeeNumber });
+        showSuccessModal(`PIN del empleado ${employeeNumber} actualizado exitosamente.`);
     }
 };
 
@@ -348,8 +350,9 @@ const _logic = {
 // 6. EVENTOS
 // ==========================================================================
 const _bindEvents = () => {
-    // Tabs
+    // Tabs — con lazy loading donde aplica
     Object.keys(state.dom.tabs).forEach(tabKey => {
+        if (!state.dom.tabs[tabKey]) return;
         state.dom.tabs[tabKey].addEventListener('click', async () => {
             _render.switchTab(tabKey);
             if (tabKey === 'monitor' && state.data.records.length === 0) {
@@ -358,6 +361,7 @@ const _bindEvents = () => {
             if (tabKey === 'turnos' && state.data.shifts.length === 0) {
                 await _logic.loadShifts();
             }
+            // 'horarios' ya se cargó en el mount — no requiere lazy loading
         });
     });
 
@@ -368,15 +372,11 @@ const _bindEvents = () => {
     // Historial
     state.dom.btnSearchHistorial?.addEventListener('click', _logic.loadHistorial);
 
-    // Turnos
-    if (state.dom.formAdminTurno) {
-        bindForm('form-admin-turno', _logic.createShift);
-    }
+    // Catálogo de Turnos
+    if (state.dom.formAdminTurno) bindForm('form-admin-turno', _logic.createShift);
 
     // Reset PIN
-    if (state.dom.formResetPin) {
-        bindForm('form-reset-pin', _logic.resetPin);
-    }
+    if (state.dom.formResetPin) bindForm('form-reset-pin', _logic.resetPin);
 };
 
 // ==========================================================================
@@ -384,11 +384,17 @@ const _bindEvents = () => {
 // ==========================================================================
 export const TurnosController = {
     mount: async (container) => {
-        const horariosContainer = viewManager.mount(KORE_CONFIG.DOM.ADMIN.TEMPLATES.HORARIOS);
         _cacheDOM(container);
         _bindEvents();
-        // Monitor es la tab por defecto — cargarlo al montar
+
+        // Monitor es la tab por defecto
         await _logic.loadMonitor();
-        await HorariosController.mount(horariosContainer);
+
+        // Montar HorariosController en su contenedor (#view-horarios).
+        // NO se usa viewManager.mount aquí — eso destruiría la vista de Turnos.
+        // HorariosController clona internamente tpl-admin-horarios en ese div.
+        if (state.dom.views.horarios) {
+            await HorariosController.mount(state.dom.views.horarios);
+        }
     }
 };

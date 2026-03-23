@@ -1,22 +1,16 @@
-// frontends/admin/js/modules/admin.horarios.controller.js
-// ============================================================
-// Controlador del módulo de Horarios de Personal.
-// Gestiona la asignación de turnos para cajeros, cocineros y staff
-// que no tienen zona física asignada (no-piso).
-//
-// Patrón: igual que los otros módulos Admin:
-// 1. _cacheDOM  → cachea referencias al DOM del template
-// 2. _bindEvents → enlaza eventos (form, buttons, filters)
-// 3. logic_*     → llaman a la API y actualizan state
-// 4. render_*    → pintán el DOM desde state
-// ============================================================
+// frontends/admin/js/views/turnos/horarios.js
 
+// ==========================================================================
+// 1. DEPENDENCIAS
+// ==========================================================================
 import { fetchData, postData, deleteData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
 import { bindForm } from '/shared/js/formEngine.js';
 
-// ── STATE ────────────────────────────────────────────────────
+// ==========================================================================
+// 2. ESTADO PRIVADO Y CONFIGURACIÓN
+// ==========================================================================
 const state = {
     employees: [],
     shifts: [],
@@ -24,282 +18,240 @@ const state = {
     stats: {}
 };
 
-// ── DOM CACHE ─────────────────────────────────────────────────
-let _dom = {};
+const _dom = {};
 
-const _cacheDOM = (container) => {
-    _dom = {
-        empSelect: container.querySelector('#sch-employee'),
-        shiftSelect: container.querySelector('#sch-shift'),
-        dateInput: container.querySelector('#sch-date'),
-        recurrence: container.querySelector('#sch-recurrence'),
-        filterDate: container.querySelector('#sch-filter-date'),
-        btnFilter: container.querySelector('#btn-sch-filter'),
-        btnToday: container.querySelector('#btn-sch-today'),
-        tableBody: container.querySelector('#table-horarios-body'),
-        statsBar: container.querySelector('#sch-stats-bar'),
-        statTotal: container.querySelector('#sch-stat-total'),
-        statPresent: container.querySelector('#sch-stat-present'),
-        statExpected: container.querySelector('#sch-stat-expected'),
-        statAbsent: container.querySelector('#sch-stat-absent'),
-    };
+// Diccionario UI — cero lógica de negocio en el render
+const _uiConfig = {
+    status: {
+        PRESENTE: { badge: 'bg-emerald-100 text-emerald-700', label: 'Presente' },
+        ESPERADO: { badge: 'bg-amber-100 text-amber-700', label: 'Esperado' },
+        AUSENTE: { badge: 'bg-red-100 text-red-600', label: 'Ausente' },
+        DEFAULT: { badge: 'bg-amber-100 text-amber-700', label: 'Esperado' }
+    }
 };
 
-// ── LOGIC ─────────────────────────────────────────────────────
+// ==========================================================================
+// 3. CACHÉ DEL DOM
+// ==========================================================================
+const _cacheDOM = (container) => {
+    _dom.empSelect = container.querySelector('#sch-employee');
+    _dom.shiftSelect = container.querySelector('#sch-shift');
+    _dom.dateInput = container.querySelector('#sch-date');
+    _dom.recurrence = container.querySelector('#sch-recurrence');
+    _dom.filterDate = container.querySelector('#sch-filter-date');
+    _dom.btnFilter = container.querySelector('#btn-sch-filter');
+    _dom.btnToday = container.querySelector('#btn-sch-today');
+    _dom.tableBody = container.querySelector('#table-horarios-body');
+    _dom.statsBar = container.querySelector('#sch-stats-bar');
+    _dom.statTotal = container.querySelector('#sch-stat-total');
+    _dom.statPresent = container.querySelector('#sch-stat-present');
+    _dom.statExpected = container.querySelector('#sch-stat-expected');
+    _dom.statAbsent = container.querySelector('#sch-stat-absent');
 
-/**
- * Carga empleados y turnos en paralelo para hidratar los selects.
- * Los empleados se filtran en frontend para excluir área de Piso (code=20),
- * ya que esos tienen su roster en restaurant_assignments.
- */
-const logic_loadCatalogos = async () => {
-    try {
+    // Templates — busca en el documento global (los partials los inyecta TemplateLoader)
+    _dom.tplRow = document.querySelector('#tpl-row-horario');
+    _dom.tplEmpty = document.querySelector('#tpl-horario-empty');
+};
+
+// ==========================================================================
+// 4. LÓGICA DE VISTA / RENDERIZADO
+// ==========================================================================
+const render = {
+    empSelect: () => {
+        if (!_dom.empSelect) return;
+        _dom.empSelect.innerHTML = '';
+        _dom.empSelect.appendChild(
+            Object.assign(new Option('Seleccionar empleado...', ''), { disabled: true, selected: true })
+        );
+        state.employees.forEach(emp => {
+            const num = emp.employeeNumber || emp.employee_number || '';
+            const nombre = `${emp.firstName || emp.first_name || ''} ${emp.lastName || emp.last_name || ''}`.trim();
+            const area = emp.areaName || emp.area_name || '';
+            _dom.empSelect.appendChild(new Option(`${nombre} — ${area}`, num));
+        });
+    },
+
+    shiftSelect: () => {
+        if (!_dom.shiftSelect) return;
+        _dom.shiftSelect.innerHTML = '';
+        _dom.shiftSelect.appendChild(
+            Object.assign(new Option('Seleccionar turno...', ''), { disabled: true, selected: true })
+        );
+        state.shifts.forEach(s => {
+            _dom.shiftSelect.appendChild(
+                new Option(`${s.name}  (${s.startTime} – ${s.endTime})`, s.code)
+            );
+        });
+    },
+
+    table: () => {
+        if (!_dom.tableBody) return;
+        _dom.tableBody.innerHTML = '';
+
+        if (state.schedules.length === 0) {
+            const clone = _dom.tplEmpty.content.cloneNode(true);
+            _dom.tableBody.appendChild(clone);
+            return;
+        }
+
+        state.schedules.forEach(r => {
+            const clone = _dom.tplRow.content.cloneNode(true);
+            const nombre = `${r.firstName || ''} ${r.lastName || ''}`.trim();
+            const status = r.attendanceStatus || 'ESPERADO';
+            const cfg = _uiConfig.status[status] || _uiConfig.status.DEFAULT;
+
+            const checkIn = r.checkInAt
+                ? new Date(r.checkInAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                : '—';
+
+            const fecha = r.assignmentDate
+                ? new Date(r.assignmentDate + 'T12:00:00').toLocaleDateString('es-MX', {
+                    weekday: 'short', day: 'numeric', month: 'short'
+                })
+                : '—';
+
+            clone.querySelector('.col-nombre').textContent = nombre;
+            clone.querySelector('.col-shift').textContent = r.shiftName || r.shift || '—';
+            clone.querySelector('.col-horario').textContent = `${r.startTime || '—'} – ${r.endTime || '—'}`;
+            clone.querySelector('.col-fecha').textContent = fecha;
+            clone.querySelector('.col-checkin').textContent = checkIn;
+
+            const badge = clone.querySelector('.col-status-badge');
+            badge.textContent = cfg.label;
+            badge.className = `col-status-badge px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.badge}`;
+
+            // data-* para delegación — nunca addEventListener dentro del forEach
+            const btnDel = clone.querySelector('.btn-delete-schedule');
+            btnDel.dataset.id = r.assignmentId || r.assignment_id || '';
+            btnDel.dataset.nombre = nombre;
+            btnDel.dataset.fecha = fecha;
+
+            _dom.tableBody.appendChild(clone);
+        });
+    },
+
+    stats: () => {
+        if (!state.stats?.total) {
+            _dom.statsBar?.classList.add('hidden');
+            return;
+        }
+        _dom.statsBar?.classList.remove('hidden');
+        if (_dom.statTotal) _dom.statTotal.textContent = state.stats.total ?? 0;
+        if (_dom.statPresent) _dom.statPresent.textContent = state.stats.presente ?? 0;
+        if (_dom.statExpected) _dom.statExpected.textContent = state.stats.esperado ?? 0;
+        if (_dom.statAbsent) _dom.statAbsent.textContent = state.stats.ausente ?? 0;
+    }
+};
+
+// ==========================================================================
+// 5. LÓGICA DE NEGOCIO / DATOS
+// ==========================================================================
+const logic = {
+    loadCatalogos: async () => {
         const [empRes, shiftRes] = await Promise.all([
             fetchData(ENDPOINTS.admin.get.employees),
             fetchData(ENDPOINTS.admin.get.shifts)
         ]);
 
-        // Excluir meseros (área Piso) del selector — ellos van en módulo de Piso
-        const allEmployees = empRes.data || [];
-        state.employees = allEmployees.filter(e => {
-            const areaCode = e.areaCode || e.area_code || '';
-            return areaCode !== '20'; // Área Piso
+        // Excluir área de Piso (code 20) — esos van en módulo de Piso
+        state.employees = (empRes.data || []).filter(e => {
+            const areaCode = String(e.areaCode || e.area_code || '');
+            return areaCode !== '20';
         });
-
         state.shifts = shiftRes.data?.shifts || shiftRes.data || [];
 
-        render_empSelect();
-        render_shiftSelect();
+        render.empSelect();
+        render.shiftSelect();
+    },
 
-    } catch (err) {
-        console.error('[HorariosController] Error cargando catálogos:', err);
-        showErrorModal('No se pudieron cargar los catálogos. Verifica la conexión.');
-    }
-};
-
-/**
- * Carga los horarios programados para la fecha dada y actualiza la tabla.
- * @param {string} date - Fecha en formato YYYY-MM-DD
- */
-const logic_loadSchedules = async (date) => {
-    if (!date) return;
-    try {
+    loadSchedules: async (date) => {
+        if (!date) return;
         const res = await fetchData(`${ENDPOINTS.admin.get.schedules}?date=${date}`);
         state.schedules = res.data?.records || [];
         state.stats = res.data?.stats || {};
-        render_table();
-        render_stats();
-    } catch (err) {
-        console.error('[HorariosController] Error cargando horarios:', err);
-        showErrorModal('Error al cargar los horarios programados.');
-    }
-};
+        render.table();
+        render.stats();
+    },
 
-/**
- * Crea un horario con recurrencia. Llamado por FormEngine al submit.
- * Lanza error si falla para que FormEngine NO limpie el formulario.
- */
-const logic_createSchedule = async () => {
-    const payload = {
-        employeeNumber: _dom.empSelect?.value,
-        shiftCode: _dom.shiftSelect?.value,
-        scheduleDate: _dom.dateInput?.value,
-        recurrence: _dom.recurrence?.value || 'DIA'
-    };
+    createSchedule: async () => {
+        const payload = {
+            employeeNumber: _dom.empSelect?.value,
+            shiftCode: _dom.shiftSelect?.value,
+            scheduleDate: _dom.dateInput?.value,
+            recurrence: _dom.recurrence?.value || 'DIA'
+        };
 
-    if (!payload.employeeNumber || !payload.shiftCode || !payload.scheduleDate) {
-        showErrorModal('Completa todos los campos antes de asignar el horario.');
-        throw new Error('Campos incompletos'); // FormEngine no limpia
-    }
+        if (!payload.employeeNumber || !payload.shiftCode || !payload.scheduleDate) {
+            showErrorModal('Completa todos los campos antes de asignar el horario.');
+            throw new Error('Campos incompletos'); // FormEngine NO limpia si lanza error
+        }
 
-    await postData(ENDPOINTS.admin.post.schedule, payload);
-    showSuccessModal('Horario asignado correctamente.');
+        await postData(ENDPOINTS.admin.post.schedule, payload);
+        showSuccessModal('Horario asignado correctamente.');
+        await logic.loadSchedules(_dom.filterDate?.value || payload.scheduleDate);
+    },
 
-    // Refrescar con la fecha activa del filtro (o la fecha del nuevo horario)
-    const activeDate = _dom.filterDate?.value || payload.scheduleDate;
-    await logic_loadSchedules(activeDate);
-};
+    deleteSchedule: async (id, nombre, fecha) => {
+        const ok = await confirmAction(`¿Eliminar el horario de ${nombre} del ${fecha}?`);
+        if (!ok) return;
 
-/**
- * Elimina un registro individual de horario tras confirmación.
- */
-const logic_deleteSchedule = async (id, empleado, fecha) => {
-    const ok = await confirmAction(`¿Eliminar el horario de ${empleado} del ${fecha}?`);
-    if (!ok) return;
-
-    try {
         await deleteData(ENDPOINTS.admin.delete.schedule, { id });
         showSuccessModal('Horario eliminado.');
-        const activeDate = _dom.filterDate?.value || new Date().toISOString().split('T')[0];
-        await logic_loadSchedules(activeDate);
-    } catch (err) {
-        showErrorModal(err.message || 'Error al eliminar el horario.');
+        await logic.loadSchedules(
+            _dom.filterDate?.value || new Date().toISOString().split('T')[0]
+        );
     }
 };
 
-// ── RENDER ────────────────────────────────────────────────────
-
-const render_empSelect = () => {
-    if (!_dom.empSelect) return;
-    _dom.empSelect.innerHTML = '<option value="">Seleccionar empleado...</option>';
-    state.employees.forEach(emp => {
-        const num = emp.employeeNumber || emp.employee_number || '';
-        const nombre = `${emp.firstName || emp.first_name || ''} ${emp.lastName || emp.last_name || ''}`.trim();
-        const area = emp.areaName || emp.area_name || '';
-        const opt = document.createElement('option');
-        opt.value = num;
-        opt.textContent = `${nombre} — ${area}`;
-        _dom.empSelect.appendChild(opt);
-    });
-};
-
-const render_shiftSelect = () => {
-    if (!_dom.shiftSelect) return;
-    _dom.shiftSelect.innerHTML = '<option value="">Seleccionar turno...</option>';
-    state.shifts.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.code;
-        opt.textContent = `${s.name}  (${s.startTime} – ${s.endTime})`;
-        _dom.shiftSelect.appendChild(opt);
-    });
-};
-
-const STATUS_BADGE = {
-    PRESENTE: 'bg-emerald-100 text-emerald-700',
-    ESPERADO: 'bg-amber-100  text-amber-700',
-    AUSENTE: 'bg-red-100    text-red-600'
-};
-const STATUS_LABEL = {
-    PRESENTE: 'Presente',
-    ESPERADO: 'Esperado',
-    AUSENTE: 'Ausente'
-};
-
-const render_table = () => {
-    if (!_dom.tableBody) return;
-
-    if (state.schedules.length === 0) {
-        _dom.tableBody.innerHTML = `
-            <tr>
-              <td colspan="7" class="px-4 py-10 text-center text-slate-400 text-sm">
-                <span class="material-symbols-outlined text-[28px] block mb-1 text-slate-300">event_busy</span>
-                No hay horarios programados para esta fecha.
-              </td>
-            </tr>`;
-        return;
-    }
-
-    _dom.tableBody.innerHTML = state.schedules.map(r => {
-        const nombre = `${r.firstName} ${r.lastName}`;
-        const status = r.attendanceStatus || 'ESPERADO';
-        const badge = STATUS_BADGE[status] || STATUS_BADGE.ESPERADO;
-        const label = STATUS_LABEL[status] || status;
-
-        const checkIn = r.checkInAt
-            ? new Date(r.checkInAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-            : '—';
-
-        const fecha = r.assignmentDate
-            ? new Date(r.assignmentDate + 'T12:00:00').toLocaleDateString('es-MX', {
-                weekday: 'short', day: 'numeric', month: 'short'
-            })
-            : '—';
-
-        // Escapar para uso en data-* attributes
-        const nombreEsc = nombre.replace(/"/g, '&quot;');
-        const fechaEsc = fecha.replace(/"/g, '&quot;');
-
-        return `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="px-4 py-3">
-            <span class="font-medium text-slate-800">${nombre}</span>
-          </td>
-          <td class="px-4 py-3 text-slate-600 text-xs font-medium uppercase tracking-wide">
-            ${r.shiftName || r.shift || '—'}
-          </td>
-          <td class="px-4 py-3 text-slate-500 text-xs font-mono">
-            ${r.startTime || '—'} – ${r.endTime || '—'}
-          </td>
-          <td class="px-4 py-3 text-slate-600">${fecha}</td>
-          <td class="px-4 py-3">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${badge}">${label}</span>
-          </td>
-          <td class="px-4 py-3 text-slate-500 text-xs font-mono">${checkIn}</td>
-          <td class="px-4 py-3">
-            <button
-              class="btn-delete-schedule text-slate-400 hover:text-red-500 transition-colors"
-              data-id="${r.assignmentId || r.assignment_id}"
-              data-nombre="${nombreEsc}"
-              data-fecha="${fechaEsc}"
-              title="Eliminar horario">
-              <span class="material-symbols-outlined text-[18px]">delete</span>
-            </button>
-          </td>
-        </tr>`;
-    }).join('');
-
-    // Delegar eventos de borrado en los botones recién creados
-    _dom.tableBody.querySelectorAll('.btn-delete-schedule').forEach(btn => {
-        btn.addEventListener('click', () => {
-            logic_deleteSchedule(btn.dataset.id, btn.dataset.nombre, btn.dataset.fecha);
-        });
-    });
-};
-
-const render_stats = () => {
-    if (!state.stats || !state.stats.total) {
-        _dom.statsBar?.classList.add('hidden');
-        return;
-    }
-    _dom.statsBar?.classList.remove('hidden');
-    if (_dom.statTotal) _dom.statTotal.textContent = state.stats.total ?? 0;
-    if (_dom.statPresent) _dom.statPresent.textContent = state.stats.presente ?? 0;
-    if (_dom.statExpected) _dom.statExpected.textContent = state.stats.esperado ?? 0;
-    if (_dom.statAbsent) _dom.statAbsent.textContent = state.stats.ausente ?? 0;
-};
-
-// ── BIND EVENTS ───────────────────────────────────────────────
-
+// ==========================================================================
+// 6. EVENTOS
+// ==========================================================================
 const _bindEvents = () => {
-    // Form submit — FormEngine maneja el reset post-éxito (UIRules define preserveFields)
-    bindForm('form-employee-schedule', logic_createSchedule);
+    bindForm('form-employee-schedule', logic.createSchedule);
 
-    // Filtrar por fecha personalizada
     _dom.btnFilter?.addEventListener('click', () => {
         const date = _dom.filterDate?.value;
         if (!date) return showErrorModal('Selecciona una fecha para filtrar.');
-        logic_loadSchedules(date);
+        logic.loadSchedules(date);
     });
 
-    // Botón "Hoy" — carga horarios del día actual
     _dom.btnToday?.addEventListener('click', () => {
         const today = new Date().toISOString().split('T')[0];
         if (_dom.filterDate) _dom.filterDate.value = today;
-        logic_loadSchedules(today);
+        logic.loadSchedules(today);
     });
 
-    // Enter en input de fecha del filtro
     _dom.filterDate?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') _dom.btnFilter?.click();
     });
+
+    // B) DINÁMICOS — delegación al tbody padre estático
+    _dom.tableBody?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-delete-schedule');
+        if (btn) logic.deleteSchedule(btn.dataset.id, btn.dataset.nombre, btn.dataset.fecha);
+    });
 };
 
-// ── MOUNT ─────────────────────────────────────────────────────
-
+// ==========================================================================
+// 7. API PÚBLICA
+// ==========================================================================
 export const HorariosController = {
-    async mount(container) {
+    mount: async (container) => {
+        // El container es #view-horarios dentro de _turnos.html.
+        // Clonamos el template del partial _horarios.html en ese container.
+        const tpl = document.getElementById('tpl-admin-horarios');
+        if (tpl) container.appendChild(tpl.content.cloneNode(true));
+
         _cacheDOM(container);
         _bindEvents();
 
-        // Establecer fecha de hoy en ambos inputs
         const today = new Date().toISOString().split('T')[0];
         if (_dom.dateInput) _dom.dateInput.value = today;
         if (_dom.filterDate) _dom.filterDate.value = today;
 
-        // Cargar catálogos y horarios del día en paralelo
         await Promise.all([
-            logic_loadCatalogos(),
-            logic_loadSchedules(today)
+            logic.loadCatalogos(),
+            logic.loadSchedules(today)
         ]);
     }
 };
