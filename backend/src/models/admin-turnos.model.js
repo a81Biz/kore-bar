@@ -91,14 +91,6 @@ export const recordAttendance = async (c, employeeNumber, source) =>
 
 // ── MÓDULO HORARIOS (employee_schedules) ──────────────────────
 
-export const createEmployeeSchedule = async (c, employeeNumber, shiftCode, startDate, endDate) =>
-    await executeStoredProcedure(c, 'sp_create_employee_schedule', {
-        p_employee_number: employeeNumber,
-        p_shift_code: shiftCode,
-        p_start_date: startDate,
-        p_end_date: endDate
-    }, { p_start_date: 'DATE', p_end_date: 'DATE' });
-
 export const deleteEmployeeSchedule = async (c, id) =>
     await executeStoredProcedure(c, 'sp_delete_employee_schedule', {
         p_id: id
@@ -146,5 +138,69 @@ export const getSchedules = async (c, { date, startDate, endDate, employeeNumber
         FROM    vw_schedule_monitor
         ${where}
         ORDER BY assignment_date DESC, shift, last_name ASC
+    `, params);
+};
+
+// ── ALIAS: el helper llama createEmployeeSchedule ─────────────
+// El SP se llama sp_create_employee_schedule (sin _range).
+// Este alias evita tener que cambiar el helper ya existente.
+export const createEmployeeSchedule = async (c, employeeNumber, shiftCode, startDate, endDate) =>
+    await executeStoredProcedure(
+        c,
+        'sp_create_employee_schedule',
+        {
+            p_employee_number: employeeNumber,
+            p_shift_code: shiftCode,
+            p_start_date: startDate,
+            p_end_date: endDate
+        },
+        { p_start_date: 'DATE', p_end_date: 'DATE' }
+    );
+
+// ── INASISTENCIAS ─────────────────────────────────────────────
+// Consulta vw_absence_deductions (definida en 10_faltantes.sql).
+// Soporta filtros opcionales: startDate, endDate, employeeNumber, areaCode.
+// Todos los alias de columna están en camelCase para el helper.
+
+export const getAbsences = async (c, { startDate, endDate, employeeNumber, areaCode } = {}) => {
+    const conditions = [];
+    const params = [];
+
+    if (startDate) {
+        params.push(startDate);
+        conditions.push(`absence_date >= $${params.length}`);
+    }
+    if (endDate) {
+        params.push(endDate);
+        conditions.push(`absence_date <= $${params.length}`);
+    }
+    if (employeeNumber) {
+        params.push(employeeNumber);
+        conditions.push(`employee_number = $${params.length}`);
+    }
+    if (areaCode) {
+        params.push(areaCode);
+        conditions.push(`area_code = $${params.length}`);
+    }
+
+    const where = conditions.length > 0
+        ? `WHERE ${conditions.join(' AND ')}`
+        : '';
+
+    return await executeQuery(c, `
+        SELECT
+            employee_number                            AS "employeeNumber",
+            first_name                                 AS "firstName",
+            last_name                                  AS "lastName",
+            area_code                                  AS "areaCode",
+            area_name                                  AS "areaName",
+            TO_CHAR(absence_date, 'YYYY-MM-DD')        AS "absenceDate",
+            shift_name                                 AS "shiftName",
+            TO_CHAR(start_time, 'HH24:MI:SS')          AS "startTime",
+            TO_CHAR(end_time,   'HH24:MI:SS')          AS "endTime",
+            roster_source                              AS "rosterSource"
+        FROM   vw_absence_deductions
+        ${where}
+        ORDER BY absence_date DESC, area_name, last_name
     `, params);
 };

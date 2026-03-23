@@ -1,0 +1,56 @@
+{
+    "id": "get_absence_deductions",
+    "name": "Reporte de Inasistencias",
+    "description": "Devuelve todas las inasistencias consolidadas desde ambas fuentes de roster: restaurant_assignments (meseros) y employee_schedules (cajeros, cocineros). Solo incluye fechas pasadas sin registro de check-in en attendance_records. Resultado agrupado por área en byArea para el resumen gerencial. Exportable como CSV para ERP de nómina.",
+    "api": {
+        "method": "GET",
+        "path": "/attendance/absences",
+        "tags": [
+            "Admin / Turnos"
+        ],
+        "query": {
+            "properties": {
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-03-01",
+                    "description": "Inicio del rango de fechas YYYY-MM-DD."
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-03-31",
+                    "description": "Fin del rango de fechas YYYY-MM-DD."
+                },
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "80219601",
+                    "description": "Filtra por número de empleado específico."
+                },
+                "areaCode": {
+                    "type": "string",
+                    "example": "40",
+                    "description": "Filtra por código de área (Ej: 40 = Caja, 20 = Piso)."
+                }
+            }
+        }
+    },
+    "startAt": "fetch_absences",
+    "nodes": {
+        "fetch_absences": {
+            "type": "action",
+            "handler": "getAbsences",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "total": "{{state.data.total}}",
+                    "absences": "{{state.data.absences}}",
+                    "byArea": "{{state.data.byArea}}"
+                }
+            }
+        }
+    }
+}

@@ -42,7 +42,9 @@ export const ENDPOINTS = {
             // Turnos y Asistencia
             shifts: '/admin/shifts',
             attendance: '/admin/attendance',
-            schedules: '/admin/schedules'
+            schedules: '/admin/schedules',
+            purchaseSuggestions: '/inventory/purchase-suggestions',
+            absences: '/admin/attendance/absences'
         },
         post: {
             zone: '/admin/zones',
@@ -58,7 +60,8 @@ export const ENDPOINTS = {
             menuDish: '/admin/menu/dishes',
             // Turnos
             shift: '/admin/shifts',
-            schedule: '/admin/schedules'
+            schedule: '/admin/schedules',
+            generatePurchaseSuggestions: '/inventory/purchase-suggestions/generate'
         },
         put: {
             employee: '/admin/employees/:id',
@@ -78,6 +81,9 @@ export const ENDPOINTS = {
             menuCategory: '/admin/menu/categories/:code',
             menuDish: '/admin/menu/dishes/:code',
             schedule: '/admin/schedules/:id'
+        },
+        patch: {
+            sendPurchaseOrder: '/inventory/purchase-orders/:id/send'
         }
     },
 

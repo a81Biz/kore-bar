@@ -21,6 +21,7 @@
 \ir migrations/07_operations.sql
 \ir migrations/08_turnos_asistencia.sql
 \ir migrations/09_employee_schedules.sql
+\ir migrations/10_faltantes.sql
 
 \echo '── [2/4] Procedures ──────────────────────────────────────'
 \ir procedures/sp_hr.sql
@@ -30,6 +31,7 @@
 \ir procedures/sp_orders.sql
 \ir procedures/sp_cashier.sql
 \ir procedures/sp_auth.sql
+\ir procedures/sp_faltantes.sql
 
 \echo '── [3/4] Views ───────────────────────────────────────────'
 \ir views/views.sql

@@ -54,6 +54,7 @@ import updateEmployee from './schemas/admin/employee/update-employee.schema.json
 import createSchedule from './schemas/admin/employee/create-schedule.schema.json'  assert { type: 'json' };
 import getSchedules from './schemas/admin/employee/get-schedules.schema.json'     assert { type: 'json' };
 import deleteSchedule from './schemas/admin/employee/delete-schedule.schema.json'  assert { type: 'json' };
+import getAbsences from './schemas/admin/employee/get-absences.schema.json' assert { type: 'json' };
 
 // ── ADMIN / MENU ──────────────────────────────────────────────
 import createMenuCategory from './schemas/admin/menu/create-menu-category.schema.json'   assert { type: 'json' };
@@ -87,6 +88,9 @@ import getSuppliers from './schemas/inventory/get-suppliers.schema.json'       a
 import supplierPrice from './schemas/inventory/supplier-price.schema.json'      assert { type: 'json' };
 import syncPurchases from './schemas/inventory/sync-purchases.schema.json'      assert { type: 'json' };
 import webhookPurchase from './schemas/inventory/webhook-purchase.schema.json'    assert { type: 'json' };
+import generatePurchaseSuggestions from './schemas/inventory/generate-purchase-suggestions.schema.json' assert { type: 'json' };
+import getPurchaseSuggestions from './schemas/inventory/get-purchase-suggestions.schema.json' assert { type: 'json' };
+import sendPurchaseOrder from './schemas/inventory/send-purchase-order.schema.json' assert { type: 'json' };
 
 // ── KITCHEN / KDS ─────────────────────────────────────────────
 import kitchenBoard from './schemas/kitchen/kds/kitchen-board.schema.json'        assert { type: 'json' };
@@ -142,13 +146,14 @@ export const schemasBySubDir = {
         getMenuCategories, getMenuDishes, updateMenuCategory, updateMenuDish,
         createTable, deleteTable, getTables, updateTable,
         createZone, deleteZone, getZones, updateZone,
-        createSchedule, getSchedules, deleteSchedule,
+        createSchedule, getSchedules, deleteSchedule, getAbsences,
     ],
 
     inventory: [
         createAdjustment, createSupplier, createTransfer,
         getInventory, getKardex, getSuppliers,
         supplierPrice, syncPurchases, webhookPurchase,
+        generatePurchaseSuggestions, getPurchaseSuggestions, sendPurchaseOrder
     ],
 
     kitchen: [

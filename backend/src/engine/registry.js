@@ -72,7 +72,11 @@ import {
     createSupplier,
     getInventoryStock,
     getKardex,
-    saveSupplierPrice
+    saveSupplierPrice,
+    getPurchaseSuggestions,
+    generatePurchaseSuggestions,
+    sendPurchaseOrder,
+
 } from '../helpers/admin-inventory.helper.js';
 
 import {
@@ -133,7 +137,8 @@ import {
     resetEmployeePin,
     createScheduleRange,
     getSchedules,
-    deleteSchedule
+    deleteSchedule,
+    getAbsences,
 } from '../helpers/admin-turnos.helper.js';
 
 
@@ -258,5 +263,14 @@ export const ActionRegistry = {
     resetEmployeePin,
     createScheduleRange,
     getSchedules,
-    deleteSchedule
+    deleteSchedule,
+
+    // Pedidos automáticos
+    getPurchaseSuggestions,
+    generatePurchaseSuggestions,
+    sendPurchaseOrder,
+
+    // Inasistencias
+    getAbsences,
+
 };

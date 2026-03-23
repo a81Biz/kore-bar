@@ -125,3 +125,68 @@ export const adjustStock = async (c, locationCode, itemCode, physicalStock, note
         p_physical_stock: physicalStock,
         p_note: note
     });
+
+// ── GET /inventory/purchase-suggestions ──────────────────────
+// Devuelve purchase_orders DRAFT o SENT del día actual,
+// agrupadas por proveedor con sus líneas de detalle en JSONB.
+export const getPurchaseSuggestions = async (c) =>
+    await executeQuery(c, `
+        SELECT
+            po.id               AS "orderId",
+            po.status,
+            po.total_amount     AS "totalAmount",
+            po.generated_at     AS "generatedAt",
+            s.code              AS "supplierCode",
+            s.name              AS "supplierName",
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'itemCode',     ii.code,
+                        'itemName',     ii.name,
+                        'qtySuggested', poi.qty_suggested,
+                        'unitPrice',    poi.unit_price,
+                        'leadTimeDays', poi.lead_time_days,
+                        'lineTotal',    ROUND(poi.qty_suggested * poi.unit_price, 2)
+                    ) ORDER BY ii.name
+                ) FILTER (WHERE poi.id IS NOT NULL),
+                '[]'::jsonb
+            )                   AS items
+        FROM  purchase_orders po
+        JOIN  suppliers s             ON s.id = po.supplier_id
+        LEFT JOIN purchase_order_items poi ON poi.order_id = po.id
+        LEFT JOIN inventory_items ii  ON ii.id = poi.item_id
+        WHERE po.status IN ('DRAFT', 'SENT')
+          AND DATE(po.generated_at) = CURRENT_DATE
+        GROUP BY po.id, po.status, po.total_amount, po.generated_at,
+                 s.code, s.name
+        ORDER BY po.total_amount DESC
+    `);
+
+
+// ── POST /inventory/purchase-suggestions/generate ────────────
+// Ejecuta el SP que detecta items con stock <= minimum_stock
+// y crea purchase_orders DRAFT agrupadas por proveedor óptimo.
+export const runGeneratePurchaseSuggestions = async (c) =>
+    await executeQuery(c, `CALL sp_generate_purchase_suggestions()`);
+
+
+// ── PATCH /inventory/purchase-orders/:id/send ────────────────
+// Actualiza el status de una purchase_order a SENT.
+// Si el UUID no existe, lanza error con code P0002 para que
+// el helper lo traduzca a 404.
+export const updatePurchaseOrderStatus = async (c, orderId, status) => {
+    const rows = await executeQuery(c, `
+        UPDATE purchase_orders
+        SET    status     = $1,
+               updated_at = NOW()
+        WHERE  id = $2
+        RETURNING id
+    `, [status, orderId]);
+
+    if (!rows || rows.length === 0) {
+        const err = new Error(`Orden de compra no encontrada: ${orderId}`);
+        err.code = 'P0002';
+        throw err;
+    }
+    return rows;
+};

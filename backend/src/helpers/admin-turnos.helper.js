@@ -158,3 +158,32 @@ export const deleteSchedule = async (state, c) => {
         throw new AppError('Error al eliminar el horario', 500);
     }
 };
+
+// ── GET /admin/attendance/absences ───────────────────────────
+// Devuelve todas las inasistencias consolidadas (fecha < hoy, sin check-in)
+// desde ambas fuentes de roster (restaurant_assignments + employee_schedules).
+// Parámetros opcionales: startDate, endDate, employeeNumber, areaCode.
+// El frontend ofrece exportar como CSV para el ERP de nómina.
+export const getAbsences = async (state, c) => {
+    const { startDate, endDate, employeeNumber, areaCode } = state.payload || {};
+    try {
+        const rows = await turnosModel.getAbsences(c, {
+            startDate, endDate, employeeNumber, areaCode
+        });
+
+        // Agrupar por área para el resumen gerencial
+        const byArea = rows.reduce((acc, r) => {
+            acc[r.areaName] = (acc[r.areaName] || 0) + 1;
+            return acc;
+        }, {});
+
+        state.data = {
+            total: rows.length,
+            absences: rows,
+            byArea
+        };
+    } catch (error) {
+        if (error.isOperational) throw error;
+        throw new AppError('Error obteniendo el reporte de inasistencias', 500);
+    }
+};

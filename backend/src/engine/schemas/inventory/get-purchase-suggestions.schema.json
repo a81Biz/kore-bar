@@ -1,0 +1,30 @@
+{
+    "id": "get_purchase_suggestions",
+    "name": "Obtener Sugerencias de Compra",
+    "description": "Devuelve las purchase_orders en estado DRAFT o SENT generadas el día actual, agrupadas por proveedor con sus líneas de detalle. Cada línea incluye el item, cantidad sugerida, precio unitario y lead_time del proveedor óptimo.",
+    "api": {
+        "method": "GET",
+        "path": "/purchase-suggestions",
+        "tags": [
+            "Inventario / Pedidos"
+        ]
+    },
+    "startAt": "fetch_suggestions",
+    "nodes": {
+        "fetch_suggestions": {
+            "type": "action",
+            "handler": "getPurchaseSuggestions",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orders": "{{state.data.orders}}"
+                }
+            }
+        }
+    }
+}

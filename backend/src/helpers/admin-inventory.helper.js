@@ -119,3 +119,52 @@ export const transferStockHandler = async (state, c) => {
         throw new AppError(`Error en transacción de Kardex: ${error.message}`, 500);
     }
 };
+
+// ── GET /inventory/purchase-suggestions ──────────────────────
+// Devuelve las purchase_orders en estado DRAFT del día actual
+// para que el admin las revise antes de enviarlas.
+export const getPurchaseSuggestions = async (state, c) => {
+    try {
+        const rows = await inventoryModel.getPurchaseSuggestions(c);
+        state.data = { orders: rows };
+    } catch (error) {
+        if (error.isOperational) throw error;
+        throw new AppError('Error obteniendo sugerencias de compra', 500);
+    }
+};
+
+// ── POST /inventory/purchase-suggestions/generate ────────────
+// Llama a sp_generate_purchase_suggestions.
+// El algoritmo detecta items con stock <= minimum_stock,
+// selecciona el proveedor más barato (tie: menor lead_time)
+// y crea purchase_orders DRAFT agrupadas por proveedor.
+export const generatePurchaseSuggestions = async (state, c) => {
+    try {
+        await inventoryModel.runGeneratePurchaseSuggestions(c);
+        // Devolvemos las órdenes recién generadas en la misma respuesta
+        const rows = await inventoryModel.getPurchaseSuggestions(c);
+        state.data = { orders: rows };
+        state.message = `Se generaron sugerencias para ${rows.length} proveedor(es) con stock bajo.`;
+    } catch (error) {
+        if (error.isOperational) throw error;
+        throw new AppError(`Error generando sugerencias de compra: ${error.message}`, 500);
+    }
+};
+
+// ── PATCH /inventory/purchase-orders/:id/send ────────────────
+// Marca una purchase_order como SENT (pedido enviado al proveedor).
+// En producción este endpoint dispararía el email/webhook al proveedor.
+export const sendPurchaseOrder = async (state, c) => {
+    const { id } = state.params;
+    if (!id) throw new AppError('El ID de la orden es requerido', 400);
+    try {
+        await inventoryModel.updatePurchaseOrderStatus(c, id, 'SENT');
+        state.message = 'Pedido marcado como enviado al proveedor.';
+    } catch (error) {
+        if (error.code === 'P0002' || error.message?.includes('no encontrada')) {
+            throw new AppError(`Orden de compra no encontrada: ${id}`, 404);
+        }
+        if (error.isOperational) throw error;
+        throw new AppError('Error actualizando estado de la orden', 500);
+    }
+};

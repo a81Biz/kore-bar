@@ -1,0 +1,35 @@
+{
+    "id": "generate_purchase_suggestions",
+    "name": "Generar Sugerencias de Compra Automáticas",
+    "description": "Ejecuta sp_generate_purchase_suggestions: detecta items con stock <= minimum_stock en LOC-BODEGA, selecciona el proveedor óptimo (menor precio; lead_time como desempate) y crea purchase_orders DRAFT agrupadas por proveedor. Idempotente: re-ejecutar el mismo día actualiza en lugar de duplicar. Devuelve las órdenes generadas.",
+    "api": {
+        "method": "POST",
+        "path": "/purchase-suggestions/generate",
+        "tags": [
+            "Inventario / Pedidos"
+        ],
+        "body": {
+            "required": [],
+            "properties": {}
+        }
+    },
+    "startAt": "run_generate",
+    "nodes": {
+        "run_generate": {
+            "type": "action",
+            "handler": "generatePurchaseSuggestions",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "orders": "{{state.data.orders}}",
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

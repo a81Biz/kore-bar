@@ -1,0 +1,30 @@
+{
+    "id": "send_purchase_order",
+    "name": "Confirmar Envío de Pedido a Proveedor",
+    "description": "Marca una purchase_order como SENT, indicando que el pedido fue enviado al proveedor. El id es el UUID de la orden. Solo acepta órdenes en estado DRAFT; devuelve 404 si el UUID no existe.",
+    "api": {
+        "method": "PATCH",
+        "path": "/purchase-orders/:id/send",
+        "tags": [
+            "Inventario / Pedidos"
+        ]
+    },
+    "startAt": "mark_sent",
+    "nodes": {
+        "mark_sent": {
+            "type": "action",
+            "handler": "sendPurchaseOrder",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}
