@@ -2,9 +2,10 @@ name: Deploy Jira Archive to Pages
 
 on:
   push:
-    branches: ["main"] # Cambia "main" por "master" si tu rama principal se llama diferente
+    branches: ["main"] 
     paths:
-      - 'doc/jira/**' # Esto hace que el Action solo corra si modificas algo en esta carpeta
+      - 'doc/jira/**' 
+  workflow_dispatch: 
 
 # Permisos necesarios para que el Action pueda publicar
 permissions:
