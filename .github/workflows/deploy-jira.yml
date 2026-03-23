@@ -31,10 +31,10 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v4
 
-      - name: Empaquetar SOLO la carpeta doc/jira
+      - name: Empaquetar SOLO la carpeta docs/jira
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './doc/jira'
+          path: './docs/jira'
 
       - name: Desplegar a GitHub Pages
         id: deployment
