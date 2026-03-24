@@ -5,11 +5,14 @@
 -- ============================================================
 
 -- ── TRASPASO ──────────────────────────────────────────────────
+-- REGLA: Bodega y Cocina almacenan stock en recipeUnit (KG, PZ, LT…).
+-- La conversión purchaseUnit→recipeUnit ocurre UNA SOLA VEZ al sincronizar
+-- compras. El traspaso mueve recipeUnits directamente; no hay factor aquí.
 CREATE OR REPLACE PROCEDURE public.sp_kardex_transfer(
     p_item_code          VARCHAR,
     p_from_location_code VARCHAR,
     p_to_location_code   VARCHAR,
-    p_base_qty           DECIMAL,
+    p_base_qty           DECIMAL,   -- cantidad en recipeUnit (KG, PZ…)
     p_user_id            UUID,
     p_reference_id       VARCHAR
 )
@@ -18,43 +21,48 @@ DECLARE
     v_item_id      UUID;
     v_from_loc_id  UUID;
     v_to_loc_id    UUID;
-    v_conv_factor  DECIMAL;
-    v_target_qty   DECIMAL;
 BEGIN
-    SELECT id, conversion_factor INTO v_item_id, v_conv_factor
+    -- Resolvemos IDs (ya no necesitamos conversion_factor aquí)
+    SELECT id INTO v_item_id
     FROM public.inventory_items WHERE code = p_item_code;
     IF v_item_id IS NULL THEN
         RAISE EXCEPTION 'Insumo no encontrado: %', p_item_code;
     END IF;
 
-    SELECT id INTO v_from_loc_id FROM public.inventory_locations WHERE code = p_from_location_code;
+    SELECT id INTO v_from_loc_id
+    FROM public.inventory_locations WHERE code = p_from_location_code;
     IF v_from_loc_id IS NULL THEN
         RAISE EXCEPTION 'Ubicación origen no encontrada: %', p_from_location_code;
     END IF;
 
-    SELECT id INTO v_to_loc_id FROM public.inventory_locations WHERE code = p_to_location_code;
+    SELECT id INTO v_to_loc_id
+    FROM public.inventory_locations WHERE code = p_to_location_code;
     IF v_to_loc_id IS NULL THEN
         RAISE EXCEPTION 'Ubicación destino no encontrada: %', p_to_location_code;
     END IF;
 
+    -- Validar stock suficiente en origen (en recipeUnit)
     IF NOT EXISTS (
         SELECT 1 FROM public.inventory_stock_locations
-        WHERE item_id = v_item_id AND location_id = v_from_loc_id AND stock >= p_base_qty
+        WHERE item_id = v_item_id
+          AND location_id = v_from_loc_id
+          AND stock >= p_base_qty
     ) THEN
-        RAISE EXCEPTION 'Stock insuficiente en ubicación origen para: %', p_item_code;
+        RAISE EXCEPTION 'Stock insuficiente en % para: %', p_from_location_code, p_item_code;
     END IF;
 
-    v_target_qty := p_base_qty * v_conv_factor;
-
+    -- Restar de origen (recipeUnit)
     UPDATE public.inventory_stock_locations
     SET stock = stock - p_base_qty
     WHERE item_id = v_item_id AND location_id = v_from_loc_id;
 
+    -- Sumar a destino (misma recipeUnit — sin multiplicar por conversionFactor)
     INSERT INTO public.inventory_stock_locations (item_id, location_id, stock)
-    VALUES (v_item_id, v_to_loc_id, v_target_qty)
+    VALUES (v_item_id, v_to_loc_id, p_base_qty)
     ON CONFLICT (item_id, location_id)
     DO UPDATE SET stock = inventory_stock_locations.stock + EXCLUDED.stock;
 
+    -- Registro en Kardex (cantidad trasladada en recipeUnit)
     INSERT INTO public.inventory_kardex (
         item_id, from_location_id, to_location_id,
         transaction_type, quantity, reference_id
@@ -123,6 +131,13 @@ $$;
 
 
 -- ── SINCRONIZACIÓN DE COMPRAS ─────────────────────────────────
+-- ── SINCRONIZACIÓN DE COMPRAS ─────────────────────────────────
+-- FIX: La cantidad en Kardex y stock_locations se guarda en recipeUnit:
+--      qty_recipe = quantityPurchased × conversionFactor
+--
+-- Ejemplo:
+--   INS-SAL:      quantityPurchased=1,  conversionFactor=12  → 12 KG en Bodega
+--   INS-COCA-COLA: quantityPurchased=5, conversionFactor=24  → 120 PZ en Bodega
 CREATE OR REPLACE PROCEDURE public.sp_sync_purchases(p_payload JSONB)
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -135,6 +150,9 @@ DECLARE
     v_supplier_contact VARCHAR(255);
     v_doc_reference    VARCHAR(100);
     v_destination_code VARCHAR(50);
+    v_conv_factor      DECIMAL(18, 6);
+    v_qty_purchased    DECIMAL(18, 4);
+    v_qty_recipe       DECIMAL(18, 4);   -- cantidad final en recipeUnit
 BEGIN
     v_supplier_code    := p_payload->'supplier'->>'code';
     v_supplier_name    := p_payload->'supplier'->>'name';
@@ -146,7 +164,8 @@ BEGIN
         RAISE EXCEPTION 'Payload inválido: falta código de proveedor o ubicación destino';
     END IF;
 
-    SELECT id INTO v_loc_bodega_id FROM inventory_locations WHERE code = v_destination_code;
+    SELECT id INTO v_loc_bodega_id
+    FROM inventory_locations WHERE code = v_destination_code;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Ubicación destino no encontrada: %', v_destination_code;
     END IF;
@@ -154,7 +173,9 @@ BEGIN
     INSERT INTO suppliers (code, name, contact_info)
     VALUES (v_supplier_code, v_supplier_name, v_supplier_contact)
     ON CONFLICT (code) DO UPDATE
-    SET name = EXCLUDED.name, contact_info = EXCLUDED.contact_info, updated_at = CURRENT_TIMESTAMP
+        SET name = EXCLUDED.name,
+            contact_info = EXCLUDED.contact_info,
+            updated_at = CURRENT_TIMESTAMP
     RETURNING id INTO v_supplier_id;
 
     IF v_supplier_id IS NULL THEN
@@ -163,6 +184,14 @@ BEGIN
 
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_payload->'items')
     LOOP
+        -- ── Calcular cantidad en recipeUnit ──────────────────
+        v_qty_purchased := COALESCE((v_item.value->>'quantityPurchased')::DECIMAL, 0);
+        v_conv_factor   := COALESCE((v_item.value->>'conversionFactor')::DECIMAL, 1);
+        v_qty_recipe    := v_qty_purchased * v_conv_factor;
+        -- Ejemplo: 1 costal × 12 KG/costal = 12 KG
+        --          5 cajas × 24 PZ/caja    = 120 PZ
+
+        -- ── Upsert del insumo ────────────────────────────────
         INSERT INTO inventory_items (
             code, name, unit_measure, recipe_unit, conversion_factor, minimum_stock
         ) VALUES (
@@ -170,7 +199,7 @@ BEGIN
             v_item.value->>'itemName',
             v_item.value->>'purchaseUnit',
             v_item.value->>'recipeUnit',
-            (v_item.value->>'conversionFactor')::DECIMAL,
+            v_conv_factor,
             10
         )
         ON CONFLICT (code) DO UPDATE SET
@@ -182,28 +211,32 @@ BEGIN
         RETURNING id INTO v_new_item_id;
 
         IF v_new_item_id IS NULL THEN
-            SELECT id INTO v_new_item_id FROM inventory_items WHERE code = v_item.value->>'itemCode';
+            SELECT id INTO v_new_item_id
+            FROM inventory_items WHERE code = v_item.value->>'itemCode';
         END IF;
 
+        -- ── Precio proveedor ─────────────────────────────────
         INSERT INTO supplier_prices (supplier_id, item_id, price)
         VALUES (v_supplier_id, v_new_item_id, (v_item.value->>'unitCost')::DECIMAL)
         ON CONFLICT (supplier_id, item_id) DO UPDATE
-        SET price = EXCLUDED.price, updated_at = CURRENT_TIMESTAMP;
+            SET price = EXCLUDED.price, updated_at = CURRENT_TIMESTAMP;
 
+        -- ── Kardex: registra en recipeUnit ───────────────────
         INSERT INTO inventory_kardex (
             item_id, transaction_type, quantity, reference_id, to_location_id
         ) VALUES (
             v_new_item_id,
             'IN_PURCHASE',
-            (v_item.value->>'quantityPurchased')::DECIMAL,
+            v_qty_recipe,                          -- 12 KG, no 1 costal
             COALESCE(v_doc_reference, 'SYNC-AUTO'),
             v_loc_bodega_id
         );
 
+        -- ── Stock en Bodega: acumula en recipeUnit ───────────
         INSERT INTO inventory_stock_locations (item_id, location_id, stock)
-        VALUES (v_new_item_id, v_loc_bodega_id, (v_item.value->>'quantityPurchased')::DECIMAL)
-        ON CONFLICT (item_id, location_id) DO UPDATE
-        SET stock = inventory_stock_locations.stock + EXCLUDED.stock;
+        VALUES (v_new_item_id, v_loc_bodega_id, v_qty_recipe)
+        ON CONFLICT (item_id, location_id)
+        DO UPDATE SET stock = inventory_stock_locations.stock + EXCLUDED.stock;
     END LOOP;
 END;
 $$;

@@ -61,14 +61,14 @@ export const render = {
             const mdmConfig = state.uiConfig.badges.mdm[syncState];
             const mdmBadge = document.createElement('span');
             mdmBadge.className = `ml-2 inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${mdmConfig.color}`;
-            
+
             const mdmIconSpan = document.createElement('span');
             mdmIconSpan.className = 'mr-1';
             mdmIconSpan.textContent = mdmConfig.icon;
-            
+
             mdmBadge.appendChild(mdmIconSpan);
             mdmBadge.appendChild(document.createTextNode(` ${mdmConfig.label}`));
-            
+
             badgeEstado.parentElement.appendChild(mdmBadge);
 
             const btnEditar = clone.querySelector('.btn-editar');
@@ -139,5 +139,39 @@ export const render = {
         state.dom.modalEdit.classList.add('opacity-0', 'pointer-events-none');
         state.dom.modalEdit.querySelector('div').classList.add('scale-95');
         if (state.dom.formEdit) state.dom.formEdit.reset();
+    },
+
+};
+export const renderAreasCashier = (areas) => {
+    const list = document.querySelector('#list-areas-cashier');
+    const tpl = document.querySelector('#tpl-fila-area-cashier');
+    if (!list || !tpl) return;
+
+    list.innerHTML = '';
+
+    if (!areas || areas.length === 0) {
+        list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm">No hay áreas registradas.</div>';
+        return;
     }
+
+    areas.forEach(area => {
+        const clone = tpl.content.cloneNode(true);
+        clone.querySelector('.col-area-name').textContent = area.name;
+        clone.querySelector('.col-area-code').textContent = area.code;
+
+        const toggle = clone.querySelector('.toggle-cashier');
+        toggle.dataset.code = area.code;
+        toggle.dataset.name = area.name;
+        toggle.checked = area.can_access_cashier === true;
+
+        const label = clone.querySelector('.col-cashier-label');
+        label.textContent = area.can_access_cashier ? 'Con acceso a caja' : 'Sin acceso';
+
+        // Actualizar label en tiempo real al cambiar el toggle
+        toggle.addEventListener('change', (e) => {
+            label.textContent = e.target.checked ? 'Con acceso a caja' : 'Sin acceso';
+        });
+
+        list.appendChild(clone);
+    });
 };

@@ -1,0 +1,30 @@
+{
+    "id": "delete_payroll_deduction",
+    "name": "Eliminar Descuento de Nómina",
+    "description": "Elimina un descuento previamente aplicado. El registro de asistencia no se toca.",
+    "api": {
+        "method": "DELETE",
+        "path": "/attendance/deductions/:id",
+        "tags": [
+            "Admin / Nómina"
+        ]
+    },
+    "startAt": "delete_deduction",
+    "nodes": {
+        "delete_deduction": {
+            "type": "action",
+            "handler": "deletePayrollDeduction",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

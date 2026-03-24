@@ -4,21 +4,21 @@ export const upsertHrCatalog = async (c, catalogItem) => {
     await executeStoredProcedure(c, 'sp_upsert_hr_catalog', {
         p_area_code: catalogItem.areaId,
         p_area_name: catalogItem.areaName,
-        p_job_code:  catalogItem.jobTitleId,
-        p_job_name:  catalogItem.jobTitleName
+        p_job_code: catalogItem.jobTitleId,
+        p_job_name: catalogItem.jobTitleName
     });
 };
 
 export const upsertEmployee = async (c, emp) => {
     await executeStoredProcedure(c, 'sp_upsert_employee', {
         p_employee_number: emp.employeeNumber,
-        p_first_name:      emp.firstName,
-        p_last_name:       emp.lastName,
-        p_area_code:       emp.areaId,
-        p_job_code:        emp.jobTitleId,
-        p_hire_date:       emp.hireDate,
-        p_is_active:       emp.isActive,
-        p_pin_code:        emp.pinCode
+        p_first_name: emp.firstName,
+        p_last_name: emp.lastName,
+        p_area_code: emp.areaId,
+        p_job_code: emp.jobTitleId,
+        p_hire_date: emp.hireDate,
+        p_is_active: emp.isActive,
+        p_pin_code: emp.pinCode
     });
 };
 
@@ -59,18 +59,26 @@ export const getAllJobTitles = async (c) => {
 
 export const insertAreaModel = async (c, code, name, canAccessCashier = false) => {
     await executeStoredProcedure(c, 'sp_create_area', {
-        p_code:               code,
-        p_name:               name,
+        p_code: code,
+        p_name: name,
         p_can_access_cashier: canAccessCashier
     });
 };
 
-export const updateAreaModel = async (c, code, name) => {
+export const updateAreaModel = async (c, code, name, canAccessCashier = null) => {
     await executeStoredProcedure(c, 'sp_update_area', {
         p_code: code,
-        p_name: name
+        p_name: name,
+        p_can_access_cashier: canAccessCashier
     });
 };
+
+export const recordAdminCheckin = async (c, employeeNumber) => {
+    await executeStoredProcedure(c, 'sp_record_admin_checkin', {
+        p_employee_number: employeeNumber
+    });
+};
+
 
 export const deactivateAreaModel = async (c, code) => {
     await executeStoredProcedure(c, 'sp_deactivate_area', {

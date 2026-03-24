@@ -16,6 +16,14 @@ import getAssignment from './schemas/admin/assignment/get-assignment.schema.json
 import authLogin from './schemas/admin/auth/auth-login.schema.json'                   assert { type: 'json' };
 import authPin from './schemas/admin/auth/auth-pin.schema.json'                     assert { type: 'json' };
 
+// ── ADMIN / ATTENDANCE ──────────────────────────────────────────────
+
+import createPayrollDeduction from './schemas/admin/attendance/create-payroll-deduction.schema.json' assert { type: 'json'};
+import deletePayrollDeduction from './schemas/admin/attendance/delete-payroll-deduction.schema.json' assert { type: 'json'};
+import exportPayrollData from './schemas/admin/attendance/get-payroll-export.schema.json' assert { type: 'json'};
+import getPayrollHistory from './schemas/admin/attendance/get-payroll-history.schema.json' assert { type: 'json'};
+import recordAdminCheckin from './schemas/admin/attendance/record-attendance-admin.schema.json' assert { type: 'json'};
+
 // ── ADMIN / CASHIER ───────────────────────────────────────────
 import cashierBoard from './schemas/admin/cashier/cashier-board.schema.json'             assert { type: 'json' };
 import cashierCorte from './schemas/admin/cashier/cashier-corte.schema.json'             assert { type: 'json' };
@@ -147,6 +155,8 @@ export const schemasBySubDir = {
         createTable, deleteTable, getTables, updateTable,
         createZone, deleteZone, getZones, updateZone,
         createSchedule, getSchedules, deleteSchedule, getAbsences,
+        createPayrollDeduction, deletePayrollDeduction, exportPayrollData,
+        getPayrollHistory, recordAdminCheckin
     ],
 
     inventory: [

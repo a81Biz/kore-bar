@@ -131,25 +131,22 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE sp_update_area(p_code VARCHAR, p_name VARCHAR)
+CREATE OR REPLACE PROCEDURE sp_update_area(
+    p_code               VARCHAR,
+    p_name               VARCHAR,
+    p_can_access_cashier BOOLEAN DEFAULT NULL  -- NULL = no cambiar el valor actual
+)
 LANGUAGE plpgsql AS $$
 BEGIN
-    UPDATE areas SET name = p_name, updated_at = NOW() WHERE code = p_code;
-END;
-$$;
+    UPDATE areas
+    SET name               = p_name,
+        can_access_cashier = COALESCE(p_can_access_cashier, can_access_cashier),
+        updated_at         = NOW()
+    WHERE code = p_code;
 
-CREATE OR REPLACE PROCEDURE sp_deactivate_area(p_code VARCHAR)
-LANGUAGE plpgsql AS $$
-BEGIN
-    UPDATE areas SET is_active = FALSE, updated_at = NOW() WHERE code = p_code;
-END;
-$$;
-
-CREATE OR REPLACE PROCEDURE sp_bulk_deactivate_areas(p_codes VARCHAR[])
-LANGUAGE plpgsql AS $$
-BEGIN
-    UPDATE areas SET is_active = FALSE, updated_at = NOW()
-    WHERE code = ANY(p_codes);
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Área no encontrada: %', p_code USING ERRCODE = 'P0002';
+    END IF;
 END;
 $$;
 

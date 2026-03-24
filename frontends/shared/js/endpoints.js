@@ -44,7 +44,9 @@ export const ENDPOINTS = {
             attendance: '/admin/attendance',
             schedules: '/admin/schedules',
             purchaseSuggestions: '/inventory/purchase-suggestions',
-            absences: '/admin/attendance/absences'
+            absences: '/admin/attendance/absences',
+            payrollHistory: '/admin/attendance/payroll',
+            payrollExport: '/admin/attendance/payroll/export',
         },
         post: {
             zone: '/admin/zones',
@@ -61,7 +63,10 @@ export const ENDPOINTS = {
             // Turnos
             shift: '/admin/shifts',
             schedule: '/admin/schedules',
-            generatePurchaseSuggestions: '/inventory/purchase-suggestions/generate'
+            generatePurchaseSuggestions: '/inventory/purchase-suggestions/generate',
+            adminCheckin: '/admin/attendance/checkin',
+
+            deduction: '/admin/attendance/deductions',
         },
         put: {
             employee: '/admin/employees/:id',
@@ -69,7 +74,8 @@ export const ENDPOINTS = {
             bulkJobTitles: '/admin/employees/job-titles/bulk',
             menuDish: '/admin/menu/dishes/:code',
             // Seguridad
-            resetPin: '/admin/employees/:employeeNumber/reset-pin'
+            resetPin: '/admin/employees/:employeeNumber/reset-pin',
+            area: '/admin/employees/areas/:code',
         },
         delete: {
             employee: '/admin/employees/:id',
@@ -80,7 +86,8 @@ export const ENDPOINTS = {
             assignment: '/admin/assignments/:id',
             menuCategory: '/admin/menu/categories/:code',
             menuDish: '/admin/menu/dishes/:code',
-            schedule: '/admin/schedules/:id'
+            schedule: '/admin/schedules/:id',
+            deduction: '/admin/attendance/deductions/:id',
         },
         patch: {
             sendPurchaseOrder: '/inventory/purchase-orders/:id/send'

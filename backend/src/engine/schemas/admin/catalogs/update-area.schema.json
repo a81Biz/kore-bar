@@ -1,17 +1,31 @@
 {
     "id": "update_area",
     "name": "Update Area",
-    "description": "Actualiza el nombre o estado activo de un área existente.",
+    "description": "Actualiza el nombre, estado activo y permiso de acceso a caja de un área existente.",
     "api": {
         "method": "PUT",
         "path": "/employees/areas/:code",
-        "tags": ["Admin / Catalogos"],
+        "tags": [
+            "Admin / Catalogos"
+        ],
         "body": {
             "properties": {
-                "areaName": { "type": "string" },
-                "isActive": { "type": "boolean" }
+                "areaName": {
+                    "type": "string",
+                    "example": "Cocina"
+                },
+                "isActive": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "canAccessCashier": {
+                    "type": "boolean",
+                    "example": false
+                }
             },
-            "required": ["areaName"]
+            "required": [
+                "areaName"
+            ]
         }
     },
     "startAt": "update_area_node",

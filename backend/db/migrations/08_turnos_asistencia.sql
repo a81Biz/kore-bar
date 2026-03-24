@@ -134,3 +134,10 @@ LEFT JOIN attendance_records ar
         ON  ar.employee_number = ra.employee_number
         AND ar.work_date       = ra.assignment_date
 ORDER BY ra.assignment_date DESC, ra.shift, e.last_name;
+
+ALTER TABLE attendance_records
+    DROP CONSTRAINT IF EXISTS attendance_records_source_check;
+
+ALTER TABLE attendance_records
+    ADD CONSTRAINT attendance_records_source_check
+        CHECK (source IN ('WAITERS', 'CASHIER', 'KITCHEN', 'ADMIN'));

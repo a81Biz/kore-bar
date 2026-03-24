@@ -40,18 +40,39 @@ export const syncPurchases = async (c, payload) =>
 export const getStockSummary = async (c) =>
     await executeQuery(c, `SELECT * FROM vw_stock_summary`);
 
-// Alias con camelCase requerido por el helper y el test (INV-03 verifica 'minStock')
-export const getInventoryStock = async (c, locationCode = null) =>
-    await executeQuery(c, `
-        SELECT code,
-               name,
-               unit_measure      AS "unitMeasure",
-               recipe_unit       AS "recipeUnit",
-               minimum_stock     AS "minStock",
-               total_stock       AS "totalStock",
-               by_location       AS "byLocation"
-        FROM vw_stock_summary
-    `);
+// Ahora cada llamada recibe solo los items que tienen stock en esa ubicación.
+// El frontend hace dos llamadas independientes:
+//   fetchData(`${ENDPOINTS.inventory.get.stock}?location=LOC-BODEGA`)
+//   fetchData(`${ENDPOINTS.inventory.get.stock}?location=LOC-COCINA`)
+export const getInventoryStock = async (c, locationCode = null) => {
+    const params = [];
+    const conditions = ['ii.is_active = true'];
+
+    if (locationCode) {
+        params.push(locationCode);
+        conditions.push(`il.code = $${params.length}`);
+    }
+
+    const where = conditions.join(' AND ');
+
+    return await executeQuery(c, `
+        SELECT
+            ii.code,
+            ii.name,
+            ii.unit_measure          AS "unitMeasure",
+            ii.recipe_unit           AS "recipeUnit",
+            ii.minimum_stock         AS "minStock",
+            ii.conversion_factor     AS "conversionFactor",
+            COALESCE(isl.stock, 0)   AS "totalStock",
+            COALESCE(isl.stock, 0)   AS "stock",
+            il.code                  AS "locationCode"
+        FROM inventory_items ii
+        JOIN inventory_stock_locations isl ON isl.item_id    = ii.id
+        JOIN inventory_locations il        ON il.id          = isl.location_id
+        WHERE ${where}
+        ORDER BY ii.name ASC
+    `, params);
+};
 
 // ── KARDEX ────────────────────────────────────────────────────
 

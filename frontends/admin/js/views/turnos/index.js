@@ -1,17 +1,11 @@
-// frontends/admin/js/views/turnos/index.js
 
-// ==========================================================================
-// 1. DEPENDENCIAS
-// ==========================================================================
 import { fetchData, postData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { bindForm } from '/shared/js/formEngine.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
 import { HorariosController } from './horarios.js';
 
-// ==========================================================================
-// 2. ESTADO PRIVADO Y CONFIGURACIÓN
-// ==========================================================================
+// ── 2. ESTADO ────────────────────────────────────────────────
 const state = {
     dom: {},
     data: {
@@ -20,11 +14,11 @@ const state = {
         shifts: []
     },
     ui: {
-        activeTab: 'monitor'
+        activeTab: 'monitor',
+        checkinTarget: null  // { employeeNumber, nombre }
     }
 };
 
-// Diccionario UI — cero lógica de negocio en el render
 const _uiConfig = {
     attendanceStatus: {
         'PRESENTE': { badge: 'bg-emerald-100 text-emerald-800', label: 'Presente' },
@@ -34,7 +28,8 @@ const _uiConfig = {
     source: {
         'WAITERS': { badge: 'bg-emerald-100 text-emerald-700', label: 'Mesero' },
         'CASHIER': { badge: 'bg-purple-100 text-purple-700', label: 'Caja' },
-        'KITCHEN': { badge: 'bg-orange-100 text-orange-700', label: 'Cocina' }
+        'KITCHEN': { badge: 'bg-orange-100 text-orange-700', label: 'Cocina' },
+        'ADMIN': { badge: 'bg-indigo-100 text-indigo-700', label: 'Admin' }
     },
     tabs: {
         active: 'px-6 py-3 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 bg-white transition-colors',
@@ -42,13 +37,10 @@ const _uiConfig = {
     }
 };
 
-// ==========================================================================
-// 3. CACHÉ DEL DOM
-// ==========================================================================
+// ── 3. CACHÉ DEL DOM ─────────────────────────────────────────
 const _cacheDOM = (container) => {
     state.dom.root = container;
 
-    // Tabs — incluye el 5° tab de Horarios
     state.dom.tabs = {
         monitor: container.querySelector('#tab-monitor'),
         historial: container.querySelector('#tab-historial'),
@@ -64,7 +56,6 @@ const _cacheDOM = (container) => {
         horarios: container.querySelector('#view-horarios')
     };
 
-    // Monitor
     state.dom.monitorDate = container.querySelector('#monitor-date');
     state.dom.btnRefreshMonitor = container.querySelector('#btn-refresh-monitor');
     state.dom.tableMonitorBody = container.querySelector('#table-monitor-body');
@@ -74,14 +65,12 @@ const _cacheDOM = (container) => {
     state.dom.kpiAusente = container.querySelector('#kpi-ausente');
     state.dom.tplRowMonitor = document.querySelector('#tpl-row-monitor');
 
-    // Historial
     state.dom.histStart = container.querySelector('#hist-start');
     state.dom.histEnd = container.querySelector('#hist-end');
     state.dom.histEmployee = container.querySelector('#hist-employee');
     state.dom.btnSearchHistorial = container.querySelector('#btn-search-historial');
     state.dom.tableHistorialBody = container.querySelector('#table-historial-body');
 
-    // Catálogo de Turnos
     state.dom.formAdminTurno = container.querySelector('#form-admin-turno');
     state.dom.turnoCode = container.querySelector('#turno-code');
     state.dom.turnoName = container.querySelector('#turno-name');
@@ -90,20 +79,35 @@ const _cacheDOM = (container) => {
     state.dom.listTurnos = container.querySelector('#list-turnos');
     state.dom.tplItemTurno = document.querySelector('#tpl-item-turno');
 
-    // Reset PIN
     state.dom.formResetPin = container.querySelector('#form-reset-pin');
     state.dom.pinEmployeeNumber = container.querySelector('#pin-employee-number');
     state.dom.pinNewValue = container.querySelector('#pin-new-value');
     state.dom.pinConfirmValue = container.querySelector('#pin-confirm-value');
 
-    // Fecha inicial del monitor
+    // ── Modal check-in ────────────────────────────────────────
+    // El modal vive en tpl-modal-checkin (partial _turnos.html).
+    // Se inyecta al body en mount() para que no quede dentro de la vista.
+    let modalCheckin = document.getElementById('modal-checkin');
+    if (!modalCheckin) {
+        const tpl = document.getElementById('tpl-modal-checkin');
+        if (tpl) {
+            document.body.appendChild(tpl.content.cloneNode(true));
+            modalCheckin = document.getElementById('modal-checkin');
+        }
+    }
+    state.dom.modalCheckin = modalCheckin;
+    state.dom.checkinNombre = modalCheckin?.querySelector('#checkin-nombre');
+    state.dom.checkinEmpNumber = modalCheckin?.querySelector('#checkin-employee-number');
+    state.dom.checkinHora = modalCheckin?.querySelector('#checkin-hora');
+    state.dom.btnConfirmCheckin = modalCheckin?.querySelector('#btn-confirm-checkin');
+    state.dom.btnCancelCheckin = modalCheckin?.querySelector('#btn-cancel-checkin');
+    state.dom.btnCloseCheckin = modalCheckin?.querySelector('#btn-close-checkin');
+
     const hoy = new Date().toISOString().split('T')[0];
     if (state.dom.monitorDate) state.dom.monitorDate.value = hoy;
 };
 
-// ==========================================================================
-// 4. RENDERIZADO
-// ==========================================================================
+// ── 4. RENDERIZADO ───────────────────────────────────────────
 const _render = {
     switchTab: (tabKey) => {
         state.ui.activeTab = tabKey;
@@ -134,7 +138,7 @@ const _render = {
         if (records.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 8;
+            td.colSpan = 9; // era 8, ahora 9 por columna Acción
             td.className = 'px-4 py-8 text-center text-slate-400 text-sm';
             td.textContent = 'No hay asignaciones para la fecha seleccionada.';
             tr.appendChild(td);
@@ -145,6 +149,7 @@ const _render = {
         records.forEach(rec => {
             const clone = state.dom.tplRowMonitor.content.cloneNode(true);
             const nombre = `${rec.firstName || ''} ${rec.lastName || ''}`.trim();
+            const yaPresente = rec.attendanceStatus === 'PRESENTE';
 
             clone.querySelector('.col-nombre').textContent = nombre;
             clone.querySelector('.col-employee-number').textContent = rec.employeeNumber;
@@ -172,6 +177,17 @@ const _render = {
                 sourceBadge.textContent = '—';
             }
 
+            // Botón check-in — solo activo si no está presente aún
+            const btnCheckin = clone.querySelector('.btn-admin-checkin');
+            if (btnCheckin) {
+                btnCheckin.dataset.employeeNumber = rec.employeeNumber;
+                btnCheckin.dataset.nombre = nombre;
+                if (yaPresente) {
+                    btnCheckin.disabled = true;
+                    btnCheckin.title = 'Ya registró entrada';
+                }
+            }
+
             state.dom.tableMonitorBody.appendChild(clone);
         });
     },
@@ -194,8 +210,7 @@ const _render = {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50 border-b border-slate-100 text-sm';
             const nombre = `${rec.firstName || ''} ${rec.lastName || ''}`.trim();
-            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus]
-                || _uiConfig.attendanceStatus.ESPERADO;
+            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus] || _uiConfig.attendanceStatus.ESPERADO;
             const srcCfg = rec.source
                 ? (_uiConfig.source[rec.source] || { badge: 'bg-slate-100 text-slate-600', label: rec.source })
                 : null;
@@ -244,6 +259,7 @@ const _render = {
     },
 
     shiftsList: () => {
+        if (!state.dom.listTurnos) return;
         state.dom.listTurnos.innerHTML = '';
 
         if (state.data.shifts.length === 0) {
@@ -261,12 +277,34 @@ const _render = {
             clone.querySelector('.col-horario').textContent = `${shift.startTime} – ${shift.endTime}`;
             state.dom.listTurnos.appendChild(clone);
         });
+    },
+
+    // ── Check-in modal ────────────────────────────────────────
+    checkinModal: {
+        open: (employeeNumber, nombre) => {
+            if (!state.dom.modalCheckin) return;
+            state.ui.checkinTarget = { employeeNumber, nombre };
+
+            const ahora = new Date();
+            state.dom.checkinNombre.textContent = nombre;
+            state.dom.checkinEmpNumber.textContent = `# ${employeeNumber}`;
+            state.dom.checkinHora.textContent = ahora.toLocaleTimeString('es-MX', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+
+            state.dom.modalCheckin.classList.remove('opacity-0', 'pointer-events-none');
+            state.dom.modalCheckin.firstElementChild.classList.remove('scale-95');
+        },
+        close: () => {
+            if (!state.dom.modalCheckin) return;
+            state.ui.checkinTarget = null;
+            state.dom.modalCheckin.classList.add('opacity-0', 'pointer-events-none');
+            state.dom.modalCheckin.firstElementChild.classList.add('scale-95');
+        }
     }
 };
 
-// ==========================================================================
-// 5. LÓGICA DE DATOS
-// ==========================================================================
+// ── 5. LÓGICA DE DATOS ───────────────────────────────────────
 const _logic = {
     loadMonitor: async () => {
         const date = state.dom.monitorDate?.value || new Date().toISOString().split('T')[0];
@@ -329,12 +367,8 @@ const _logic = {
         const newPin = state.dom.pinNewValue.value;
         const confirmPin = state.dom.pinConfirmValue.value;
 
-        if (!/^\d{4,6}$/.test(newPin)) {
-            throw new Error('El PIN debe contener entre 4 y 6 dígitos numéricos.');
-        }
-        if (newPin !== confirmPin) {
-            throw new Error('Los PINs no coinciden. Vuelve a ingresarlos.');
-        }
+        if (!/^\d{4,6}$/.test(newPin)) throw new Error('El PIN debe contener entre 4 y 6 dígitos numéricos.');
+        if (newPin !== confirmPin) throw new Error('Los PINs no coinciden. Vuelve a ingresarlos.');
 
         const confirmed = await confirmAction(
             `¿Estás seguro de restablecer el PIN del empleado ${employeeNumber}? Esta acción no se puede deshacer.`
@@ -343,56 +377,74 @@ const _logic = {
 
         await putData(ENDPOINTS.admin.put.resetPin, { newPin }, { employeeNumber });
         showSuccessModal(`PIN del empleado ${employeeNumber} actualizado exitosamente.`);
+    },
+
+    // ── Check-in manual desde Admin ───────────────────────────
+    adminCheckin: async () => {
+        const target = state.ui.checkinTarget;
+        if (!target) return;
+
+        try {
+            state.dom.btnConfirmCheckin.disabled = true;
+            await postData(ENDPOINTS.admin.post.adminCheckin, {
+                employeeNumber: target.employeeNumber
+            });
+            _render.checkinModal.close();
+            showSuccessModal(`Check-in registrado para ${target.nombre}.`, 'Entrada Confirmada');
+            // Refrescar el monitor para que el badge cambie a PRESENTE
+            await _logic.loadMonitor();
+        } catch (err) {
+            _render.checkinModal.close();
+            showErrorModal(err.message || 'No se pudo registrar el check-in.');
+        } finally {
+            if (state.dom.btnConfirmCheckin) state.dom.btnConfirmCheckin.disabled = false;
+        }
     }
 };
 
-// ==========================================================================
-// 6. EVENTOS
-// ==========================================================================
+// ── 6. EVENTOS ───────────────────────────────────────────────
 const _bindEvents = () => {
-    // Tabs — con lazy loading donde aplica
     Object.keys(state.dom.tabs).forEach(tabKey => {
         if (!state.dom.tabs[tabKey]) return;
         state.dom.tabs[tabKey].addEventListener('click', async () => {
             _render.switchTab(tabKey);
-            if (tabKey === 'monitor' && state.data.records.length === 0) {
-                await _logic.loadMonitor();
-            }
-            if (tabKey === 'turnos' && state.data.shifts.length === 0) {
-                await _logic.loadShifts();
-            }
-            // 'horarios' ya se cargó en el mount — no requiere lazy loading
+            if (tabKey === 'monitor') await _logic.loadMonitor();
+            if (tabKey === 'turnos') await _logic.loadShifts();
         });
     });
 
-    // Monitor
     state.dom.btnRefreshMonitor?.addEventListener('click', _logic.loadMonitor);
     state.dom.monitorDate?.addEventListener('change', _logic.loadMonitor);
-
-    // Historial
     state.dom.btnSearchHistorial?.addEventListener('click', _logic.loadHistorial);
 
-    // Catálogo de Turnos
     if (state.dom.formAdminTurno) bindForm('form-admin-turno', _logic.createShift);
-
-    // Reset PIN
     if (state.dom.formResetPin) bindForm('form-reset-pin', _logic.resetPin);
+
+    // Delegación de eventos en la tabla del monitor — botón check-in
+    state.dom.tableMonitorBody?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-admin-checkin');
+        if (btn && !btn.disabled) {
+            _render.checkinModal.open(
+                btn.dataset.employeeNumber,
+                btn.dataset.nombre
+            );
+        }
+    });
+
+    // Modal check-in — cerrar
+    state.dom.btnCloseCheckin?.addEventListener('click', _render.checkinModal.close);
+    state.dom.btnCancelCheckin?.addEventListener('click', _render.checkinModal.close);
+
+    // Modal check-in — confirmar
+    state.dom.btnConfirmCheckin?.addEventListener('click', _logic.adminCheckin);
 };
 
-// ==========================================================================
-// 7. API PÚBLICA
-// ==========================================================================
+// ── 7. API PÚBLICA ───────────────────────────────────────────
 export const TurnosController = {
     mount: async (container) => {
         _cacheDOM(container);
         _bindEvents();
-
-        // Monitor es la tab por defecto
         await _logic.loadMonitor();
-
-        // Montar HorariosController en su contenedor (#view-horarios).
-        // NO se usa viewManager.mount aquí — eso destruiría la vista de Turnos.
-        // HorariosController clona internamente tpl-admin-horarios en ese div.
         if (state.dom.views.horarios) {
             await HorariosController.mount(state.dom.views.horarios);
         }

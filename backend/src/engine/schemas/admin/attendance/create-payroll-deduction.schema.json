@@ -1,0 +1,56 @@
+{
+    "id": "create_payroll_deduction",
+    "name": "Aplicar Descuento de Nómina",
+    "description": "Registra un descuento manual para un día específico de un empleado. Idempotente: si ya existe un descuento ese día, lo actualiza.",
+    "api": {
+        "method": "POST",
+        "path": "/attendance/deductions",
+        "tags": [
+            "Admin / Nómina"
+        ],
+        "body": {
+            "properties": {
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "E-001"
+                },
+                "deductionDate": {
+                    "type": "string",
+                    "example": "2026-03-15"
+                },
+                "deductionType": {
+                    "type": "string",
+                    "example": "FALTA_INJUSTIFICADA"
+                },
+                "motivo": {
+                    "type": "string",
+                    "example": "No se presentó sin aviso"
+                }
+            },
+            "required": [
+                "employeeNumber",
+                "deductionDate",
+                "deductionType",
+                "motivo"
+            ]
+        }
+    },
+    "startAt": "create_deduction",
+    "nodes": {
+        "create_deduction": {
+            "type": "action",
+            "handler": "createPayrollDeduction",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 201,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

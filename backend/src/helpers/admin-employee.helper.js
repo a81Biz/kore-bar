@@ -197,7 +197,12 @@ export const createArea = async (state, c) => {
 };
 
 export const updateArea = async (state, c) => {
-    await modelEmployee.updateAreaModel(c, state.params?.code, state.payload.areaName);
+    await modelEmployee.updateAreaModel(
+        c,
+        state.params?.code,
+        state.payload.areaName,
+        state.payload.canAccessCashier ?? null
+    );
     return { status: 'COMPLETED' };
 };
 

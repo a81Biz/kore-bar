@@ -39,6 +39,13 @@ import {
     bulkDeactivateJobTitles
 } from '../helpers/admin-employee.helper.js';
 
+import {
+    getPayrollHistory,
+    createPayrollDeduction,
+    deletePayrollDeduction,
+    exportPayrollData
+} from '../helpers/admin-payroll.helper.js';
+
 // ── LAYOUT — PISO ─────────────────────────────────────────────
 import {
     saveZone,
@@ -139,6 +146,7 @@ import {
     getSchedules,
     deleteSchedule,
     getAbsences,
+    recordAdminCheckin
 } from '../helpers/admin-turnos.helper.js';
 
 
@@ -160,6 +168,12 @@ export const ActionRegistry = {
     updateEmployee,
     deactivateEmployeeData,
     bulkSaveEmployees,
+
+    //Admin Payroll
+    getPayrollHistory,
+    createPayrollDeduction,
+    deletePayrollDeduction,
+    exportPayrollData,
 
     // Catálogos — Áreas
     getAreas,
@@ -264,6 +278,7 @@ export const ActionRegistry = {
     createScheduleRange,
     getSchedules,
     deleteSchedule,
+    recordAdminCheckin,
 
     // Pedidos automáticos
     getPurchaseSuggestions,

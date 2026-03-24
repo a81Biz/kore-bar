@@ -1,0 +1,44 @@
+{
+    "id": "get_payroll_export",
+    "name": "Exportar Nómina a RRHH",
+    "description": "Devuelve el resumen de nómina en formato estructurado para exportar a CSV o enviar como JSON a la URL del sistema RRHH.",
+    "api": {
+        "method": "GET",
+        "path": "/attendance/payroll/export",
+        "tags": [
+            "Admin / Nómina"
+        ],
+        "query": {
+            "properties": {
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-03-01"
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-03-31"
+                }
+            }
+        }
+    },
+    "startAt": "export_payroll",
+    "nodes": {
+        "export_payroll": {
+            "type": "action",
+            "handler": "exportPayrollData",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "period": "{{state.data.period}}",
+                    "rows": "{{state.data.rows}}",
+                    "totals": "{{state.data.totals}}"
+                }
+            }
+        }
+    }
+}

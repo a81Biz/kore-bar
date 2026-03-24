@@ -55,7 +55,19 @@ const bindEvents = () => {
     if (state.dom.selectEditArea) {
         state.dom.selectEditArea.addEventListener('change', (e) => render.puestos(e.target.value));
     }
-
+    const listAreas = container.querySelector('#list-areas-cashier');
+    if (listAreas) {
+        listAreas.addEventListener('change', async (e) => {
+            const toggle = e.target.closest('.toggle-cashier');
+            if (toggle) {
+                await toggleCashierAccess(
+                    toggle.dataset.code,
+                    toggle.dataset.name,
+                    toggle.checked
+                );
+            }
+        });
+    }
     // CORRECCIÓN 1: Interceptar el formulario manualmente para que no borre la URL
     if (state.dom.formSync) {
         state.dom.formSync.addEventListener('submit', async (e) => {
@@ -90,4 +102,5 @@ export const mount = async (container) => {
     cacheDOM(container);
     bindEvents();
     await logic.loadAll();
+    await loadAreas();
 };

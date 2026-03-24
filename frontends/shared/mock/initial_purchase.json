@@ -22,10 +22,19 @@
       "itemCode": "INS-LIMON",
       "itemName": "Limón Persa sin Semilla",
       "purchaseUnit": "KG",
+      "recipeUnit": "KG",
+      "conversionFactor": 1,
+      "unitCost": 45.00,
+      "quantityPurchased": 25
+    },
+    {
+      "itemCode": "INS-CLAVO",
+      "itemName": "Clavo de olor",
+      "purchaseUnit": "KG",
       "recipeUnit": "GR",
       "conversionFactor": 1000,
       "unitCost": 45.00,
-      "quantityPurchased": 25
+      "quantityPurchased": 2
     },
     {
       "itemCode": "INS-COCA-COLA",

@@ -145,3 +145,32 @@ COMMENT ON VIEW vw_absence_deductions IS
     'Une ausencias de meseros (restaurant_assignments) y staff no-piso (employee_schedules). '
     'Solo incluye fechas pasadas sin registro de check-in. '
     'Fuente para el reporte CSV de descuentos que se exporta al ERP de nómina.';
+
+
+-- sp_deactivate_area
+CREATE OR REPLACE PROCEDURE sp_deactivate_area(p_code VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE areas
+    SET    is_active  = false,
+           updated_at = NOW()
+    WHERE  code = p_code;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Área no encontrada: %', p_code
+            USING ERRCODE = 'P0002';
+    END IF;
+END;
+$$;
+
+
+-- sp_bulk_deactivate_areas
+CREATE OR REPLACE PROCEDURE sp_bulk_deactivate_areas(p_codes VARCHAR[])
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE areas
+    SET    is_active  = false,
+           updated_at = NOW()
+    WHERE  code = ANY(p_codes);
+END;
+$$;

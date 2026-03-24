@@ -1,0 +1,51 @@
+{
+    "id": "get_payroll_history",
+    "name": "Historial de Nómina",
+    "description": "Devuelve días laborados y descuentos por empleado en el rango indicado. Agrupa por empleado con resumen de días trabajados, ausencias y descuentos.",
+    "api": {
+        "method": "GET",
+        "path": "/attendance/payroll",
+        "tags": [
+            "Admin / Nómina"
+        ],
+        "query": {
+            "properties": {
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-03-01"
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-03-31"
+                },
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "E-001"
+                },
+                "areaCode": {
+                    "type": "string",
+                    "example": "20"
+                }
+            }
+        }
+    },
+    "startAt": "fetch_payroll",
+    "nodes": {
+        "fetch_payroll": {
+            "type": "action",
+            "handler": "getPayrollHistory",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "employees": "{{state.data.employees}}",
+                    "summary": "{{state.data.summary}}"
+                }
+            }
+        }
+    }
+}

@@ -2,7 +2,7 @@ import { postData, fetchData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { showErrorModal, showSuccessModal } from '/shared/js/ui.js';
 import { state } from './state.js';
-import { render } from './view.js';
+import { render, renderAreasCashier } from './view.js';
 import { MDMEngine } from '../../rules/mdm.engine.js';
 
 // ==========================================
@@ -294,5 +294,30 @@ export const logic = {
 
         if (state.dom.inputUrlSync?.value) await logic.syncHR();
         else await logic.loadAll();
+    },
+
+    loadAreas: async () => {
+        try {
+            const res = await fetchData(ENDPOINTS.admin.get.areas);
+            const areas = res.data || [];
+            renderAreasCashier(areas);
+            return areas;
+        } catch (err) {
+            console.error('[Empleados] Error cargando áreas:', err);
+            return [];
+        }
+    },
+
+    toggleCashierAccess: async (code, name, canAccessCashier) => {
+        try {
+            const url = ENDPOINTS.admin.put.area.replace(':code', code);
+            await putData(url, { areaName: name, canAccessCashier });
+            const label = canAccessCashier ? 'habilitado' : 'deshabilitado';
+            showSuccessModal(`Acceso a caja ${label} para "${name}".`, 'Permiso Actualizado');
+        } catch (err) {
+            showErrorModal(err.message || 'Error actualizando el permiso de caja.');
+            // Revertir el toggle visualmente si falló
+            await loadAreas();
+        }
     }
 };

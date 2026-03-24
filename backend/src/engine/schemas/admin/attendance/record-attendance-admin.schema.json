@@ -1,0 +1,41 @@
+{
+    "id": "record_admin_checkin",
+    "name": "Registrar Check-in Manual (Admin)",
+    "description": "Registra la llegada de un empleado desde el portal Admin. Fuente: ADMIN. Solo funciona si el empleado tiene asignación activa el día de hoy.",
+    "api": {
+        "method": "POST",
+        "path": "/attendance/checkin",
+        "tags": [
+            "Admin / Asistencia"
+        ],
+        "body": {
+            "properties": {
+                "employeeNumber": {
+                    "type": "string",
+                    "example": "E-001"
+                }
+            },
+            "required": [
+                "employeeNumber"
+            ]
+        }
+    },
+    "startAt": "record_checkin",
+    "nodes": {
+        "record_checkin": {
+            "type": "action",
+            "handler": "recordAdminCheckin",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

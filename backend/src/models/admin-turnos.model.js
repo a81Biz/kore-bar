@@ -24,14 +24,19 @@ export const createShift = async (c, code, name, startTime, endTime) =>
     });
 
 // ── MONITOR DE ASISTENCIA ─────────────────────────────────────
-// Filtra por fecha exacta o rango (startDate/endDate).
-// employeeNumber es opcional.
+// FIX: UNION de ambas fuentes de roster:
+//   - vw_attendance_monitor  → restaurant_assignments (meseros de Piso)
+//   - vw_schedule_monitor    → employee_schedules (cajeros, cocineros, staff)
+//
+// Ambas vistas exponen exactamente las mismas columnas, por lo que
+// el UNION ALL funciona sin casteos adicionales.
+// Se usa UNION ALL (no UNION) para evitar el DISTINCT implícito
+// que sería costoso y no necesario (los IDs son distintos por fuente).
 
 export const getAttendance = async (c, { date, startDate, endDate, employeeNumber } = {}) => {
     const conditions = [];
     const params = [];
 
-    // Rango de fechas: si hay startDate/endDate los prioriza; si no, usa date (default hoy)
     if (startDate && endDate) {
         params.push(startDate);
         conditions.push(`assignment_date >= $${params.length}`);
@@ -51,21 +56,59 @@ export const getAttendance = async (c, { date, startDate, endDate, employeeNumbe
 
     return await executeQuery(c, `
         SELECT  assignment_id,
-                employee_number  AS "employeeNumber",
-                first_name       AS "firstName",
-                last_name        AS "lastName",
+                employee_number   AS "employeeNumber",
+                first_name        AS "firstName",
+                last_name         AS "lastName",
                 shift,
-                shift_name       AS "shiftName",
-                start_time       AS "startTime",
-                end_time         AS "endTime",
-                assignment_date  AS "assignmentDate",
-                zone_name        AS "zoneName",
-                zone_code        AS "zoneCode",
-                attendance_id    AS "attendanceId",
-                check_in_at      AS "checkInAt",
+                shift_name        AS "shiftName",
+                start_time        AS "startTime",
+                end_time          AS "endTime",
+                assignment_date   AS "assignmentDate",
+                zone_name         AS "zoneName",
+                zone_code         AS "zoneCode",
+                attendance_id     AS "attendanceId",
+                check_in_at       AS "checkInAt",
                 source,
                 attendance_status AS "attendanceStatus"
-        FROM    vw_attendance_monitor
+        FROM (
+            -- Fuente 1: Meseros de Piso (restaurant_assignments)
+            SELECT  assignment_id,
+                    employee_number,
+                    first_name,
+                    last_name,
+                    shift,
+                    shift_name,
+                    start_time,
+                    end_time,
+                    assignment_date,
+                    zone_name,
+                    zone_code,
+                    attendance_id,
+                    check_in_at,
+                    source,
+                    attendance_status
+            FROM    vw_attendance_monitor
+
+            UNION ALL
+
+            -- Fuente 2: Staff no-piso (employee_schedules)
+            SELECT  assignment_id,
+                    employee_number,
+                    first_name,
+                    last_name,
+                    shift,
+                    shift_name,
+                    start_time,
+                    end_time,
+                    assignment_date,
+                    zone_name,
+                    zone_code,
+                    attendance_id,
+                    check_in_at,
+                    source,
+                    attendance_status
+            FROM    vw_schedule_monitor
+        ) AS unified_monitor
         ${where}
         ORDER BY assignment_date DESC, shift, last_name ASC
     `, params);
@@ -79,9 +122,7 @@ export const resetPin = async (c, employeeNumber, newPin) =>
         p_new_pin: newPin
     });
 
-// ── REGISTRO DE ASISTENCIA (llamado por waiter y cashier helpers) ─
-// Idempotente: ON CONFLICT DO NOTHING en el SP.
-// El llamador envuelve en try/catch y solo loga el warning — no falla el login.
+// ── REGISTRO DE ASISTENCIA ────────────────────────────────────
 
 export const recordAttendance = async (c, employeeNumber, source) =>
     await executeStoredProcedure(c, 'sp_record_attendance', {
@@ -96,8 +137,6 @@ export const deleteEmployeeSchedule = async (c, id) =>
         p_id: id
     }, { p_id: 'UUID' });
 
-// Misma firma que getAttendance para consistencia en el helper.
-// Lee desde vw_schedule_monitor (misma estructura de columnas).
 export const getSchedules = async (c, { date, startDate, endDate, employeeNumber } = {}) => {
     const conditions = [];
     const params = [];
@@ -141,9 +180,6 @@ export const getSchedules = async (c, { date, startDate, endDate, employeeNumber
     `, params);
 };
 
-// ── ALIAS: el helper llama createEmployeeSchedule ─────────────
-// El SP se llama sp_create_employee_schedule (sin _range).
-// Este alias evita tener que cambiar el helper ya existente.
 export const createEmployeeSchedule = async (c, employeeNumber, shiftCode, startDate, endDate) =>
     await executeStoredProcedure(
         c,
@@ -158,9 +194,6 @@ export const createEmployeeSchedule = async (c, employeeNumber, shiftCode, start
     );
 
 // ── INASISTENCIAS ─────────────────────────────────────────────
-// Consulta vw_absence_deductions (definida en 10_faltantes.sql).
-// Soporta filtros opcionales: startDate, endDate, employeeNumber, areaCode.
-// Todos los alias de columna están en camelCase para el helper.
 
 export const getAbsences = async (c, { startDate, endDate, employeeNumber, areaCode } = {}) => {
     const conditions = [];
@@ -183,22 +216,20 @@ export const getAbsences = async (c, { startDate, endDate, employeeNumber, areaC
         conditions.push(`area_code = $${params.length}`);
     }
 
-    const where = conditions.length > 0
-        ? `WHERE ${conditions.join(' AND ')}`
-        : '';
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     return await executeQuery(c, `
         SELECT
-            employee_number                            AS "employeeNumber",
-            first_name                                 AS "firstName",
-            last_name                                  AS "lastName",
-            area_code                                  AS "areaCode",
-            area_name                                  AS "areaName",
-            TO_CHAR(absence_date, 'YYYY-MM-DD')        AS "absenceDate",
-            shift_name                                 AS "shiftName",
-            TO_CHAR(start_time, 'HH24:MI:SS')          AS "startTime",
-            TO_CHAR(end_time,   'HH24:MI:SS')          AS "endTime",
-            roster_source                              AS "rosterSource"
+            employee_number                       AS "employeeNumber",
+            first_name                            AS "firstName",
+            last_name                             AS "lastName",
+            area_code                             AS "areaCode",
+            area_name                             AS "areaName",
+            TO_CHAR(absence_date, 'YYYY-MM-DD')   AS "absenceDate",
+            shift_name                            AS "shiftName",
+            TO_CHAR(start_time, 'HH24:MI:SS')     AS "startTime",
+            TO_CHAR(end_time,   'HH24:MI:SS')     AS "endTime",
+            roster_source                         AS "rosterSource"
         FROM   vw_absence_deductions
         ${where}
         ORDER BY absence_date DESC, area_name, last_name

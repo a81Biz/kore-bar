@@ -1,6 +1,7 @@
 // src/helpers/admin-turnos.helper.js
 import { AppError } from '../utils/errors.util.js';
 import * as turnosModel from '../models/admin-turnos.model.js';
+import * as employeeModel from '../models/admin-employee.model.js';
 
 // ── GET CATÁLOGO DE TURNOS ────────────────────────────────────
 export const getShifts = async (state, c) => {
@@ -155,7 +156,7 @@ export const deleteSchedule = async (state, c) => {
         }
         if (error.isOperational) throw error;
         console.error('Raw DB Error in deleteSchedule:', error);
-        throw new AppError('Error al eliminar el horario', 500);
+        throw new AppError(`Error al eliminar el horario: ${error.message}`, 500);
     }
 };
 
@@ -184,6 +185,26 @@ export const getAbsences = async (state, c) => {
         };
     } catch (error) {
         if (error.isOperational) throw error;
-        throw new AppError('Error obteniendo el reporte de inasistencias', 500);
+        throw new AppError(`Error obteniendo el reporte de inasistencias: ${error.message}`, 500);
+    }
+};
+
+export const recordAdminCheckin = async (state, c) => {
+    const { employeeNumber } = state.payload;
+    if (!employeeNumber) {
+        throw new AppError('El número de empleado es requerido', 400);
+    }
+    try {
+        await employeeModel.recordAdminCheckin(c, employeeNumber);
+        state.message = `Check-in registrado para el empleado ${employeeNumber}.`;
+    } catch (error) {
+        if (error.code === 'P0001' || error.message?.includes('No hay asignación')) {
+            throw new AppError(
+                `El empleado ${employeeNumber} no tiene asignación activa hoy.`,
+                404
+            );
+        }
+        if (error.isOperational) throw error;
+        throw new AppError(`Error registrando el check-in: ${error.message}`, 500);
     }
 };

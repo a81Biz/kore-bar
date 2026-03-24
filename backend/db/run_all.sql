@@ -22,6 +22,7 @@
 \ir migrations/08_turnos_asistencia.sql
 \ir migrations/09_employee_schedules.sql
 \ir migrations/10_faltantes.sql
+\ir migrations/11_payroll.sql
 
 \echo '── [2/4] Procedures ──────────────────────────────────────'
 \ir procedures/sp_hr.sql
