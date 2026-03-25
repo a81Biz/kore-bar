@@ -247,40 +247,60 @@ export const render = {
 
     kardex: () => {
         state.dom.tbodyKardex.innerHTML = '';
+
         state.data.kardex.forEach(mov => {
             const clone = state.dom.tplKardex.content.cloneNode(true);
-            const mType = mov.type || mov.transaction_type;
+
+            // ── Tipo de transacción ───────────────────────────
+            // API devuelve: transactionType ('TRANSFER', 'IN_PURCHASE', 'IN', 'OUT', 'ADJ')
+            const mType = mov.transactionType || mov.type || mov.transaction_type;
             const conf = uiConfig.transactionType[mType] || uiConfig.transactionType.DEFAULT;
 
-            clone.querySelector('.col-date').textContent = new Date(mov.date || mov.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+            // ── Fecha ─────────────────────────────────────────
+            // API devuelve: date (ISO string)
+            clone.querySelector('.col-date').textContent = new Date(
+                mov.date || mov.created_at
+            ).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
 
+            // ── Badge tipo ────────────────────────────────────
             const badge = clone.querySelector('.col-type-badge');
             badge.className = `px-2 py-1 text-[10px] font-bold rounded col-type-badge tracking-wider ${conf.badge}`;
             badge.textContent = conf.label;
 
-            clone.querySelector('.col-origin').textContent = mov.origin || mov.from_location_code || '-';
-            clone.querySelector('.col-dest').textContent = mov.dest || mov.to_location_code || '-';
-            clone.querySelector('.col-ingredient').textContent = mov.ingredient || mov.item_name || mov.item_code || 'Desconocido';
+            // ── Ubicaciones ───────────────────────────────────
+            // API devuelve: fromLocation / toLocation
+            clone.querySelector('.col-origin').textContent = mov.fromLocation || mov.origin || mov.from_location_code || '-';
+            clone.querySelector('.col-dest').textContent = mov.toLocation || mov.dest || mov.to_location_code || '-';
 
+            // ── Nombre del insumo ─────────────────────────────
+            // API devuelve: itemName / itemCode
+            clone.querySelector('.col-ingredient').textContent =
+                mov.itemName || mov.ingredient || mov.item_name || mov.item_code || 'Desconocido';
+
+            // ── Cantidad con signo visual ─────────────────────
             const qtyEl = clone.querySelector('.col-qty');
             const qtyNum = parseFloat(mov.quantity || 0);
 
-            // Lógica Pura Visual de Signo para Kardex
             let sign = '';
-            if (mType === 'IN') sign = '+';
-            else if (mType === 'OUT' || mType === 'ADJ' && qtyNum < 0) sign = '-';
-            // Para traspasos el numero es absoluto
+            if (mType === 'IN' || mType === 'IN_PURCHASE') sign = '+';
+            else if (mType === 'OUT' || (mType === 'ADJ' && qtyNum < 0)) sign = '-';
 
             qtyEl.textContent = `${sign}${Math.abs(qtyNum)}`;
-            if (mType === 'IN' || (mType === 'ADJ' && qtyNum > 0)) qtyEl.classList.add('text-emerald-600');
+
+            if (mType === 'IN' || mType === 'IN_PURCHASE') qtyEl.classList.add('text-emerald-600');
             else if (mType === 'OUT' || mType === 'ADJ') qtyEl.classList.add('text-orange-600');
             else if (mType === 'TRANSFER') qtyEl.classList.add('text-purple-600');
             else qtyEl.classList.add('text-slate-600');
 
-            clone.querySelector('.col-ref').textContent = mov.reference || mov.reference_id || '-';
+            // ── Referencia ────────────────────────────────────
+            // API devuelve: referenceId
+            clone.querySelector('.col-ref').textContent =
+                mov.referenceId || mov.reference || mov.reference_id || '-';
+
             state.dom.tbodyKardex.appendChild(clone);
         });
     },
+
 
     // Modal Manager
     modals: {
@@ -306,7 +326,11 @@ export const render = {
             }
         },
         adjustment: {
-            open: (code, name, unit, currentStock) => {
+            open: (code, name, unit, currentStock, locationCode) => {
+                // Guardar la ubicación en el estado para que bindForm('form-adjustment')
+                // pueda leerla desde state.ui.stockLocation al hacer el submit
+                state.ui.stockLocation = locationCode || 'LOC-BODEGA';
+
                 state.dom.adjItemCode.value = code;
                 state.dom.adjLocationCode.value = state.ui.stockLocation;
                 state.dom.adjItemName.textContent = name;

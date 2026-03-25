@@ -7,10 +7,10 @@ import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.j
 // ── ESTADO ────────────────────────────────────────────────────────────────
 const state = {
     dom: {
-        root:       null,
-        tableBody:  null,
-        tplRow:     null,
-        btnSubmit:  null,
+        root: null,
+        tableBody: null,
+        tplRow: null,
+        btnSubmit: null,
         navButtons: null
     },
     stock: []
@@ -19,21 +19,21 @@ const state = {
 // ── RENDERIZADO ───────────────────────────────────────────────────────────
 const render = {
     cacheDOM: (container) => {
-        state.dom.root       = container;
+        state.dom.root = container;
         state.dom.navButtons = container.querySelectorAll('[data-nav]');
-        state.dom.tableBody  = container.querySelector('#table-kitchen-stock');
-        state.dom.tplRow     = document.querySelector('#tpl-row-kitchen-stock');
-        state.dom.btnSubmit  = container.querySelector('#btn-submit-blind');
+        state.dom.tableBody = container.querySelector('#table-kitchen-stock');
+        state.dom.tplRow = document.querySelector('#tpl-row-kitchen-stock');
+        state.dom.btnSubmit = container.querySelector('#btn-submit-blind');
     },
 
     stockList: () => {
         state.dom.tableBody.innerHTML = '';
         state.stock.forEach((item, index) => {
-            const clon     = state.dom.tplRow.content.cloneNode(true);
-            clon.querySelector('.col-name').textContent    = item.itemName;
-            clon.querySelector('.col-code').textContent    = item.itemCode;
+            const clon = state.dom.tplRow.content.cloneNode(true);
+            clon.querySelector('.col-name').textContent = item.itemName;
+            clon.querySelector('.col-code').textContent = item.itemCode;
             clon.querySelector('.col-teorico').textContent = `${item.currentStock} ${item.unit}`;
-            clon.querySelector('.col-unit').textContent    = item.unit;
+            clon.querySelector('.col-unit').textContent = item.unit;
 
             const inputReal = clon.querySelector('.input-real-stock');
             inputReal.setAttribute('data-index', index);
@@ -51,8 +51,8 @@ const logic = {
         try {
             // ✅ ENDPOINTS.kitchen.get.kitchenStock ya incluye ?location=LOC-COCINA
             // No se concatena la query string manualmente aquí
-            const res  = await fetchData(ENDPOINTS.kitchen.get.kitchenStock);
-            state.stock = res.data || [];
+            const res = await fetchData(ENDPOINTS.kitchen.get.kitchenStock);
+            state = res.data || [];
             render.stockList();
         } catch (error) {
             showErrorModal('No se pudo cargar el inventario teórico local.', 'Error de Lectura');
@@ -60,7 +60,7 @@ const logic = {
     },
 
     submitBlindInventory: async () => {
-        const inputs        = state.dom.tableBody.querySelectorAll('.input-real-stock');
+        const inputs = state.dom.tableBody.querySelectorAll('.input-real-stock');
         const itemsToAdjust = [];
 
         inputs.forEach(input => {
@@ -69,9 +69,9 @@ const logic = {
                 const item = state.stock[input.getAttribute('data-index')];
                 if (item.currentStock !== realStock) {
                     itemsToAdjust.push({
-                        itemCode:  item.itemCode,
+                        itemCode: item.itemCode,
                         realStock: realStock,
-                        note:      'Toma Física: Cuadre de Cierre de Turno en Cocina'
+                        note: 'Toma Física: Cuadre de Cierre de Turno en Cocina'
                     });
                 }
             }
@@ -89,12 +89,12 @@ const logic = {
         )) return;
 
         try {
-            state.dom.btnSubmit.disabled    = true;
+            state.dom.btnSubmit.disabled = true;
             state.dom.btnSubmit.textContent = 'Enviando Lote...';
 
             await postData(ENDPOINTS.inventory.post.adjustments, {
                 locationCode: 'LOC-COCINA',
-                items:         itemsToAdjust
+                items: itemsToAdjust
             });
 
             showSuccessModal(
@@ -106,7 +106,7 @@ const logic = {
         } catch (error) {
             showErrorModal(error.message, 'Fallo de Asentación de Merma');
         } finally {
-            state.dom.btnSubmit.disabled    = false;
+            state.dom.btnSubmit.disabled = false;
             state.dom.btnSubmit.textContent = 'Registrar Mermas y Cerrar Turno';
         }
     }

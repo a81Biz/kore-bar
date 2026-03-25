@@ -73,8 +73,8 @@ export const renderLoginScreen = (employees = []) => {
   employees.forEach(e => {
     const optClon = cloneTemplate('tpl-cashier-emp-option');
     const opt = optClon.querySelector('option');
-    opt.value = e.employee_number;
-    opt.textContent = `${e.first_name} ${e.last_name}`;
+    opt.value = e.employeeNumber;
+    opt.textContent = `${e.firstName} ${e.lastName}`;
     sel.appendChild(optClon);
   });
 

@@ -49,7 +49,7 @@ const fetchBoardData = async () => {
     try {
         const res = await fetchData(ENDPOINTS.kitchen.get.board);
         if (res.success) {
-            state.items = res.data.board || [];
+            state = res.data.board || [];
             renderBoard();
         }
     } catch (e) {
@@ -170,7 +170,7 @@ const startTimers = () => {
 
             if (diff > 600) timerEl.classList.add('text-red-500', 'animate-pulse');
         });
-    }, 1000);
+    }, 100000);
 };
 
 // ── 5. CICLO DE VIDA PÚBLICO ──────────────────────────────────────────────

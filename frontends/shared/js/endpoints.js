@@ -99,14 +99,14 @@ export const ENDPOINTS = {
     // ──────────────────────────────────────────────────────────────────────────
     cashier: {
         get: {
-            employees: '/cashier/employees',
-            board: '/cashier/board',
-            corte: '/cashier/corte',
-            ticket: '/cashier/tickets/:folio'
+            employees: '/admin/cashier/employees',
+            board: '/admin/cashier/board',
+            corte: '/admin/cashier/corte',
+            ticket: '/admin/cashier/tickets/:folio'
         },
         post: {
-            login: '/cashier/login',
-            pay: '/cashier/tables/:tableCode/pay'
+            login: '/admin/cashier/login',
+            pay: '/admin/cashier/tables/:tableCode/pay'
         }
     },
 
@@ -115,7 +115,7 @@ export const ENDPOINTS = {
     // ──────────────────────────────────────────────────────────────────────────
     invoice: {
         post: {
-            request: '/cashier/tickets/:folio/invoice'
+            request: '/admin/cashier/tickets/:folio/invoice'
         }
     },
 
@@ -130,10 +130,12 @@ export const ENDPOINTS = {
             ingredients: '/kitchen/ingredients',
             recipeBOM: '/kitchen/recipes/:dishCode/bom',
             kitchenStock: '/inventory/stock?location=LOC-COCINA'
+
         },
         post: {
             ingredient: '/kitchen/ingredients',
-            recipeItem: '/kitchen/recipes/items'
+            recipeItem: '/kitchen/recipes/items',
+            clockIn: '/admin/auth/login'
         },
         put: {
             itemStatus: '/kitchen/items/:itemId/status',

@@ -1,9 +1,10 @@
-
+// frontends/admin/js/views/turnos/index.js
 import { fetchData, postData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { bindForm } from '/shared/js/formEngine.js';
 import { showSuccessModal, showErrorModal, confirmAction } from '/shared/js/ui.js';
 import { HorariosController } from './horarios.js';
+import { HistorialController } from './historial-nomina.js';   // ← era la línea que faltaba
 
 // ── 2. ESTADO ────────────────────────────────────────────────
 const state = {
@@ -15,7 +16,7 @@ const state = {
     },
     ui: {
         activeTab: 'monitor',
-        checkinTarget: null  // { employeeNumber, nombre }
+        checkinTarget: null
     }
 };
 
@@ -65,12 +66,6 @@ const _cacheDOM = (container) => {
     state.dom.kpiAusente = container.querySelector('#kpi-ausente');
     state.dom.tplRowMonitor = document.querySelector('#tpl-row-monitor');
 
-    state.dom.histStart = container.querySelector('#hist-start');
-    state.dom.histEnd = container.querySelector('#hist-end');
-    state.dom.histEmployee = container.querySelector('#hist-employee');
-    state.dom.btnSearchHistorial = container.querySelector('#btn-search-historial');
-    state.dom.tableHistorialBody = container.querySelector('#table-historial-body');
-
     state.dom.formAdminTurno = container.querySelector('#form-admin-turno');
     state.dom.turnoCode = container.querySelector('#turno-code');
     state.dom.turnoName = container.querySelector('#turno-name');
@@ -84,9 +79,7 @@ const _cacheDOM = (container) => {
     state.dom.pinNewValue = container.querySelector('#pin-new-value');
     state.dom.pinConfirmValue = container.querySelector('#pin-confirm-value');
 
-    // ── Modal check-in ────────────────────────────────────────
-    // El modal vive en tpl-modal-checkin (partial _turnos.html).
-    // Se inyecta al body en mount() para que no quede dentro de la vista.
+    // Modal check-in — se inyecta al body para que no quede dentro del scroll
     let modalCheckin = document.getElementById('modal-checkin');
     if (!modalCheckin) {
         const tpl = document.getElementById('tpl-modal-checkin');
@@ -138,7 +131,7 @@ const _render = {
         if (records.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 9; // era 8, ahora 9 por columna Acción
+            td.colSpan = 9;
             td.className = 'px-4 py-8 text-center text-slate-400 text-sm';
             td.textContent = 'No hay asignaciones para la fecha seleccionada.';
             tr.appendChild(td);
@@ -170,14 +163,14 @@ const _render = {
 
             const sourceBadge = clone.querySelector('.col-source-badge');
             if (rec.source) {
-                const srcCfg = _uiConfig.source[rec.source] || { badge: 'bg-slate-100 text-slate-600', label: rec.source };
+                const srcCfg = _uiConfig.source[rec.source]
+                    || { badge: 'bg-slate-100 text-slate-600', label: rec.source };
                 sourceBadge.textContent = srcCfg.label;
                 sourceBadge.className = `col-source-badge text-[10px] font-bold px-2 py-0.5 rounded uppercase ${srcCfg.badge}`;
             } else {
                 sourceBadge.textContent = '—';
             }
 
-            // Botón check-in — solo activo si no está presente aún
             const btnCheckin = clone.querySelector('.btn-admin-checkin');
             if (btnCheckin) {
                 btnCheckin.dataset.employeeNumber = rec.employeeNumber;
@@ -189,72 +182,6 @@ const _render = {
             }
 
             state.dom.tableMonitorBody.appendChild(clone);
-        });
-    },
-
-    historialRows: (records) => {
-        state.dom.tableHistorialBody.innerHTML = '';
-
-        if (records.length === 0) {
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-            td.colSpan = 7;
-            td.className = 'px-4 py-8 text-center text-slate-400 text-sm';
-            td.textContent = 'No se encontraron registros para el rango indicado.';
-            tr.appendChild(td);
-            state.dom.tableHistorialBody.appendChild(tr);
-            return;
-        }
-
-        records.forEach(rec => {
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-slate-50 border-b border-slate-100 text-sm';
-            const nombre = `${rec.firstName || ''} ${rec.lastName || ''}`.trim();
-            const statusCfg = _uiConfig.attendanceStatus[rec.attendanceStatus] || _uiConfig.attendanceStatus.ESPERADO;
-            const srcCfg = rec.source
-                ? (_uiConfig.source[rec.source] || { badge: 'bg-slate-100 text-slate-600', label: rec.source })
-                : null;
-
-            [
-                { text: rec.assignmentDate, cls: 'px-4 py-3 text-slate-500' },
-                { text: `${nombre} (${rec.employeeNumber})`, cls: 'px-4 py-3 font-medium text-slate-800' },
-                { text: rec.shiftName || rec.shift, cls: 'px-4 py-3 text-slate-600' },
-                { text: rec.zoneName || '—', cls: 'px-4 py-3 text-slate-600' }
-            ].forEach(({ text, cls }) => {
-                const td = document.createElement('td');
-                td.className = cls;
-                td.textContent = text || '—';
-                tr.appendChild(td);
-            });
-
-            const tdStatus = document.createElement('td');
-            tdStatus.className = 'px-4 py-3 text-center';
-            const badgeEl = document.createElement('span');
-            badgeEl.className = `px-2.5 py-1 text-xs font-bold rounded-full ${statusCfg.badge}`;
-            badgeEl.textContent = statusCfg.label;
-            tdStatus.appendChild(badgeEl);
-            tr.appendChild(tdStatus);
-
-            const tdCheckin = document.createElement('td');
-            tdCheckin.className = 'px-4 py-3 text-xs text-slate-500';
-            tdCheckin.textContent = rec.checkInAt
-                ? new Date(rec.checkInAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-                : '—';
-            tr.appendChild(tdCheckin);
-
-            const tdSource = document.createElement('td');
-            tdSource.className = 'px-4 py-3';
-            if (srcCfg) {
-                const srcBadge = document.createElement('span');
-                srcBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded uppercase ${srcCfg.badge}`;
-                srcBadge.textContent = srcCfg.label;
-                tdSource.appendChild(srcBadge);
-            } else {
-                tdSource.textContent = '—';
-            }
-            tr.appendChild(tdSource);
-
-            state.dom.tableHistorialBody.appendChild(tr);
         });
     },
 
@@ -279,19 +206,16 @@ const _render = {
         });
     },
 
-    // ── Check-in modal ────────────────────────────────────────
     checkinModal: {
         open: (employeeNumber, nombre) => {
             if (!state.dom.modalCheckin) return;
             state.ui.checkinTarget = { employeeNumber, nombre };
-
             const ahora = new Date();
             state.dom.checkinNombre.textContent = nombre;
             state.dom.checkinEmpNumber.textContent = `# ${employeeNumber}`;
             state.dom.checkinHora.textContent = ahora.toLocaleTimeString('es-MX', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             });
-
             state.dom.modalCheckin.classList.remove('opacity-0', 'pointer-events-none');
             state.dom.modalCheckin.firstElementChild.classList.remove('scale-95');
         },
@@ -316,27 +240,6 @@ const _logic = {
             _render.monitorRows(state.data.records);
         } catch (err) {
             showErrorModal(err.message || 'Error cargando el monitor de asistencia.');
-        }
-    },
-
-    loadHistorial: async () => {
-        const startDate = state.dom.histStart?.value;
-        const endDate = state.dom.histEnd?.value;
-        const employeeNumber = state.dom.histEmployee?.value?.trim();
-
-        if (!startDate || !endDate) {
-            showErrorModal('Selecciona un rango de fechas completo (Desde y Hasta).');
-            return;
-        }
-
-        let url = `${ENDPOINTS.admin.get.attendance}?startDate=${startDate}&endDate=${endDate}`;
-        if (employeeNumber) url += `&employeeNumber=${encodeURIComponent(employeeNumber)}`;
-
-        try {
-            const res = await fetchData(url);
-            _render.historialRows(res.data?.records || []);
-        } catch (err) {
-            showErrorModal(err.message || 'Error cargando el historial.');
         }
     },
 
@@ -379,11 +282,9 @@ const _logic = {
         showSuccessModal(`PIN del empleado ${employeeNumber} actualizado exitosamente.`);
     },
 
-    // ── Check-in manual desde Admin ───────────────────────────
     adminCheckin: async () => {
         const target = state.ui.checkinTarget;
         if (!target) return;
-
         try {
             state.dom.btnConfirmCheckin.disabled = true;
             await postData(ENDPOINTS.admin.post.adminCheckin, {
@@ -391,7 +292,6 @@ const _logic = {
             });
             _render.checkinModal.close();
             showSuccessModal(`Check-in registrado para ${target.nombre}.`, 'Entrada Confirmada');
-            // Refrescar el monitor para que el badge cambie a PRESENTE
             await _logic.loadMonitor();
         } catch (err) {
             _render.checkinModal.close();
@@ -410,32 +310,26 @@ const _bindEvents = () => {
             _render.switchTab(tabKey);
             if (tabKey === 'monitor') await _logic.loadMonitor();
             if (tabKey === 'turnos') await _logic.loadShifts();
+            // historial y horarios tienen sus propios controladores — no necesitan trigger aquí
         });
     });
 
     state.dom.btnRefreshMonitor?.addEventListener('click', _logic.loadMonitor);
     state.dom.monitorDate?.addEventListener('change', _logic.loadMonitor);
-    state.dom.btnSearchHistorial?.addEventListener('click', _logic.loadHistorial);
 
     if (state.dom.formAdminTurno) bindForm('form-admin-turno', _logic.createShift);
     if (state.dom.formResetPin) bindForm('form-reset-pin', _logic.resetPin);
 
-    // Delegación de eventos en la tabla del monitor — botón check-in
+    // Delegación — tabla monitor → botón check-in
     state.dom.tableMonitorBody?.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-admin-checkin');
         if (btn && !btn.disabled) {
-            _render.checkinModal.open(
-                btn.dataset.employeeNumber,
-                btn.dataset.nombre
-            );
+            _render.checkinModal.open(btn.dataset.employeeNumber, btn.dataset.nombre);
         }
     });
 
-    // Modal check-in — cerrar
     state.dom.btnCloseCheckin?.addEventListener('click', _render.checkinModal.close);
     state.dom.btnCancelCheckin?.addEventListener('click', _render.checkinModal.close);
-
-    // Modal check-in — confirmar
     state.dom.btnConfirmCheckin?.addEventListener('click', _logic.adminCheckin);
 };
 
@@ -444,9 +338,19 @@ export const TurnosController = {
     mount: async (container) => {
         _cacheDOM(container);
         _bindEvents();
+
+        // Tab inicial: monitor en vivo
         await _logic.loadMonitor();
+
+        // HorariosController inyecta su propio template en view-horarios
         if (state.dom.views.horarios) {
             await HorariosController.mount(state.dom.views.horarios);
+        }
+
+        // HistorialController cachea DOM del view-historial y enlaza sus propios eventos.
+        // NO hace llamadas HTTP aquí — espera a que el usuario presione "Buscar".
+        if (state.dom.views.historial) {
+            HistorialController.mount(state.dom.views.historial);
         }
     }
 };

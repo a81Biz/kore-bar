@@ -45,7 +45,8 @@ const cacheDOM = (container) => {
 // ==========================================================================
 // EVENTOS (Delegación)
 // ==========================================================================
-const bindEvents = () => {
+// FIX: recibe container como parámetro para que el querySelector funcione
+const bindEvents = (container) => {
     if (state.dom.modalEdit) {
         state.dom.modalEdit.querySelectorAll('.btn-close-modal').forEach(btn =>
             btn.addEventListener('click', render.modalClose)
@@ -55,12 +56,14 @@ const bindEvents = () => {
     if (state.dom.selectEditArea) {
         state.dom.selectEditArea.addEventListener('change', (e) => render.puestos(e.target.value));
     }
+
+    // FIX: container ahora está disponible como parámetro
     const listAreas = container.querySelector('#list-areas-cashier');
     if (listAreas) {
         listAreas.addEventListener('change', async (e) => {
             const toggle = e.target.closest('.toggle-cashier');
             if (toggle) {
-                await toggleCashierAccess(
+                await logic.toggleCashierAccess(
                     toggle.dataset.code,
                     toggle.dataset.name,
                     toggle.checked
@@ -68,18 +71,20 @@ const bindEvents = () => {
             }
         });
     }
-    // CORRECCIÓN 1: Interceptar el formulario manualmente para que no borre la URL
+
+    // FIX: interceptar el submit para evitar recarga de página
     if (state.dom.formSync) {
         state.dom.formSync.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evita recargar la página
+            e.preventDefault();
             const originalHtml = state.dom.btnSync.innerHTML;
             state.dom.btnSync.innerHTML = '⏳ Sincronizando...';
             state.dom.btnSync.disabled = true;
-
-            await logic.syncHR();
-
-            state.dom.btnSync.innerHTML = originalHtml;
-            state.dom.btnSync.disabled = false;
+            try {
+                await logic.syncHR();
+            } finally {
+                state.dom.btnSync.innerHTML = originalHtml;
+                state.dom.btnSync.disabled = false;
+            }
         });
     }
 
@@ -93,6 +98,12 @@ const bindEvents = () => {
             if (btn.dataset.action === 'abrir-modal-editar') logic.prepararEdicion(btn.dataset.id);
         });
     }
+
+    // Botón refresh áreas cashier
+    const btnRefreshAreas = container.querySelector('#btn-refresh-areas');
+    if (btnRefreshAreas) {
+        btnRefreshAreas.addEventListener('click', logic.loadAreas);
+    }
 };
 
 // ==========================================================================
@@ -100,7 +111,7 @@ const bindEvents = () => {
 // ==========================================================================
 export const mount = async (container) => {
     cacheDOM(container);
-    bindEvents();
+    bindEvents(container);   // FIX: pasar container
     await logic.loadAll();
-    await loadAreas();
+    await logic.loadAreas(); // FIX: llamar desde logic, no como función suelta
 };

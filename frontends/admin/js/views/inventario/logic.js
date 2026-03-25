@@ -194,7 +194,8 @@ export const bindEvents = () => {
                     btnA.getAttribute('data-code'),
                     btnA.getAttribute('data-name'),
                     btnA.getAttribute('data-unit'),
-                    btnA.getAttribute('data-stock')
+                    btnA.getAttribute('data-stock'),
+                    btnA.getAttribute('data-location')
                 );
             }
         });
@@ -209,7 +210,8 @@ export const bindEvents = () => {
                     btnA.getAttribute('data-code'),
                     btnA.getAttribute('data-name'),
                     btnA.getAttribute('data-unit'),
-                    btnA.getAttribute('data-stock')
+                    btnA.getAttribute('data-stock'),
+                    btnA.getAttribute('data-location')
                 );
             }
         });

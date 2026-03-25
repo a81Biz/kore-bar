@@ -12,7 +12,8 @@ export const state = {
         showOnlySuggested: false,
         selectedSupplierCode: null,
         kardexLocation: '',
-        kardexSearchQuery: ''
+        kardexSearchQuery: '',
+        stockLocation: 'LOC-BODEGA'
     }
 };
 
@@ -24,6 +25,7 @@ export const uiConfig = {
     },
     transactionType: {
         'IN': { badge: 'bg-emerald-100 text-emerald-800', label: 'ENTRADA' },
+        'IN_PURCHASE': { badge: 'bg-emerald-100 text-emerald-800', label: 'COMPRA' },
         'OUT': { badge: 'bg-orange-100 text-orange-800', label: 'SALIDA/MERMA' },
         'ADJ': { badge: 'bg-slate-100 text-slate-800', label: 'AJUSTE' },
         'TRANSFER': { badge: 'bg-purple-100 text-purple-800', label: 'TRASPASO' },

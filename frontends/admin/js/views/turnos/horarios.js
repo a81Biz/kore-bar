@@ -105,7 +105,7 @@ const render = {
                 : '—';
 
             const fecha = r.assignmentDate
-                ? new Date(r.assignmentDate + 'T12:00:00').toLocaleDateString('es-MX', {
+                ? new Date(r.assignmentDate).toLocaleDateString('es-MX', {
                     weekday: 'short', day: 'numeric', month: 'short'
                 })
                 : '—';
