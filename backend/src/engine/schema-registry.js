@@ -13,7 +13,7 @@ import deleteAssignment from './schemas/admin/assignment/delete-assignment.schem
 import getAssignment from './schemas/admin/assignment/get-assignment.schema.json'          assert { type: 'json' };
 
 // ── ADMIN / AUTH ──────────────────────────────────────────────
-import authLogin from './schemas/admin/auth/auth-login.schema.json'                   assert { type: 'json' };
+import loginHandler from './schemas/admin/auth/auth-login.schema.json'                   assert { type: 'json' };
 import authPin from './schemas/admin/auth/auth-pin.schema.json'                     assert { type: 'json' };
 
 // ── ADMIN / ATTENDANCE ──────────────────────────────────────────────
@@ -140,7 +140,7 @@ export const schemasBySubDir = {
 
     admin: [
         createAssignment, deleteAssignment, getAssignment,
-        authLogin, authPin,
+        loginHandler, authPin,
         cashierBoard, cashierCorte, cashierEmployees, cashierGetTicket,
         cashierInvoiceRequest, cashierLogin, cashierProcessPayment,
         bulkDeactivateAreas, bulkDeactivateJobTitles,

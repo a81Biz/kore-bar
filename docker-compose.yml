@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-      - "9229:9229" 
+      - "9229:9229"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgres://admin:admin@db:5432/kore_local_db
@@ -21,6 +21,22 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
+      - wrangler          # ← nuevo: nginx espera a wrangler
+
+  # ── Cloudflare Pages Functions (local) ──────────────────────────────────
+  # Sirve únicamente las Pages Functions del directorio functions/.
+  # Nginx le reenvía /api/env; el resto de rutas siguen igual.
+  # Las secrets se leen de .dev.vars (no commitear).
+  wrangler:
+    build: ./wrangler
+    working_dir: /app
+    volumes:
+      - .:/app                      # proyecto completo (functions/ + frontends/)
+    ports:
+      - "8788:8788"                 # expuesto para depuración directa si se necesita
+    command: wrangler pages dev frontends --port 8788 --ip 0.0.0.0 --compatibility-date 2026-03-26
+    env_file:
+      - .dev.vars                   # SUPABASE_URL y SUPABASE_ANON_KEY
 
   db:
     image: postgres:15-alpine

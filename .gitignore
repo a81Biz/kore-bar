@@ -22,3 +22,7 @@ Thumbs.db
 
 *.txt
 docs/jira/exportar_jira.py
+
+# Cloudflare Wrangler — secrets locales
+.dev.vars
+.wrangler/

@@ -174,3 +174,11 @@ BEGIN
     WHERE  code = ANY(p_codes);
 END;
 $$;
+
+-- Habilitar RLS en la tabla
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "kds_read_order_items"
+  ON order_items
+  FOR SELECT
+  USING (true);  -- true = cualquier conexión autenticada o anon puede leer

@@ -9,6 +9,9 @@ import { RecetasController } from './views/recetas/index.js';
 import { InventarioController } from './views/inventario/index.js';
 import { PinChecadorController } from './views/kds/pin-checador.js';
 
+import { loadEnv } from '/core/js/kore.env.js';
+await loadEnv(); // antes de cualquier otra cosa
+
 // ==========================================================================
 // 1. DICCIONARIO DE RUTAS
 // ==========================================================================

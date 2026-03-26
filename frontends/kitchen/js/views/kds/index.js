@@ -3,6 +3,10 @@ import { PubSub } from '/shared/js/pubsub.js';
 import { fetchData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { showErrorModal } from '/shared/js/ui.js';
+import { waitForEnv } from '/core/js/kore.env.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+
 
 // ── 1. ESTADO PRIVADO ─────────────────────────────────────────────────────
 const state = {
@@ -31,6 +35,16 @@ const _cacheDOM = (container) => {
     state.dom.btnClockIn = container.querySelector('[data-action="open-pin-modal"]');
 };
 
+const startRealtime = async () => {
+    const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    state.channel = supabase
+        .channel('kds-order-items')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' },
+            () => fetchBoardData())
+        .subscribe();
+};
+
 const _bindEvents = () => {
     state.dom.navButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -49,7 +63,7 @@ const fetchBoardData = async () => {
     try {
         const res = await fetchData(ENDPOINTS.kitchen.get.board);
         if (res.success) {
-            state = res.data.board || [];
+            state.items = res.data.board || [];
             renderBoard();
         }
     } catch (e) {
@@ -67,6 +81,10 @@ const renderBoard = () => {
         PREPARING: [],
         READY: []
     };
+
+    if (state.items.pending.length < 1 || state.items.preparing.length < 1 || state.items.ready.length < 1) {
+        return
+    }
 
     state.items.forEach(item => {
         if (groups[item.status]) groups[item.status].push(item);
@@ -170,7 +188,7 @@ const startTimers = () => {
 
             if (diff > 600) timerEl.classList.add('text-red-500', 'animate-pulse');
         });
-    }, 100000);
+    }, 1000);
 };
 
 // ── 5. CICLO DE VIDA PÚBLICO ──────────────────────────────────────────────
@@ -179,11 +197,15 @@ export const KdsController = {
         _cacheDOM(container);
         _bindEvents();
         await fetchBoardData();
+        await startRealtime();
         startTimers();
-        state.pollingInterval = setInterval(fetchBoardData, 5000);
+        //state.pollingInterval = setInterval(fetchBoardData, 5000);
     },
     unmount: () => {
-        if (state.pollingInterval) clearInterval(state.pollingInterval);
+        // if (state.pollingInterval) clearInterval(state.pollingInterval);
+        // if (state.timerInterval) clearInterval(state.timerInterval);
+        state.channel?.unsubscribe();
         if (state.timerInterval) clearInterval(state.timerInterval);
+
     }
 };
