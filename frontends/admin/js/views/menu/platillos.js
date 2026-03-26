@@ -261,7 +261,7 @@ const logic = {
     cargarCategorias: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.menuCategories).catch(() => null);
-            state.datos.categoriasActivas = (res?.data || []).filter(c => c.isActive);
+            state.datos.categoriasActivas = (res?.data.categories || []).filter(c => c.isActive);
             render.selects();
         } catch (error) { /* Silencioso */ }
     },
@@ -269,7 +269,7 @@ const logic = {
     cargarPlatillos: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.menuDishes);
-            state.datos.platillos = Array.isArray(res?.data) ? res.data : [];
+            state.datos.platillos = Array.isArray(res?.data.dishes) ? res.data : [];
             render.platillos();
         } catch (error) {
             console.error('[Menú] Error cargando platillos', error);
