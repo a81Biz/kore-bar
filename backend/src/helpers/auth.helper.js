@@ -4,10 +4,14 @@
 //
 // Dos flujos independientes:
 //   1. loginHandler      → admin web  (password + bcrypt → JWT en cookie httpOnly)
-//   2. validatePinHandler → POS       (PIN numérico     → JWT en Bearer header)
+//   2. validatePinHandler → POS       (PIN + bcrypt     → JWT en Bearer header)
+//
+// CAMBIOS vs versión anterior:
+//   - validatePinHandler ahora usa bcrypt.compare() en vez de plain text
+//   - Agrega validación de canAccessCashier para contexto 'cashier'
+//   - PIN se compara en tiempo constante con DUMMY_HASH (anti-timing)
 //
 // MIGRACIÓN: jsonwebtoken → hono/jwt (WebCrypto nativo, 100% compatible Workers)
-// El JWT incluye: employeeNumber, roleCode, areaCode, type ('session'|'pin')
 // ============================================================
 
 import bcrypt from 'bcryptjs';
@@ -30,13 +34,12 @@ const parseExpiryToSeconds = (v) => {
 const JWT_EXPIRES_WEB_SEC = parseExpiryToSeconds(process.env.JWT_EXPIRES_WEB || '8h');
 const JWT_EXPIRES_POS_SEC = parseExpiryToSeconds(process.env.JWT_EXPIRES_POS || '12h');
 
+// Hash falso para comparación en tiempo constante cuando el usuario no existe
+const DUMMY_HASH = '$2b$10$invalidhashtopreventtimingattacks000000000000000000';
+
 
 // ── UTILIDAD INTERNA ──────────────────────────────────────────
 
-/**
- * Crea un error operacional con statusCode para que el SchemaRouter
- * lo atrape y devuelva el código HTTP correcto.
- */
 const authError = (message, statusCode = 401) => {
     const err = new Error(message);
     err.statusCode = statusCode;
@@ -58,7 +61,6 @@ export const loginHandler = async (state, c) => {
     const user = await getUserForLogin(c, employeeNumber);
 
     // 2. Validación en tiempo constante
-    const DUMMY_HASH = '$2b$10$invalidhashtopreventtimingattacks000000000000000000';
     const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
     const isValid = await bcrypt.compare(password, hashToCompare);
 
@@ -106,21 +108,37 @@ export const loginHandler = async (state, c) => {
 
 // ── HANDLER 2: VALIDAR PIN (meseros / caja / cocina) ─────────
 // Flujo: POST /auth/pin
-// Body:  { employeeNumber, pinCode }
+// Body:  { employeeNumber, pinCode, context? }
 // Éxito: JWT firmado en body como { token }
 // Fallo: 401 con mensaje genérico
+//
+// CAMBIO: Ahora usa bcrypt.compare() en vez de comparación plain text.
+// El campo `context` es opcional y permite validar permisos adicionales:
+//   - 'cashier' → requiere canAccessCashier = true en el área del empleado
+//   - 'kitchen' → sin restricción adicional (cualquier empleado con PIN)
+//   - 'waiter'  → sin restricción adicional
+//   - undefined → sin restricción adicional (compatibilidad)
 
 export const validatePinHandler = async (state, c) => {
-    const { employeeNumber, pinCode } = state.payload;
+    const { employeeNumber, pinCode, context } = state.payload;
 
-    // 1. Verificar PIN contra BD
-    const user = await getUserForPin(c, employeeNumber, String(pinCode));
+    // 1. Buscar empleado en BD (ya NO se envía el PIN al SQL)
+    const user = await getUserForPin(c, employeeNumber);
 
-    if (!user || !user.isPinValid) {
+    // 2. Comparar PIN con bcrypt en tiempo constante
+    const hashToCompare = user?.pinHash ?? DUMMY_HASH;
+    const isValid = await bcrypt.compare(String(pinCode), hashToCompare);
+
+    if (!user || !isValid || !user.isActive) {
         throw authError('PIN inválido');
     }
 
-    // 2. Construir payload del token POS
+    // 3. Validar permisos por contexto
+    if (context === 'cashier' && !user.canAccessCashier) {
+        throw authError('Sin permiso de acceso a caja. Tu área no tiene habilitado el acceso.', 403);
+    }
+
+    // 4. Construir payload del token POS
     const exp = Math.floor(Date.now() / 1000) + JWT_EXPIRES_POS_SEC;
     const tokenPayload = {
         employeeNumber: user.employeeNumber,
@@ -133,7 +151,7 @@ export const validatePinHandler = async (state, c) => {
         exp
     };
 
-    // 3. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
+    // 5. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
     const token = await sign(tokenPayload, JWT_SECRET);
 
     return {

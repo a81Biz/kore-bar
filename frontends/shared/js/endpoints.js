@@ -15,7 +15,7 @@ export const ENDPOINTS = {
             floorStock: '/waiters/floor-stock'
         },
         post: {
-            login: '/waiters/login',
+            login: '/admin/auth/pin',
             openTable: '/waiters/tables/:tableCode/open',
             orders: '/waiters/tables/:tableCode/orders',
             closeTable: '/waiters/tables/:tableCode/close'
@@ -47,6 +47,14 @@ export const ENDPOINTS = {
             absences: '/admin/attendance/absences',
             payrollHistory: '/admin/attendance/payroll',
             payrollExport: '/admin/attendance/payroll/export',
+            reports: {
+                sales: '/admin/reports/sales',
+                salesSummary: '/admin/reports/sales-summary',
+                topDishes: '/admin/reports/top-dishes',
+                salesByCategory: '/admin/reports/sales-by-category',
+                salesByWaiter: '/admin/reports/sales-by-waiter',
+            },
+            dashboardKpis: '/admin/dashboard/kpis',
         },
         post: {
             zone: '/admin/zones',
@@ -102,10 +110,11 @@ export const ENDPOINTS = {
             employees: '/admin/cashier/employees',
             board: '/admin/cashier/board',
             corte: '/admin/cashier/corte',
-            ticket: '/admin/cashier/tickets/:folio'
+            ticket: '/admin/cashier/tickets/:folio',
+            ticketPrint: '/cashier/tickets/:folio/print'
         },
         post: {
-            login: '/admin/cashier/login',
+            login: '/admin/auth/pin',
             pay: '/admin/cashier/tables/:tableCode/pay'
         }
     },
@@ -135,7 +144,7 @@ export const ENDPOINTS = {
         post: {
             ingredient: '/kitchen/ingredients',
             recipeItem: '/kitchen/recipes/items',
-            clockIn: '/admin/auth/login'
+            clockIn: '/admin/auth/pin'
         },
         put: {
             itemStatus: '/kitchen/items/:itemId/status',

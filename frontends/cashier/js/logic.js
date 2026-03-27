@@ -14,6 +14,7 @@ import {
     renderPaymentModal, renderTicketSuccess, renderCorteModal,
     showToast, showLoading
 } from './view.js';
+import { TicketPrinter } from './ticket-print.js';
 
 // ── 1. Cargar empleados elegibles y mostrar pantalla de login ──────────────
 export const initLogin = async () => {
@@ -63,14 +64,14 @@ function attachLoginEvents() {
 // ── 2. Autenticar cajero ───────────────────────────────────────────────────
 async function handleLogin() {
     const employeeNumber = document.getElementById('sel-employee')?.value;
-    const pin = document.getElementById('inp-pin')?.value;
+    const pinCode = document.getElementById('inp-pin')?.value;
 
     if (!employeeNumber) { showToast('Selecciona tu nombre', 'error'); return; }
-    if (!pin || pin.length < 4) { showToast('Ingresa tu PIN (mínimo 4 dígitos)', 'error'); return; }
+    if (!pinCode || pinCode.length < 4) { showToast('Ingresa tu PIN (mínimo 4 dígitos)', 'error'); return; }
 
     showLoading(true);
     try {
-        const json = await postData(ENDPOINTS.cashier.post.login, { employeeNumber, pin });
+        const json = await postData(ENDPOINTS.cashier.post.login, { employeeNumber, pinCode, context: 'cashier' });
         const d = json.data?.body || json.data || {};
         state.cashier = {
             employeeNumber: d.employeeNumber || employeeNumber,

@@ -1,0 +1,34 @@
+{
+    "id": "get_sales_summary",
+    "name": "Get Sales Summary",
+    "description": "Obtiene el resumen de ventas agregado por día para gráficas del dashboard.",
+    "api": {
+        "method": "GET",
+        "path": "/reports/sales-summary",
+        "query": {
+            "properties": {
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-01-01"
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-01-31"
+                }
+            },
+            "required": [
+                "startDate",
+                "endDate"
+            ]
+        }
+    },
+    "startAt": "fetch_Sales_Summary",
+    "nodes": {
+        "fetch_Sales_Summary": {
+            "type": "action",
+            "handler": "fetchSalesSummary",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

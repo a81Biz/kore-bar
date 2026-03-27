@@ -2,6 +2,9 @@
 // auth.model.js
 // Capa de acceso a datos para autenticación.
 // Solo ejecuta fn_* (lecturas) — no hay mutaciones de auth.
+//
+// CAMBIO: getUserForPin ya no recibe pinCode — la comparación
+// se hace en el helper con bcrypt.compare(), no en SQL.
 // ============================================================
 
 import { executeQuery } from '../db/connection.js';
@@ -21,19 +24,18 @@ export const getUserForLogin = async (c, employeeNumber) => {
 };
 
 /**
- * Valida un PIN numérico y devuelve los datos de sesión POS.
- * isPinValid: true solo si el PIN coincide exactamente.
+ * Devuelve los datos del empleado + pinHash para que el helper
+ * pueda comparar con bcrypt.compare().
  * Retorna null si el empleado no existe o está inactivo.
  *
- * IMPORTANTE: Los parámetros necesitan casts explícitos ::VARCHAR
- * para que PostgreSQL resuelva la sobrecarga de fn_get_user_for_pin.
- * Sin ellos, pg envía `unknown` y la función no se encuentra (error 42883).
+ * CAMBIO: Ya no recibe pinCode. La función SQL devuelve el hash
+ * y la comparación se hace en Node con bcrypt (tiempo constante).
  */
-export const getUserForPin = async (c, employeeNumber, pinCode) => {
+export const getUserForPin = async (c, employeeNumber) => {
     const rows = await executeQuery(
         c,
-        `SELECT * FROM fn_get_user_for_pin($1::VARCHAR, $2::VARCHAR)`,
-        [employeeNumber, pinCode]
+        `SELECT * FROM fn_get_user_for_pin($1::VARCHAR)`,
+        [employeeNumber]
     );
     return rows[0] ?? null;
 };

@@ -1,0 +1,25 @@
+{
+    "id": "get_sales_by_waiter",
+    "name": "Get Sales By Waiter",
+    "description": "Obtiene rendimiento de ventas por mesero en un periodo.",
+    "api": {
+        "method": "GET",
+        "path": "/reports/sales-by-waiter",
+        "query": {
+            "properties": {
+                "startDate": { "type": "string", "example": "2026-01-01" },
+                "endDate":   { "type": "string", "example": "2026-01-31" }
+            },
+            "required": ["startDate", "endDate"]
+        }
+    },
+    "startAt": "fetchSalesByWaiter",
+    "nodes": {
+        "fetchSalesByWaiter": {
+            "type": "action",
+            "handler": "fetchSalesByWaiter",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

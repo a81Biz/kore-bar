@@ -8,6 +8,8 @@ import { mount as mountLogin } from './views/login.js';
 import { mount as mountDashboard } from './views/dashboard.js';
 import { mount as mountOrder } from './views/order.js';
 
+import { WaiterNotifications } from './realtime-notifications.js';
+
 /**
  * Core Orchestrator for the Vanilla JS Waiters App.
  * Dictates SPA flow natively consuming the PubSub bus reacting upon isolated Lego View state transitions.
@@ -15,10 +17,16 @@ import { mount as mountOrder } from './views/order.js';
 function initApp() {
     console.log("[App Engine] Initializing The Native Waiters Modules...");
 
-    PubSub.subscribe('AUTH_SUCCESS', (data) => {
-        console.log(`[Event: AUTH_SUCCESS] Routing User ${data.employeeNumber} to Dashboard...`);
-        const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.DASHBOARD);
-        mountDashboard(root, data);
+    PubSub.subscribe('AUTH_SUCCESS', async (employee) => {
+        state.session = employee;
+        viewManager.mount('tpl-dashboard');
+
+        // ─── NUEVO: Conectar notificaciones Realtime ─────────
+        await WaiterNotifications.connect(employee.employeeNumber, (readyItem) => {
+            // Callback: cuando un platillo pasa a READY, refrescar la vista si está en dashboard
+            // El toast y sonido ya se manejan internamente en el módulo
+            console.log('[Waiter] Platillo listo:', readyItem);
+        });
     });
 
     PubSub.subscribe('TABLE_SELECTED', (data) => {
@@ -34,10 +42,16 @@ function initApp() {
     });
 
     PubSub.subscribe('LOGOUT_TRIGGERED', () => {
-        console.log("[Event: LOGOUT_TRIGGERED] Terminating session context.");
-        const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.LOGIN);
-        mountLogin(root);
+        // ─── NUEVO: Desconectar notificaciones Realtime ──────
+        WaiterNotifications.disconnect();
+
+        state.session = null;
+        state.selectedTable = null;
+        viewManager.mount('tpl-login');
     });
+
+
+
 
     // Boot Default View
     const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.LOGIN);

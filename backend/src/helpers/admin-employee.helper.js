@@ -1,5 +1,6 @@
 import { AppError } from '../utils/errors.util.js';
 import * as modelEmployee from '../models/admin-employee.model.js';
+import { hashPin, isValidPinFormat } from '../utils/pin.util.js';
 
 // ==========================================
 // 1. INTEGRACIONES HR (Webhooks y Sincronización)
@@ -65,7 +66,10 @@ export const processHrWebhook = async (state, c) => {
     }
 
     try {
-        await modelEmployee.upsertEmployee(c, { employeeNumber, firstName, lastName, areaId, jobTitleId, hireDate, isActive });
+
+        const hrPayload = { employeeNumber, firstName, lastName, areaId, jobTitleId, hireDate, isActive };
+        await _hashPinIfPresent(hrPayload);
+        await modelEmployee.upsertEmployee(c, hrPayload);
         return { status: 'COMPLETED' };
     } catch (e) {
         throw new AppError("Error interno procesando el empleado", 500);
@@ -114,6 +118,7 @@ export const saveEmployee = async (state, c) => {
     }
 
     try {
+        await _hashPinIfPresent(payload);
         await modelEmployee.upsertEmployee(c, payload);
         return { status: 'COMPLETED' };
     } catch (e) {
@@ -131,6 +136,7 @@ export const updateEmployee = async (state, c) => {
     }
 
     try {
+        await _hashPinIfPresent(payload);
         await modelEmployee.upsertEmployee(c, payload);
         return { status: 'COMPLETED' };
     } catch (e) {
@@ -166,7 +172,7 @@ export const bulkSaveEmployees = async (state, c) => {
             if (payloadDate < dbDate) continue;
         }
 
-        await modelEmployee.upsertEmployee(c, {
+        const empPayload = {
             employeeNumber: emp.employeeNumber,
             firstName: emp.firstName,
             lastName: emp.lastName || '',
@@ -174,7 +180,9 @@ export const bulkSaveEmployees = async (state, c) => {
             jobTitleId: emp.jobTitleId,
             hireDate: emp.hireDate || new Date().toISOString().split('T')[0],
             isActive: emp.isActive !== undefined ? emp.isActive : true
-        });
+        };
+        await _hashPinIfPresent(empPayload);
+        await modelEmployee.upsertEmployee(c, empPayload);
     }
 
     return { status: 'COMPLETED' };
@@ -267,4 +275,17 @@ export const bulkDeactivateJobTitles = async (state, c) => {
     const codes = state.payload.codes || [];
     if (codes.length > 0) await modelEmployee.bulkDeactivateJobTitlesModel(c, codes);
     return { status: 'COMPLETED' };
+};
+
+const _hashPinIfPresent = async (payload) => {
+    if (payload.pinCode !== undefined && payload.pinCode !== null) {
+        const pinStr = String(payload.pinCode);
+
+        if (!isValidPinFormat(pinStr)) {
+            throw new AppError('El PIN debe ser de 4 a 6 dígitos numéricos.', 400);
+        }
+
+        payload.pinCode = await hashPin(pinStr);
+    }
+    return payload;
 };

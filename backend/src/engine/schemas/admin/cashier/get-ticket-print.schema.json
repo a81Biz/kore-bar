@@ -1,0 +1,18 @@
+{
+    "id": "get_ticket_print",
+    "name": "Get Ticket Print Data",
+    "description": "Obtiene los datos formateados de un ticket para impresión en formato 80mm.",
+    "api": {
+        "method": "GET",
+        "path": "/tickets/:folio/print"
+    },
+    "startAt": "fetchTicketPrintData",
+    "nodes": {
+        "fetchTicketPrintData": {
+            "type": "action",
+            "handler": "fetchTicketPrintData",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

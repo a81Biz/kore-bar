@@ -131,6 +131,15 @@ import waiterSubmitOrder from './schemas/public/pos/waiter-submit-order.schema.j
 // ── PUBLIC / TABLES ───────────────────────────────────────────
 import callWaiter from './schemas/public/tables/call-waiter.schema.json'   assert { type: 'json' };
 
+// ── SALES REPORT ───────────────────────────────────────────
+import fetchSalesReport from './schemas/inventory/get-sales-report.schema.json'   assert { type: 'json' };
+import fetchSalesSummary from './schemas/inventory/get-sales-summary.schema.json'   assert { type: 'json' };
+import fetchTopDishes from './schemas/inventory/get-top-dishes.schema.json'   assert { type: 'json' };
+import fetchSalesByCategory from './schemas/inventory/get-sales-by-category.schema.json'   assert { type: 'json' };
+import fetchSalesByWaiter from './schemas/inventory/get-sales-by-waiter.schema.json'   assert { type: 'json' };
+
+import fetchDashboardKpis from './schemas/inventory/get-dashboard-kpis.schema.json'   assert { type: 'json' };
+import fetchTicketPrintData from './schemas/admin/cashier/get-ticket-print.schema.json'   assert { type: 'json' };
 
 // ============================================================
 // REGISTRO CENTRAL organizado por subDir
@@ -156,14 +165,16 @@ export const schemasBySubDir = {
         createZone, deleteZone, getZones, updateZone,
         createSchedule, getSchedules, deleteSchedule, getAbsences,
         createPayrollDeduction, deletePayrollDeduction, exportPayrollData,
-        getPayrollHistory, recordAdminCheckin
+        getPayrollHistory, recordAdminCheckin, fetchTicketPrintData
     ],
 
     inventory: [
         createAdjustment, createSupplier, createTransfer,
         getInventory, getKardex, getSuppliers,
         supplierPrice, syncPurchases, webhookPurchase,
-        generatePurchaseSuggestions, getPurchaseSuggestions, sendPurchaseOrder
+        generatePurchaseSuggestions, getPurchaseSuggestions, sendPurchaseOrder,
+        fetchSalesReport, fetchSalesSummary, fetchTopDishes,
+        fetchSalesByCategory, fetchSalesByWaiter, fetchDashboardKpis
     ],
 
     kitchen: [

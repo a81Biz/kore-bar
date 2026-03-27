@@ -30,13 +30,13 @@ export async function mount(container) {
     // ── Control del PIN ───────────────────────────────────────────────────
     employeeSelect.addEventListener('change', (e) => {
         selectedEmployee = e.target.value;
-        pin = '';
+        pinCode = '';
         updateDots();
     });
 
     const updateDots = () => {
         pinDots.forEach((dot, i) => {
-            const filled = i < pin.length;
+            const filled = i < pinCode.length;
             dot.classList.toggle('bg-primary', filled);
             dot.classList.toggle('border-primary', filled);
             dot.classList.toggle('bg-transparent', !filled);
@@ -55,20 +55,21 @@ export async function mount(container) {
             const val = e.currentTarget.getAttribute('data-val');
 
             if (val === 'del') {
-                pin = pin.slice(0, -1);
+                pinCode = pin.slice(0, -1);
                 updateDots();
                 return;
             }
 
-            if (pin.length >= 4) return;
-            pin += val;
+            if (pinCode.length >= 4) return;
+            pinCode += val;
             updateDots();
 
-            if (pin.length === 4) {
+            if (pinCode.length === 4) {
                 try {
                     const res = await postData(ENDPOINTS.waiters.post.login, {
                         employeeNumber: selectedEmployee,
-                        pin
+                        context: 'waiter',
+                        pinCode
                     });
 
                     if (res.success) {
@@ -80,7 +81,7 @@ export async function mount(container) {
                     }
                 } catch (err) {
                     showErrorModal(err.message || 'Código PIN incorrecto o inválido.');
-                    pin = '';
+                    pinCode = '';
                     updateDots();
                 }
             }

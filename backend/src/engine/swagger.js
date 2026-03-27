@@ -30,6 +30,23 @@ export const generateOpenAPISpec = () => {
             schema: { type: 'string' }
         }));
 
+        const queryParams = [];
+        if (schema.api.query && schema.api.query.properties) {
+            const requiredFields = schema.api.query.required || [];
+            for (const [key, details] of Object.entries(schema.api.query.properties)) {
+                queryParams.push({
+                    name: key,
+                    in: 'query',
+                    required: requiredFields.includes(key),
+                    description: details.description || '',
+                    schema: {
+                        type: details.type || 'string',
+                        example: details.example
+                    }
+                });
+            }
+        }
+
         let requestBody = undefined;
         if (['post', 'put', 'patch'].includes(method) && schema.api.body) {
             requestBody = {
@@ -51,7 +68,7 @@ export const generateOpenAPISpec = () => {
             summary: schema.name || schema.id,
             description: schema.description || `Workflow autogenerado: ${schema.id}`,
             tags: schema.api.tags || ['General'],
-            parameters: pathParams,
+            parameters: [...pathParams, ...queryParams],
             requestBody,
             responses: {
                 '200': { description: 'Ejecución exitosa del Workflow' },

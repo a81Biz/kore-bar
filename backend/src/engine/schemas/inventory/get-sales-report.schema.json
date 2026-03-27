@@ -1,0 +1,36 @@
+{
+    "id": "get_sales_report",
+    "name": "Get Sales Report",
+    "description": "Obtiene el reporte histórico de ventas filtrado por rango de fechas, con desglose por ticket, platillo, mesero y categoría.",
+    "api": {
+        "method": "GET",
+        "path": "/reports/sales",
+        "query": {
+            "properties": {
+                "startDate": {
+                    "type": "string",
+                    "example": "2026-01-01",
+                    "description": "Fecha inicio YYYY-MM-DD"
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-01-31",
+                    "description": "Fecha fin YYYY-MM-DD"
+                }
+            },
+            "required": [
+                "startDate",
+                "endDate"
+            ]
+        }
+    },
+    "startAt": "fetchSalesReport",
+    "nodes": {
+        "fetchSalesReport": {
+            "type": "action",
+            "handler": "fetchSalesReport",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

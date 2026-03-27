@@ -102,7 +102,8 @@ export const KORE_CONFIG = {
                 MENU: 'tpl-admin-menu',
                 INVENTARIO: 'tpl-admin-inventario',
                 TURNOS: 'tpl-admin-turnos',
-                HORARIOS: 'tpl-admin-horarios'
+                HORARIOS: 'tpl-admin-horarios',
+                REPORTES: 'tpl-reportes'
             }
         },
 

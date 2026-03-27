@@ -1,0 +1,18 @@
+{
+    "id": "get_dashboard_kpis",
+    "name": "Get Dashboard KPIs",
+    "description": "Obtiene los indicadores clave en tiempo real del dashboard administrativo.",
+    "api": {
+        "method": "GET",
+        "path": "/dashboard/kpis"
+    },
+    "startAt": "fetchDashboardKpis",
+    "nodes": {
+        "fetchDashboardKpis": {
+            "type": "action",
+            "handler": "fetchDashboardKpis",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

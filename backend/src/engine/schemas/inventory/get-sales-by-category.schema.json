@@ -1,0 +1,25 @@
+{
+    "id": "get_sales_by_category",
+    "name": "Get Sales By Category",
+    "description": "Obtiene ventas agregadas por categoría del menú.",
+    "api": {
+        "method": "GET",
+        "path": "/reports/sales-by-category",
+        "query": {
+            "properties": {
+                "startDate": { "type": "string", "example": "2026-01-01" },
+                "endDate":   { "type": "string", "example": "2026-01-31" }
+            },
+            "required": ["startDate", "endDate"]
+        }
+    },
+    "startAt": "fetchSalesByCategory",
+    "nodes": {
+        "fetchSalesByCategory": {
+            "type": "action",
+            "handler": "fetchSalesByCategory",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

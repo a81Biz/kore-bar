@@ -1,0 +1,26 @@
+{
+    "id": "get_top_dishes",
+    "name": "Get Top Dishes",
+    "description": "Obtiene el ranking de platillos más vendidos por periodo.",
+    "api": {
+        "method": "GET",
+        "path": "/reports/top-dishes",
+        "query": {
+            "properties": {
+                "startDate": { "type": "string", "example": "2026-01-01" },
+                "endDate":   { "type": "string", "example": "2026-01-31" },
+                "limit":     { "type": "string", "example": "10" }
+            },
+            "required": ["startDate", "endDate"]
+        }
+    },
+    "startAt": "fetchTopDishes",
+    "nodes": {
+        "fetchTopDishes": {
+            "type": "action",
+            "handler": "fetchTopDishes",
+            "next": "end",
+            "onError": "end"
+        }
+    }
+}

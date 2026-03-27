@@ -1,13 +1,16 @@
 {
     "id": "auth_pin",
     "name": "Login PIN (POS)",
-    "description": "Autenticación con employee_number + PIN numérico para micrositios POS (meseros, caja, cocina). Devuelve JWT Bearer en body; el cliente lo guarda en memoria.",
+    "description": "Autenticación con employee_number + PIN numérico para micrositios POS (meseros, caja, cocina). Devuelve JWT Bearer en body. El campo context es opcional y controla validaciones adicionales (ej: 'cashier' exige can_access_cashier).",
     "api": {
         "method": "POST",
         "path": "/auth/pin",
         "auth": "none",
         "body": {
-            "required": ["employeeNumber", "pinCode"],
+            "required": [
+                "employeeNumber",
+                "pinCode"
+            ],
             "properties": {
                 "employeeNumber": {
                     "type": "string",
@@ -16,6 +19,11 @@
                 "pinCode": {
                     "type": "string",
                     "example": "1234"
+                },
+                "context": {
+                    "type": "string",
+                    "example": "waiter",
+                    "description": "Contexto del login: 'waiter', 'cashier', 'kitchen'. Controla validaciones adicionales."
                 }
             }
         }
@@ -33,11 +41,11 @@
             "response": {
                 "status": 200,
                 "body": {
-                    "token":            "{{state.data.token}}",
-                    "employeeNumber":   "{{state.data.employeeNumber}}",
-                    "firstName":        "{{state.data.firstName}}",
-                    "lastName":         "{{state.data.lastName}}",
-                    "areaCode":         "{{state.data.areaCode}}",
+                    "token": "{{state.data.token}}",
+                    "employeeNumber": "{{state.data.employeeNumber}}",
+                    "firstName": "{{state.data.firstName}}",
+                    "lastName": "{{state.data.lastName}}",
+                    "areaCode": "{{state.data.areaCode}}",
                     "canAccessCashier": "{{state.data.canAccessCashier}}"
                 }
             }

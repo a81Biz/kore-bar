@@ -149,6 +149,19 @@ import {
     recordAdminCheckin
 } from '../helpers/admin-turnos.helper.js';
 
+// ── REPORTS ───────────────────────────────────────
+import {
+    fetchSalesReport,
+    fetchSalesSummary,
+    fetchTopDishes,
+    fetchSalesByCategory,
+    fetchSalesByWaiter,
+    fetchDashboardKpis
+} from '../helpers/admin-reports.helper.js';
+
+import {
+    fetchTicketPrintData
+} from '../helpers/cashier-print.helper.js';
 
 // ============================================================
 // MAPA CENTRAL — KEY = handler en schema JSON
@@ -287,5 +300,19 @@ export const ActionRegistry = {
 
     // Inasistencias
     getAbsences,
+
+    // ── REGISTRO (agregar al objeto de acciones existente) ────────
+    // Reportes de ventas
+    fetchSalesReport,
+    fetchSalesSummary,
+    fetchTopDishes,
+    fetchSalesByCategory,
+    fetchSalesByWaiter,
+
+    // Dashboard KPIs
+    fetchDashboardKpis,
+
+    // Impresión de tickets
+    fetchTicketPrintData,
 
 };
