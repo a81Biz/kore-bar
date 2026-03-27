@@ -4,17 +4,17 @@ import { executeQuery, executeStoredProcedure } from '../db/connection.js';
 
 export const createCategory = async (c, code, name, description) =>
     await executeStoredProcedure(c, 'sp_create_menu_category', {
-        p_code:        code,
-        p_name:        name,
+        p_code: code,
+        p_name: name,
         p_description: description
     });
 
 export const updateCategory = async (c, code, name, description, isActive) =>
     await executeStoredProcedure(c, 'sp_update_menu_category', {
-        p_code:        code,
-        p_name:        name,
+        p_code: code,
+        p_name: name,
         p_description: description,
-        p_is_active:   isActive
+        p_is_active: isActive
     });
 
 export const getCategories = async (c) =>
@@ -32,23 +32,23 @@ export const deleteCategorySmart = async (c, code) =>
 
 export const createDish = async (c, code, catCode, name, desc, price, img) =>
     await executeStoredProcedure(c, 'sp_create_menu_dish', {
-        p_code:          code,
+        p_code: code,
         p_category_code: catCode,
-        p_name:          name,
-        p_description:   desc,
-        p_price:         price,
-        p_image_url:     img
+        p_name: name,
+        p_description: desc,
+        p_price: price,
+        p_image_url: img
     });
 
 export const updateDish = async (c, code, catCode, name, desc, price, img, isActive) =>
     await executeStoredProcedure(c, 'sp_update_menu_dish', {
-        p_code:          code,
+        p_code: code,
         p_category_code: catCode,
-        p_name:          name,
-        p_description:   desc,
-        p_price:         price,
-        p_image_url:     img,
-        p_is_active:     isActive
+        p_name: name,
+        p_description: desc,
+        p_price: price,
+        p_image_url: img,
+        p_is_active: isActive
     });
 
 export const getDishes = async (c) =>
@@ -61,7 +61,8 @@ export const getDishes = async (c) =>
                price,
                image_url      AS "imageUrl",
                is_active      AS "isActive",
-               has_recipe     AS "hasRecipe"
+               has_recipe     AS "hasRecipe",
+               preparation_method AS "preparationMethod"
         FROM vw_menu_dishes
     `);
 

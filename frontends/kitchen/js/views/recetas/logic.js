@@ -91,7 +91,7 @@ export const _data = {
             state.dom.btnSaveTech.textContent = 'Guardando...';
 
             const payload = {
-                prepMethod: state.dom.techPrepMethod.value,
+                preparationMethod: state.dom.techPrepMethod.value,
                 imageUrl: state.data.currentImageBase64 || state.data.activeTechDish.imageUrl || ''
             };
 
@@ -129,7 +129,7 @@ _actions.selectFinishedDish = async (dish, elementNode) => {
 
     try {
         const res = await fetchData(ENDPOINTS.kitchen.get.recipeBOM, { dishCode: dish.dishCode });
-        _render.techSheet(dish, res.data || []);
+        _render.techSheet(dish, res.data?.bom || []);
     } catch (error) {
         showErrorModal('No se pudieron cargar los ingredientes del platillo.', 'Error de Lectura');
         state.dom.techDishName.textContent = 'Error de conexión';

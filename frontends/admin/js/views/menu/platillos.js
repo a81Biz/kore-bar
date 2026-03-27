@@ -269,7 +269,7 @@ const logic = {
     cargarPlatillos: async () => {
         try {
             const res = await fetchData(ENDPOINTS.admin.get.menuDishes);
-            state.datos.platillos = Array.isArray(res?.data.dishes) ? res.data : [];
+            state.datos.platillos = Array.isArray(res?.data?.dishes) ? res.data.dishes : [];
             render.platillos();
         } catch (error) {
             console.error('[Menú] Error cargando platillos', error);
@@ -318,7 +318,7 @@ const logic = {
         render.renderBom([]);
         try {
             const res = await fetchData(ENDPOINTS.kitchen.get.recipeBOM.replace(':dishCode', dishCode));
-            render.renderBom(res.data);
+            render.renderBom(res.data?.bom || []);
         } catch (error) {
             console.warn('[Menú] Error recuperando BOM', error);
         }
