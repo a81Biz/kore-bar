@@ -5,7 +5,7 @@ import { ENDPOINTS } from '/shared/js/endpoints.js';
 import { showErrorModal } from '/shared/js/ui.js';
 
 export async function mount(container) {
-    let pin = '';
+    let pinCode = '';
     let selectedEmployee = null;
 
     const employeeSelect = container.querySelector('#employee-select');
@@ -55,7 +55,7 @@ export async function mount(container) {
             const val = e.currentTarget.getAttribute('data-val');
 
             if (val === 'del') {
-                pinCode = pin.slice(0, -1);
+                pinCode = pinCode.slice(0, -1);
                 updateDots();
                 return;
             }

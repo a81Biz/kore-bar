@@ -8,10 +8,11 @@ import { KORE_CONFIG } from '/core/js/kore.config.js';
 import { mount as mountSidebar } from './views/sidebar.js';
 import { mount as mountDashboard } from './views/dashboard.js';
 import { mount as mountEmpleados } from './views/empleados.js';
-import { PisoController } from './views/piso/index.js';
-import { MenuController } from './views/menu/index.js';
-import { InventarioController } from './views/inventario/index.js';
-import { TurnosController } from './views/turnos/index.js';
+import { PisoController }        from './views/piso/index.js';
+import { MenuController }        from './views/menu/index.js';
+import { InventarioController }  from './views/inventario/index.js';
+import { TurnosController }      from './views/turnos/index.js';
+import { ReportesController }    from './views/reportes/index.js';
 
 // 1. DICCIONARIO DE RUTAS (Objeto Literal)
 const Routes = {
@@ -38,6 +39,10 @@ const Routes = {
     'turnos': () => {
         const root = viewManager.mount(KORE_CONFIG.DOM.ADMIN.TEMPLATES.TURNOS);
         TurnosController.mount(root);
+    },
+    'reportes': () => {
+        const root = viewManager.mount(KORE_CONFIG.DOM.ADMIN.TEMPLATES.REPORTES);
+        ReportesController.mount(root);
     }
 };
 

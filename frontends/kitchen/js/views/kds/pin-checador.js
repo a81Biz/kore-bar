@@ -155,7 +155,11 @@ const _logic = {
         _state.dom.btnSubmit.disabled = true;
 
         try {
-            await postData(ENDPOINTS.kitchen.post.clockIn, { employeeNumber, pinCode });
+            await postData(ENDPOINTS.kitchen.post.clockIn, {
+                employeeNumber,
+                pinCode: pin,
+                context: 'kitchen'
+            });
 
             const nombre = _state.dom.select.options[_state.dom.select.selectedIndex]?.text || employeeNumber;
             showSuccessModal(`Entrada registrada para ${nombre}.`, '¡Bienvenido!');

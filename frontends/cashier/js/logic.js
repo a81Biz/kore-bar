@@ -21,6 +21,8 @@ export const initLogin = async () => {
     state.currentScreen = 'login';
     state.cashier = null;
     stopBoardPolling();
+    // Inicializar el módulo de impresión al arrancar (cachea el DOM del ticket)
+    TicketPrinter.init();
     showLoading(true);
     try {
         const json = await fetchData(ENDPOINTS.cashier.get.employees);
@@ -245,6 +247,10 @@ async function confirmPayment() {
         state.lastFolio = d.folio;
 
         renderTicketSuccess(d.folio, d.total || selectedTable.total);
+
+        // Imprimir ticket térmico automáticamente tras cobro exitoso
+        await TicketPrinter.print(d.folio);
+
         document.getElementById('btn-close-success')?.addEventListener('click', async () => {
             document.getElementById('payment-modal')?.remove();
             state.selectedTable = null;

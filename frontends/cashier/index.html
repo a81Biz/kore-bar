@@ -48,6 +48,22 @@
         rel="stylesheet" />
 
     <link href="css/cashier.css" rel="stylesheet" />
+
+    <!-- Estilos de impresión para ticket térmico 80mm -->
+    <style>
+        @media print {
+            body > *:not(#ticket-print-container) { display: none !important; }
+            #ticket-print-container {
+                display: block !important;
+                position: fixed;
+                top: 0; left: 0;
+                width: 80mm;
+                margin: 0; padding: 0;
+            }
+            * { background: white !important; color: black !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            @page { size: 80mm auto; margin: 0; }
+        }
+    </style>
 </head>
 
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
@@ -62,6 +78,47 @@
 
     <!-- SPA Mount Point -->
     <div id="app"></div>
+
+    <!-- Ticket de Impresión Térmica 80mm (oculto, visible sólo al imprimir) -->
+    <div id="ticket-print-container" class="hidden">
+        <div id="ticket-print-content" style="width:72mm;margin:0 auto;font-family:'Courier New',monospace;font-size:11px;color:#000;line-height:1.4;padding:4mm;">
+            <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;">
+                <div style="font-size:16px;font-weight:bold;" id="print-business-name"></div>
+                <div style="font-size:9px;" id="print-rfc"></div>
+                <div style="font-size:9px;" id="print-address"></div>
+            </div>
+            <div style="margin-bottom:6px;font-size:10px;">
+                <div><strong>Folio:</strong> <span id="print-folio"></span></div>
+                <div><strong>Fecha:</strong> <span id="print-date"></span></div>
+                <div><strong>Mesa:</strong> <span id="print-table"></span> | <strong>Zona:</strong> <span id="print-zone"></span></div>
+                <div><strong>Mesero:</strong> <span id="print-waiter"></span></div>
+            </div>
+            <div style="border-top:1px dashed #000;margin:4px 0;"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:10px;margin-bottom:2px;">
+                <span style="flex:2;">Producto</span>
+                <span style="flex:0.5;text-align:center;">Cant</span>
+                <span style="flex:1;text-align:right;">P.U.</span>
+                <span style="flex:1;text-align:right;">Total</span>
+            </div>
+            <div style="border-top:1px solid #000;margin-bottom:4px;"></div>
+            <div id="print-items"></div>
+            <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+            <div style="font-size:11px;">
+                <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span id="print-subtotal"></span></div>
+                <div style="display:flex;justify-content:space-between;"><span>IVA (16%):</span><span id="print-tax"></span></div>
+                <div style="display:flex;justify-content:space-between;"><span>Propina:</span><span id="print-tip"></span></div>
+                <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;margin-top:4px;border-top:1px solid #000;padding-top:4px;">
+                    <span>TOTAL:</span><span id="print-total"></span>
+                </div>
+            </div>
+            <div style="margin-top:6px;font-size:10px;text-align:center;">Método de pago: <strong id="print-payment-method"></strong></div>
+            <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+            <div style="text-align:center;font-size:10px;">
+                <div id="print-footer-message" style="margin-bottom:4px;"></div>
+                <div id="print-invoice-status" style="font-size:9px;"></div>
+            </div>
+        </div>
+    </div>
 
     <!--
         ⚠️  NOTA ARQUITECTÓNICA (view.js):
