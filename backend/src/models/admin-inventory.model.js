@@ -59,16 +59,18 @@ export const getInventoryStock = async (c, locationCode = null) => {
         SELECT
             ii.code,
             ii.name,
-            ii.unit_measure          AS "unitMeasure",
-            ii.recipe_unit           AS "recipeUnit",
-            ii.minimum_stock         AS "minStock",
-            ii.conversion_factor     AS "conversionFactor",
-            COALESCE(isl.stock, 0)   AS "totalStock",
-            COALESCE(isl.stock, 0)   AS "stock",
-            il.code                  AS "locationCode"
+            ii.unit_measure              AS "unitMeasure",
+            ii.recipe_unit               AS "recipeUnit",
+            ii.minimum_stock             AS "minStock",
+            ii.conversion_factor         AS "conversionFactor",
+            COALESCE(isl.stock, 0)       AS "totalStock",
+            COALESCE(isl.stock, 0)       AS "stock",
+            il.code                      AS "locationCode",
+            COALESCE(dtc.theoretical_qty, 0) AS "dailyConsumption"
         FROM inventory_items ii
         JOIN inventory_stock_locations isl ON isl.item_id    = ii.id
         JOIN inventory_locations il        ON il.id          = isl.location_id
+        LEFT JOIN vw_daily_theoretical_consumption dtc ON dtc.item_id = ii.id
         WHERE ${where}
         ORDER BY ii.name ASC
     `, params);

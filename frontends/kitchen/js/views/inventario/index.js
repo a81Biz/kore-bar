@@ -32,13 +32,21 @@ const render = {
             const clon = state.dom.tplRow.content.cloneNode(true);
             clon.querySelector('.col-name').textContent = item.itemName;
             clon.querySelector('.col-code').textContent = item.itemCode;
-            clon.querySelector('.col-teorico').textContent = `${item.currentStock} ${item.unit}`;
+
+            const stock = parseFloat(item.currentStock) || 0;
+            const consumed = parseFloat(item.dailyConsumption) || 0;
+            const expected = stock - consumed;
+
+            clon.querySelector('.col-teorico').textContent = `${stock} ${item.unit}`;
+            clon.querySelector('.col-consumo').textContent = `${consumed} ${item.unit}`;
+            clon.querySelector('.col-esperado').textContent = `${expected.toFixed(3)} ${item.unit}`;
             clon.querySelector('.col-unit').textContent = item.unit;
 
             const inputReal = clon.querySelector('.input-real-stock');
             inputReal.setAttribute('data-index', index);
-            // Pre-rellenamos con el teórico para conteo por excepción
-            inputReal.value = item.currentStock;
+            // Pre-rellenamos con el ESPERADO (stock - consumo teórico)
+            // para conteo por excepción: el chef solo corrige lo que difiere
+            inputReal.value = expected.toFixed(3);
 
             state.dom.tableBody.appendChild(clon);
         });
@@ -49,10 +57,8 @@ const render = {
 const logic = {
     loadStock: async () => {
         try {
-            // ✅ ENDPOINTS.kitchen.get.kitchenStock ya incluye ?location=LOC-COCINA
-            // No se concatena la query string manualmente aquí
             const res = await fetchData(ENDPOINTS.kitchen.get.kitchenStock);
-            state = res.data || [];
+            state.stock = res.data || [];   // FIX: era "state = res.data"
             render.stockList();
         } catch (error) {
             showErrorModal('No se pudo cargar el inventario teórico local.', 'Error de Lectura');

@@ -67,9 +67,9 @@ export const KORE_CONFIG = {
         WAITERS: { enabled: true, host: `waiters.${BASE_DOMAIN}` },
         INVOICE: { enabled: true, host: `invoice.${BASE_DOMAIN}` },
         API_DOCS: { enabled: true, host: `api.${BASE_DOMAIN}/api/docs` },
-        DOCS: { enabled: true, url: 'https://kore.bar/docs', external: true },
+        DOCS: { enabled: true, url: 'https://github.com/a81Biz/kore-bar/tree/main/docs', external: true },
         GITHUB: { enabled: true, url: 'https://github.com/a81Biz/kore-bar', external: true },
-        JIRA: { enabled: true, url: 'https://a81biz.atlassian.net/jira/software/c/projects/SGRM/boards/140?atlOrigin=eyJpIjoiNmM3NWNlMGMyZjgxNDUwMWIxMzNkODgxOWUxZjBlZGQiLCJwIjoiaiJ9', external: true }
+        JIRA: { enabled: true, url: 'https://a81biz.github.io/kore-bar/', external: true }
     },
 
     // ── Diccionario del DOM ──────────────────────────────────────────────────
