@@ -47,14 +47,16 @@ export const ENDPOINTS = {
             absences: '/admin/attendance/absences',
             payrollHistory: '/admin/attendance/payroll',
             payrollExport: '/admin/attendance/payroll/export',
+            // ── FIX: Reportes están en router inventory, no admin ──
             reports: {
-                sales: '/admin/reports/sales',
-                salesSummary: '/admin/reports/sales-summary',
-                topDishes: '/admin/reports/top-dishes',
-                salesByCategory: '/admin/reports/sales-by-category',
-                salesByWaiter: '/admin/reports/sales-by-waiter',
+                sales: '/inventory/reports/sales',
+                salesSummary: '/inventory/reports/sales-summary',
+                topDishes: '/inventory/reports/top-dishes',
+                salesByCategory: '/inventory/reports/sales-by-category',
+                salesByWaiter: '/inventory/reports/sales-by-waiter',
             },
-            dashboardKpis: '/admin/dashboard/kpis',
+            // ── FIX: KPIs están en router inventory, no admin ──
+            dashboardKpis: '/inventory/dashboard/kpis',
         },
         post: {
             zone: '/admin/zones',
@@ -111,7 +113,8 @@ export const ENDPOINTS = {
             board: '/admin/cashier/board',
             corte: '/admin/cashier/corte',
             ticket: '/admin/cashier/tickets/:folio',
-            ticketPrint: '/cashier/tickets/:folio/print'
+            // ── FIX: ticket print está en router admin como /tickets/:folio/print ──
+            ticketPrint: '/admin/tickets/:folio/print'
         },
         post: {
             login: '/admin/auth/pin',
