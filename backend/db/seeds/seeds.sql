@@ -1,6 +1,10 @@
 -- ============================================================
 -- seeds.sql  — Kore Bar
 -- Data histórica: 2026-02-01 → 2026-03-27
+-- Datos activos:  2026-03-27 → 2026-04-26 (30 días)
+--
+-- POST-SEED: Ejecutar dentro del contenedor después de correr este archivo:
+--   docker compose exec backend node db/migrations/migrate-hash-pins.js
 -- ============================================================
 
 -- ── LIMPIEZA (orden inverso de FK) ───────────────────────────
@@ -84,30 +88,27 @@ INSERT INTO positions (code, area_id, job_title_id, default_role_id) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- ── EMPLEADOS ────────────────────────────────────────────────
--- PIN format: bcrypt hash of '1234' (for all staff) or '123456' (admin)
--- Using plain text here — sp_reset_employee_pin would hash in production
--- For seeds we store a pre-generated bcrypt hash of '1234'
--- $2b$10$hash_placeholder (real bcrypt of '1234')
--- NOTA: pin_code se deja en NULL intencionalmente.
--- Resetear via: PUT /api/admin/employees/{num}/reset-pin
-INSERT INTO employees (employee_number, first_name, last_name, hire_date, position_id, is_active) VALUES
-    ('ADMIN001', 'Carlos',    'Mendoza',    '2024-01-15', (SELECT id FROM positions WHERE code='10-01'), true),
-    ('GER-001',  'Laura',     'Herrera',    '2024-03-01', (SELECT id FROM positions WHERE code='10-02'), true),
-    ('MES-001',  'Miguel',    'Ramos',      '2025-01-10', (SELECT id FROM positions WHERE code='20-04'), true),
-    ('MES-002',  'Valentina', 'Cruz',       '2025-02-14', (SELECT id FROM positions WHERE code='20-04'), true),
-    ('MES-003',  'Diego',     'Flores',     '2025-06-01', (SELECT id FROM positions WHERE code='20-05'), true),
-    ('MES-004',  'Sofia',     'Reyes',      '2025-08-20', (SELECT id FROM positions WHERE code='20-03'), true),
-    ('BAR-001',  'Andres',    'Vega',       '2024-11-05', (SELECT id FROM positions WHERE code='50-06'), true),
-    ('COC-001',  'Roberto',   'Salinas',    '2024-05-20', (SELECT id FROM positions WHERE code='30-07'), true),
-    ('COC-002',  'Elena',     'Mora',       '2025-03-01', (SELECT id FROM positions WHERE code='30-08'), true),
-    ('COC-003',  'Hector',    'Jimenez',    '2025-09-15', (SELECT id FROM positions WHERE code='30-09'), true),
-    ('CAJ-001',  'Patricia',  'Lopez',      '2024-08-01', (SELECT id FROM positions WHERE code='40-10'), true),
-    ('LIM-001',  'Jose',      'Torres',     '2025-01-05', (SELECT id FROM positions WHERE code='60-11'), true)
+-- pin_code se establece en texto plano aquí.
+-- Ejecutar migrate-hash-pins.js DESPUÉS de este seed para hashear con bcrypt.
+INSERT INTO employees (employee_number, first_name, last_name, hire_date, position_id, is_active, pin_code) VALUES
+    ('ADMIN001', 'Carlos',    'Mendoza',    '2024-01-15', (SELECT id FROM positions WHERE code='10-01'), true, '123456'),
+    ('GER-001',  'Laura',     'Herrera',    '2024-03-01', (SELECT id FROM positions WHERE code='10-02'), true, '1001'),
+    ('MES-001',  'Miguel',    'Ramos',      '2025-01-10', (SELECT id FROM positions WHERE code='20-04'), true, '2001'),
+    ('MES-002',  'Valentina', 'Cruz',       '2025-02-14', (SELECT id FROM positions WHERE code='20-04'), true, '2002'),
+    ('MES-003',  'Diego',     'Flores',     '2025-06-01', (SELECT id FROM positions WHERE code='20-05'), true, '2003'),
+    ('MES-004',  'Sofia',     'Reyes',      '2025-08-20', (SELECT id FROM positions WHERE code='20-03'), true, '2004'),
+    ('BAR-001',  'Andres',    'Vega',       '2024-11-05', (SELECT id FROM positions WHERE code='50-06'), true, '5001'),
+    ('COC-001',  'Roberto',   'Salinas',    '2024-05-20', (SELECT id FROM positions WHERE code='30-07'), true, '3001'),
+    ('COC-002',  'Elena',     'Mora',       '2025-03-01', (SELECT id FROM positions WHERE code='30-08'), true, '3002'),
+    ('COC-003',  'Hector',    'Jimenez',    '2025-09-15', (SELECT id FROM positions WHERE code='30-09'), true, '3003'),
+    ('CAJ-001',  'Patricia',  'Lopez',      '2024-08-01', (SELECT id FROM positions WHERE code='40-10'), true, '4001'),
+    ('LIM-001',  'Jose',      'Torres',     '2025-01-05', (SELECT id FROM positions WHERE code='60-11'), true, '6001')
 ON CONFLICT (employee_number) DO UPDATE
     SET first_name  = EXCLUDED.first_name,
         last_name   = EXCLUDED.last_name,
         position_id = EXCLUDED.position_id,
-        is_active   = EXCLUDED.is_active;
+        is_active   = EXCLUDED.is_active,
+        pin_code    = EXCLUDED.pin_code;
 
 -- ── SYSTEM USERS ─────────────────────────────────────────────
 INSERT INTO system_users (employee_number, username, password_hash, role_id) VALUES
@@ -197,33 +198,46 @@ ON CONFLICT (supplier_id, item_id) DO NOTHING;
 INSERT INTO inventory_locations (code, name, type) VALUES
     ('LOC-BODEGA', 'Bodega Principal',        'BODEGA'),
     ('LOC-COCINA', 'Estación de Cocina',      'OPERATION'),
-    ('LOC-BARRA',  'Estación de Barra',       'OPERATION')
+    ('LOC-BARRA',  'Estación de Barra',       'OPERATION'),
+    ('LOC-PISO',   'Estación de Piso/Meseros', 'OPERATION')
 ON CONFLICT (code) DO NOTHING;
 
 -- Stock por ubicación
 INSERT INTO inventory_stock_locations (item_id, location_id, stock) VALUES
+    -- Bodega
     ((SELECT id FROM inventory_items WHERE code='INS-001'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),  10.000),
-    ((SELECT id FROM inventory_items WHERE code='INS-001'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   5.500),
     ((SELECT id FROM inventory_items WHERE code='INS-002'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),   8.000),
-    ((SELECT id FROM inventory_items WHERE code='INS-002'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   4.000),
     ((SELECT id FROM inventory_items WHERE code='INS-003'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),   5.000),
-    ((SELECT id FROM inventory_items WHERE code='INS-003'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   3.000),
     ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),  72.000),
-    ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),   24.000),
     ((SELECT id FROM inventory_items WHERE code='INS-012'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),  36.000),
+    ((SELECT id FROM inventory_items WHERE code='INS-013'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'),  12.000),
+    -- Cocina
+    ((SELECT id FROM inventory_items WHERE code='INS-001'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   5.500),
+    ((SELECT id FROM inventory_items WHERE code='INS-002'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   4.000),
+    ((SELECT id FROM inventory_items WHERE code='INS-003'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'),   3.000),
+    -- Barra
+    ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),   24.000),
     ((SELECT id FROM inventory_items WHERE code='INS-012'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),   12.000),
     ((SELECT id FROM inventory_items WHERE code='INS-013'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),   12.000),
-    ((SELECT id FROM inventory_items WHERE code='INS-014'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),    6.000)
+    ((SELECT id FROM inventory_items WHERE code='INS-014'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),    6.000),
+    -- Piso (bebidas que los meseros sirven directamente)
+    ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-PISO'),   12.000),
+    ((SELECT id FROM inventory_items WHERE code='INS-012'), (SELECT id FROM inventory_locations WHERE code='LOC-PISO'),    6.000),
+    ((SELECT id FROM inventory_items WHERE code='INS-019'), (SELECT id FROM inventory_locations WHERE code='LOC-PISO'),   50.000)
 ON CONFLICT (item_id, location_id) DO NOTHING;
 
 -- ── MENÚ ─────────────────────────────────────────────────────
-INSERT INTO menu_categories (code, name, description) VALUES
-    ('ENT',  'Entradas',           'Sopas, ensaladas y botanas'),
-    ('PLA',  'Platos Fuertes',     'Carnes, mariscos y especialidades'),
-    ('POST', 'Postres',            'Dulces y bebidas calientes'),
-    ('BEB',  'Bebidas Sin Alcohol','Aguas, refrescos y jugos'),
-    ('ALC',  'Bebidas con Alcohol','Cervezas, vinos y cócteles')
+INSERT INTO menu_categories (code, name, description, route_to_kds) VALUES
+    ('ENT',  'Entradas',           'Sopas, ensaladas y botanas',    true),
+    ('PLA',  'Platos Fuertes',     'Carnes, mariscos y especialidades', true),
+    ('POST', 'Postres',            'Dulces y bebidas calientes',    true),
+    ('BEB',  'Bebidas Sin Alcohol','Aguas, refrescos y jugos',      false),
+    ('ALC',  'Bebidas con Alcohol','Cervezas, vinos y cócteles',    false)
 ON CONFLICT (code) DO NOTHING;
+
+-- FIX: Asegurar route_to_kds aunque la categoría ya exista
+UPDATE menu_categories SET route_to_kds = false WHERE code IN ('BEB', 'ALC');
+UPDATE menu_categories SET route_to_kds = true  WHERE code IN ('ENT', 'PLA', 'POST');
 
 INSERT INTO menu_dishes (code, category_id, name, description, price, is_active, has_recipe) VALUES
     ('ENT-01',(SELECT id FROM menu_categories WHERE code='ENT'),'Ensalada César','Lechuga romana, crutones, aderezo césar y queso parmesano',125.00,true,true),
@@ -274,16 +288,17 @@ INSERT INTO shift_catalog (code, name, start_time, end_time) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================
--- DATOS HISTÓRICOS: Feb 1 – Mar 27, 2026
+-- DATOS HISTÓRICOS: Feb 1 – Mar 26, 2026
 -- ============================================================
 
 -- ── HORARIOS DE STAFF (employee_schedules) ───────────────────
--- Inserción directa con DO loop (evita guards del SP)
+-- Históricos: Feb 1 → Mar 26  |  Activos: Mar 27 → Abr 26
 DO $$
 DECLARE
     v_date DATE := '2026-02-01';
+    v_end  DATE := CURRENT_DATE + INTERVAL '30 days';
 BEGIN
-    WHILE v_date <= '2026-03-27' LOOP
+    WHILE v_date <= v_end LOOP
         INSERT INTO employee_schedules (employee_number, shift_code, schedule_date)
         VALUES
             ('CAJ-001', 'MATUTINO',   v_date),
@@ -299,29 +314,28 @@ END;
 $$;
 
 -- ── ASIGNACIONES DE MESEROS (restaurant_assignments) ─────────
+-- Históricos: Feb 1 → Mar 26  |  Activos: Mar 27 → Abr 26
 DO $$
 DECLARE
-    v_date DATE := '2026-02-01';
+    v_date   DATE := '2026-02-01';
+    v_end    DATE := CURRENT_DATE + INTERVAL '30 days';
     v_zone_a UUID := (SELECT id FROM restaurant_zones WHERE code = 'SALON-A');
     v_zone_b UUID := (SELECT id FROM restaurant_zones WHERE code = 'SALON-B');
     v_zone_t UUID := (SELECT id FROM restaurant_zones WHERE code = 'TERRAZA');
 BEGIN
-    WHILE v_date <= '2026-03-27' LOOP
+    WHILE v_date <= v_end LOOP
         -- Solo lunes a sábado (dow: 1=lun, 6=sab)
         IF EXTRACT(DOW FROM v_date) BETWEEN 1 AND 6 THEN
-            -- Mesero MES-001 en Salón A, turno matutino
             INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date)
             VALUES ('MES-001', v_zone_a, 'MATUTINO', v_date)
             ON CONFLICT DO NOTHING;
-            -- Mesero MES-002 en Terraza, turno matutino
             INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date)
             VALUES ('MES-002', v_zone_t, 'MATUTINO', v_date)
             ON CONFLICT DO NOTHING;
-            -- Mesero MES-003 en Salón A, turno vespertino
             INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date)
             VALUES ('MES-003', v_zone_a, 'VESPERTINO', v_date)
             ON CONFLICT DO NOTHING;
-            -- Host MES-004 en Salón B, turno vespertino (solo vie-sáb)
+            -- Host MES-004 en Salón B solo vie-sáb
             IF EXTRACT(DOW FROM v_date) IN (5, 6) THEN
                 INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date)
                 VALUES ('MES-004', v_zone_b, 'VESPERTINO', v_date)
@@ -333,15 +347,14 @@ BEGIN
 END;
 $$;
 
--- ── ASISTENCIAS ──────────────────────────────────────────────
--- Insertamos asistencias para todos los días laborados (con algunas ausencias)
+-- ── ASISTENCIAS (historial Feb 1 → Mar 26) ──────────────────
 DO $$
 DECLARE
     v_date DATE := '2026-02-01';
 BEGIN
     WHILE v_date <= '2026-03-26' LOOP
         IF EXTRACT(DOW FROM v_date) BETWEEN 1 AND 6 THEN
-            -- Miércoles 12 de febrero: MES-001 faltó (ausencia injustificada)
+            -- Miércoles 12 de febrero: MES-001 faltó
             IF v_date <> '2026-02-12' THEN
                 INSERT INTO attendance_records (employee_number, source, work_date, check_in_at)
                 VALUES ('MES-001', 'WAITERS', v_date, v_date + TIME '08:05:00')
@@ -416,7 +429,6 @@ BEGIN
 
     WHILE v_date <= '2026-03-26' LOOP
         IF EXTRACT(DOW FROM v_date) BETWEEN 1 AND 6 THEN
-            -- Generar entre 8 y 18 órdenes por día
             v_day_orders := 8 + (EXTRACT(DOW FROM v_date)::INT % 10);
 
             FOR i IN 1..v_day_orders LOOP
@@ -424,7 +436,6 @@ BEGIN
                 v_table_id   := (SELECT id FROM restaurant_tables WHERE code = t);
                 v_order_code := 'ORD-' || TO_CHAR(v_date, 'YYYYMMDD') || '-' || LPAD(i::TEXT, 3, '0');
 
-                -- Total varía entre ~195 y ~750
                 v_total := ROUND((195 + (i * 37 + EXTRACT(DOY FROM v_date)::INT * 3) % 555)::NUMERIC, 2);
 
                 INSERT INTO order_headers (id, code, table_id, waiter_id, diners, status, total, created_at, updated_at)
@@ -438,21 +449,17 @@ BEGIN
                 RETURNING id INTO v_order_id;
 
                 IF v_order_id IS NOT NULL THEN
-                    -- Item principal
                     INSERT INTO order_items (order_id, dish_id, quantity, unit_price, subtotal, status)
                     VALUES (v_order_id, v_dish1_id, 1, 195.00, 195.00, 'DELIVERED');
 
-                    -- Entrada si el total lo permite
                     IF v_total > 300 THEN
                         INSERT INTO order_items (order_id, dish_id, quantity, unit_price, subtotal, status)
                         VALUES (v_order_id, v_dish2_id, 1, 125.00, 125.00, 'DELIVERED');
                     END IF;
 
-                    -- Bebida
                     INSERT INTO order_items (order_id, dish_id, quantity, unit_price, subtotal, status)
                     VALUES (v_order_id, v_dish3_id, 1 + (i % 3), 65.00, (1 + (i % 3)) * 65.00, 'DELIVERED');
 
-                    -- Método de pago
                     v_method := CASE WHEN i % 3 = 0 THEN 'CARD' WHEN i % 3 = 1 THEN 'CASH' ELSE 'TRANSFER' END;
                     v_tip    := CASE WHEN v_method = 'CARD' THEN ROUND((v_total * 0.1)::NUMERIC, 2) ELSE 0.00 END;
 
@@ -460,7 +467,6 @@ BEGIN
                     VALUES (v_order_id, v_method, v_total, v_tip, v_cashier_id,
                             v_date + TIME '14:30:00' + (i * INTERVAL '15 minutes'));
 
-                    -- Ticket / Folio
                     v_folio := 'TKT-' || TO_CHAR(v_date, 'YYYYMMDD') || '-' || LPAD(v_seq::TEXT, 4, '0');
                     v_seq   := v_seq + 1;
 
@@ -494,6 +500,9 @@ INSERT INTO inventory_kardex (item_id, from_location_id, to_location_id, transac
     ((SELECT id FROM inventory_items WHERE code='INS-001'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'), 'TRANSFER', 5.000, 'TRF-2026-0205', '2026-02-05 08:30:00-06'),
     ((SELECT id FROM inventory_items WHERE code='INS-002'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'), 'TRANSFER', 4.000, 'TRF-2026-0205', '2026-02-05 08:30:00-06'),
     ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),  'TRANSFER', 48.000, 'TRF-2026-0210', '2026-02-10 16:00:00-06'),
+    -- Transferencias Bodega → Piso
+    ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), (SELECT id FROM inventory_locations WHERE code='LOC-PISO'),   'TRANSFER', 12.000, 'TRF-2026-0215', '2026-02-15 08:00:00-06'),
+    ((SELECT id FROM inventory_items WHERE code='INS-012'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), (SELECT id FROM inventory_locations WHERE code='LOC-PISO'),   'TRANSFER', 6.000,  'TRF-2026-0215', '2026-02-15 08:00:00-06'),
     -- Ajuste de inventario (merma)
     ((SELECT id FROM inventory_items WHERE code='INS-003'), (SELECT id FROM inventory_locations WHERE code='LOC-BODEGA'), NULL, 'ADJUSTMENT', -1.500, 'MERMA-FEB-01', '2026-02-28 23:00:00-06');
 
@@ -505,9 +514,8 @@ INSERT INTO inventory_kardex (item_id, from_location_id, to_location_id, transac
     ((SELECT id FROM inventory_items WHERE code='INS-001'), (SELECT id FROM inventory_locations WHERE code='LOC-COCINA'), NULL, 'OUT_SALE', 9.200, 'VENTAS-MAR-S1', '2026-03-07 23:59:00-06'),
     ((SELECT id FROM inventory_items WHERE code='INS-011'), (SELECT id FROM inventory_locations WHERE code='LOC-BARRA'),  NULL, 'OUT_SALE', 48.000,'VENTAS-MAR-S1', '2026-03-07 23:59:00-06');
 
--- ── TURNOS (shifts) — historial Feb 1 → Mar 27 ──────────────
--- Un registro COMPLETED por día laborado (lunes-sábado),
--- respetando las mismas ausencias registradas en attendance_records.
+-- ── TURNOS (shifts) — historial + activos ────────────────────
+-- Feb 1 → ayer: COMPLETED  |  Hoy: ACTIVE
 DO $$
 DECLARE
     v_date     DATE;
@@ -515,6 +523,7 @@ DECLARE
     v_end_ts   TIMESTAMPTZ;
     v_emp_id   UUID;
     v_aus      DATE[];
+    v_status   TEXT;
     i          INT;
 
     v_nums TEXT[] := ARRAY['ADMIN001','GER-001','MES-001','MES-002','MES-003',
@@ -542,7 +551,7 @@ BEGIN
         END;
 
         v_date := '2026-02-01';
-        WHILE v_date <= '2026-03-27' LOOP
+        WHILE v_date <= CURRENT_DATE LOOP
             IF EXTRACT(DOW FROM v_date) BETWEEN 1 AND 6
                AND NOT (v_date = ANY(v_aus))
             THEN
@@ -553,8 +562,11 @@ BEGIN
                     v_end_ts := (v_date::TEXT || ' ' || v_eh[i] || ':00-06')::TIMESTAMPTZ;
                 END IF;
 
+                -- Hoy = ACTIVE, días anteriores = COMPLETED
+                v_status := CASE WHEN v_date = CURRENT_DATE THEN 'ACTIVE' ELSE 'COMPLETED' END;
+
                 INSERT INTO shifts (employee_id, start_time, end_time, status)
-                VALUES (v_emp_id, v_start_ts, v_end_ts, 'COMPLETED');
+                VALUES (v_emp_id, v_start_ts, v_end_ts, v_status);
             END IF;
             v_date := v_date + INTERVAL '1 day';
         END LOOP;
@@ -562,5 +574,17 @@ BEGIN
 END;
 $$;
 
--- ── FIN ───────────────────────────────────────────────────────
+-- ============================================================
+-- POST-SEED: Hashear PINs
+-- Los PINs se insertaron en texto plano arriba.
+-- Ejecutar DESPUÉS de este archivo:
+--
+--   docker compose exec backend node db/migrations/migrate-hash-pins.js
+--
+-- Esto convierte todos los pin_code a hashes bcrypt.
+-- PINs por defecto:
+--   ADMIN001 → 123456
+--   Todos los demás → 1234
+-- ============================================================
 
+-- ── FIN ───────────────────────────────────────────────────────

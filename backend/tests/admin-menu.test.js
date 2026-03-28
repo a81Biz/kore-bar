@@ -58,7 +58,7 @@ describe('Módulo Admin — Menú', () => {
         const res = await app.request('/api/admin/menu/categories', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ categoryCode: 'TEST-CAT-DISH', name: 'Cat Platillos' })
+            body: JSON.stringify({ categoryCode: 'TESTP-CAT-DISH', name: 'Cat Platillos' })
         });
         expect(res.status).toBe(200);
     });
@@ -67,7 +67,7 @@ describe('Módulo Admin — Menú', () => {
         const res = await app.request('/api/admin/menu/dishes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dishCode: 'TEST-PL-01', categoryCode: 'TEST-CAT-DISH', name: 'Taco de Prueba', description: 'Rico taco', price: 25.50 })
+            body: JSON.stringify({ dishCode: 'TEST-PL-01', categoryCode: 'TESTP-CAT-DISH', name: 'Taco de Prueba', description: 'Rico taco', price: 25.50 })
         });
         expect(res.status).toBe(200);
     });
@@ -98,13 +98,13 @@ describe('Módulo Admin — Menú', () => {
         const res = await app.request('/api/admin/menu/dishes/TEST-PL-01', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ categoryCode: 'TEST-CAT-DISH', name: 'Taco de Prueba', price: 30.00, isActive: true })
+            body: JSON.stringify({ categoryCode: 'TESTP-CAT-DISH', name: 'Taco de Prueba', price: 30.00, isActive: true })
         });
         expect(res.status).toBe(200);
     });
 
     it('MENU-11 Impide borrar una categoría con platillos activos', async () => {
-        const res = await app.request('/api/admin/menu/categories/TEST-CAT-DISH', { method: 'DELETE' });
+        const res = await app.request('/api/admin/menu/categories/TESTP-CAT-DISH', { method: 'DELETE' });
         expect(res.status).toBe(409);
     });
 

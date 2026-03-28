@@ -5,9 +5,13 @@
 // ✅ Usa http.client.js (fetchData / postData) en lugar de fetch() directo.
 // ✅ Usa ENDPOINTS en lugar de URLs hardcodeadas.
 // ✅ No contiene lógica de renderizado — toda la UI vive en view.js.
+// ✅ Supabase Realtime reemplaza polling de 15s.
+//    Fallback: polling conservador (30s, solo con pestaña visible) para Docker local.
 
 import { fetchData, postData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
+import { waitForEnv } from '/core/js/kore.env.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { state } from './state.js';
 import {
     renderLoginScreen, renderBoard, renderTableDetail,
@@ -16,11 +20,16 @@ import {
 } from './view.js';
 import { TicketPrinter } from './ticket-print.js';
 
+// ── Realtime / Fallback state ──────────────────────────────────────────────
+let _realtimeChannel = null;
+let _fallbackInterval = null;
+let _visibilityHandler = null;
+
 // ── 1. Cargar empleados elegibles y mostrar pantalla de login ──────────────
 export const initLogin = async () => {
     state.currentScreen = 'login';
     state.cashier = null;
-    stopBoardPolling();
+    stopRealtime();
     // Inicializar el módulo de impresión al arrancar (cachea el DOM del ticket)
     TicketPrinter.init();
     showLoading(true);
@@ -99,7 +108,7 @@ export const initBoard = async () => {
     state.selectedTable = null;
     state.orderItems = [];
     await loadBoard();
-    startBoardPolling();
+    await startRealtime();
 };
 
 // ── 4. Cargar el tablero desde la API ──────────────────────────────────────
@@ -114,18 +123,92 @@ export const loadBoard = async () => {
     }
 };
 
-// Polling automático cada 15 s
-function startBoardPolling() {
-    stopBoardPolling();
-    state.boardPollInterval = setInterval(() => {
-        if (state.currentScreen === 'board') loadBoard();
-    }, 15000);
-}
-function stopBoardPolling() {
-    if (state.boardPollInterval) {
-        clearInterval(state.boardPollInterval);
-        state.boardPollInterval = null;
+// ── Supabase Realtime (reemplaza polling de 15s) ───────────────────────────
+async function startRealtime() {
+    stopRealtime();
+
+    try {
+        // Esperar credenciales con timeout de 3s — si no hay Supabase, fallback
+        const env = await Promise.race([
+            waitForEnv(),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('env timeout')), 3000)
+            )
+        ]);
+
+        const { supabaseUrl, supabaseAnonKey } = env || {};
+        if (!supabaseUrl || !supabaseAnonKey) throw new Error('sin credenciales Supabase');
+
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        _realtimeChannel = supabase
+            .channel('cashier-board')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'order_headers' },
+                (payload) => {
+                    const status = payload.new?.status;
+                    // Refrescar tablero cuando una orden entra o sale de AWAITING_PAYMENT
+                    if (['AWAITING_PAYMENT', 'CLOSED'].includes(status)) {
+                        if (state.currentScreen === 'board') loadBoard();
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'order_headers' },
+                () => {
+                    // Nueva orden creada — refrescar por si acaso
+                    if (state.currentScreen === 'board') loadBoard();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('[Cashier] Realtime conectado — polling desactivado');
+                }
+            });
+
+    } catch (e) {
+        console.warn('[Cashier] Supabase no disponible, activando polling conservador:', e.message);
+        startFallbackPolling();
     }
+}
+
+// ── Fallback: polling conservador para Docker local ────────────────────────
+// Solo hace fetch cuando la pestaña está visible, cada 30s.
+// Al volver a la pestaña después de estar oculta, refresca inmediatamente.
+function startFallbackPolling() {
+    stopFallbackPolling();
+
+    _fallbackInterval = setInterval(() => {
+        if (state.currentScreen === 'board' && document.visibilityState === 'visible') {
+            loadBoard();
+        }
+    }, 30000);
+
+    _visibilityHandler = () => {
+        if (document.visibilityState === 'visible' && state.currentScreen === 'board') {
+            loadBoard();
+        }
+    };
+    document.addEventListener('visibilitychange', _visibilityHandler);
+}
+
+function stopFallbackPolling() {
+    if (_fallbackInterval) {
+        clearInterval(_fallbackInterval);
+        _fallbackInterval = null;
+    }
+    if (_visibilityHandler) {
+        document.removeEventListener('visibilitychange', _visibilityHandler);
+        _visibilityHandler = null;
+    }
+}
+
+function stopRealtime() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    stopFallbackPolling();
 }
 
 // ── Eventos del tablero ────────────────────────────────────────────────────
@@ -141,7 +224,7 @@ function attachBoardEvents() {
     document.getElementById('btn-corte')?.addEventListener('click', openCorte);
 
     document.getElementById('btn-logout')?.addEventListener('click', () => {
-        stopBoardPolling();
+        stopRealtime();
         initLogin();
     });
 
