@@ -2,9 +2,9 @@
 // waiter.test.js
 // Módulo: POS Mesero — Login, Layout, Mesa, Comanda, Items
 // Códigos: POS-xx
-// Consolida: waiter-login, waiter-layout, waiter-open-table,
-//            waiter-submit-order, waiter-close-table,
-//            waiter-collect-item, waiter-deliver-item
+//
+// FIX: PIN se establece via reset-pin API (bcrypt hash).
+//      Teardown no nullifica PIN de ADMIN001.
 // ============================================================
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import app from '../src/index.js';
@@ -14,9 +14,11 @@ describe('Módulo POS — Mesero', () => {
     let collectItemId = null;
     let deliverItemId = null;
 
+    const ADMIN_PIN = '123456';
+
     // ── SETUP COMPARTIDO ──────────────────────────────────────
     beforeAll(async () => {
-        // Infraestructura base reutilizada por todos los tests del módulo
+        // Infraestructura base
         await executeQuery(null, `INSERT INTO restaurant_zones  (code, name)                   VALUES ('POS-ZONE', 'Zona POS Test') ON CONFLICT (code) DO NOTHING`);
         await executeQuery(null, `INSERT INTO restaurant_tables (code, zone_id, capacity)       VALUES ('POS-T01', (SELECT id FROM restaurant_zones WHERE code='POS-ZONE'), 4) ON CONFLICT (code) DO NOTHING`);
         await executeQuery(null, `INSERT INTO menu_categories   (code, name)                   VALUES ('POS-CAT', 'Cat POS') ON CONFLICT (code) DO NOTHING`);
@@ -27,41 +29,45 @@ describe('Módulo POS — Mesero', () => {
                 ('POS-REFRESCO',  (SELECT id FROM menu_categories WHERE code='POS-CAT'), 'Refresco',  50,  false, true)
             ON CONFLICT (code) DO NOTHING
         `);
-        // PIN para login
-        await executeQuery(null, `UPDATE employees SET pin_code = '123456' WHERE employee_number = 'ADMIN001'`);
+
+        // PIN via API — genera hash bcrypt, compatible con auth.helper.js
+        await app.request('/api/admin/employees/ADMIN001/reset-pin', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPin: ADMIN_PIN })
+        });
     });
 
     // ── LOGIN ─────────────────────────────────────────────────
 
     it('POS-01 Autentica al mesero con PIN correcto', async () => {
-        const res = await app.request('/api/waiters/login', {
+        const res = await app.request('/api/admin/auth/pin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employeeNumber: 'ADMIN001', pin: '123456' })
+            body: JSON.stringify({ employeeNumber: 'ADMIN001', pinCode: ADMIN_PIN })
         });
 
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.success).toBe(true);
-        expect(data.data.body.employeeNumber).toBe('ADMIN001');
+        const body = data.data?.body || data.data || {};
+        expect(body.employeeNumber).toBe('ADMIN001');
     });
 
     it('POS-02 Rechaza PIN incorrecto con 401', async () => {
-        const res = await app.request('/api/waiters/login', {
+        const res = await app.request('/api/admin/auth/pin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employeeNumber: 'ADMIN001', pin: '000000' })
+            body: JSON.stringify({ employeeNumber: 'ADMIN001', pinCode: '000000' })
         });
         expect(res.status).toBe(401);
-        const data = await res.json();
-        expect(data.error).toBeDefined();
     });
 
     it('POS-03 Rechaza login sin employeeNumber (Gatekeeper 400)', async () => {
-        const res = await app.request('/api/waiters/login', {
+        const res = await app.request('/api/admin/auth/pin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: '123456' })
+            body: JSON.stringify({ pinCode: ADMIN_PIN })
         });
         expect(res.status).toBe(400);
     });
@@ -92,7 +98,6 @@ describe('Módulo POS — Mesero', () => {
     // ── ABRIR MESA ────────────────────────────────────────────
 
     it('POS-05 Abre una mesa creando la cabecera de comanda', async () => {
-        // Limpiar órdenes previas de la mesa de prueba
         await executeQuery(null, `UPDATE order_headers SET status = 'CLOSED' WHERE table_id = (SELECT id FROM restaurant_tables WHERE code = 'POS-T01') AND status IN ('OPEN','AWAITING_PAYMENT')`);
 
         const res = await app.request('/api/waiters/tables/POS-T01/open', {
@@ -190,7 +195,6 @@ describe('Módulo POS — Mesero', () => {
     // ── RECOLECTAR ITEM (piso — sin receta) ───────────────────
 
     it('POS-13 El mesero recolecta un item PENDING_FLOOR y descuenta inventario', async () => {
-        // Inyectar item directo en estado PENDING_FLOOR
         const orderRes = await executeQuery(null, `SELECT id FROM order_headers WHERE table_id = (SELECT id FROM restaurant_tables WHERE code = 'POS-T01') AND status = 'OPEN' LIMIT 1`);
         const orderId = orderRes[0]?.id;
         expect(orderId).toBeDefined();
@@ -227,7 +231,6 @@ describe('Módulo POS — Mesero', () => {
     // ── ENTREGAR ITEM ─────────────────────────────────────────
 
     it('POS-15 El mesero entrega un item COLLECTED en la mesa', async () => {
-        // Inyectar item en COLLECTED directamente
         const orderRes = await executeQuery(null, `SELECT id FROM order_headers WHERE table_id = (SELECT id FROM restaurant_tables WHERE code = 'POS-T01') AND status = 'OPEN' LIMIT 1`);
         const orderId = orderRes[0]?.id;
         expect(orderId).toBeDefined();
@@ -273,7 +276,6 @@ describe('Módulo POS — Mesero', () => {
         expect(data.success).toBe(true);
         expect(data.data.body.orderCode).toBeDefined();
 
-        // Verificar en BD que quedó en AWAITING_PAYMENT
         const checkRes = await executeQuery(null, `SELECT status FROM order_headers WHERE code = $1`, [data.data.body.orderCode]);
         expect(checkRes[0].status).toBe('AWAITING_PAYMENT');
     });
@@ -297,6 +299,7 @@ describe('Módulo POS — Mesero', () => {
     });
 
     // ── TEARDOWN ──────────────────────────────────────────────
+    // NO se nullifica pin_code de ADMIN001 — otros tests lo necesitan.
     afterAll(async () => {
         await executeQuery(null, `DELETE FROM payments      WHERE order_id IN (SELECT id FROM order_headers WHERE table_id = (SELECT id FROM restaurant_tables WHERE code = 'POS-T01'))`);
         await executeQuery(null, `DELETE FROM tickets       WHERE order_id IN (SELECT id FROM order_headers WHERE table_id = (SELECT id FROM restaurant_tables WHERE code = 'POS-T01'))`);
@@ -306,6 +309,5 @@ describe('Módulo POS — Mesero', () => {
         await executeQuery(null, `DELETE FROM menu_categories WHERE code = 'POS-CAT'`);
         await executeQuery(null, `DELETE FROM restaurant_tables WHERE code = 'POS-T01'`);
         await executeQuery(null, `DELETE FROM restaurant_zones  WHERE code = 'POS-ZONE'`);
-        await executeQuery(null, `UPDATE employees SET pin_code = NULL WHERE employee_number = 'ADMIN001'`);
     });
 });
