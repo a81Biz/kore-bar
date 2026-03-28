@@ -1,0 +1,106 @@
+<!--
+    partial: reportes.html
+    Ruta: frontends/admin/partials/reportes.html
+    Cargado por: TemplateLoader.loadPartials(KORE_CONFIG.DOM.ADMIN.PARTIALS)
+    Montado por: viewManager.mount('tpl-reportes') → ReportesController.mount(root)
+
+    INTEGRACIÓN:
+    1. Copiar a frontends/admin/partials/reportes.html
+    2. En kore.config.js, agregar 'partials/reportes.html' al array KORE_CONFIG.DOM.ADMIN.PARTIALS
+    3. En kore.config.js, agregar REPORTES: 'tpl-reportes' a KORE_CONFIG.DOM.ADMIN.TEMPLATES
+    4. Agregar Chart.js CDN en admin/index.html:
+       <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    5. Agregar botón en el sidebar:
+       <button data-nav="reportes">
+           <span class="material-symbols-outlined">query_stats</span>
+           <span>Reportes</span>
+       </button>
+-->
+
+<template id="tpl-reportes">
+    <div class="space-y-6">
+
+        <!-- Header con filtros -->
+        <div class="flex flex-col md:flex-row md:items-end gap-4 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800 mb-1">Reportes de Ventas</h2>
+                <p class="text-sm text-slate-500">Análisis histórico por periodo</p>
+            </div>
+            <div class="flex-1"></div>
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label for="report-start-date" class="block text-xs font-medium text-slate-600 mb-1">Desde</label>
+                    <input type="date" id="report-start-date"
+                           class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="report-end-date" class="block text-xs font-medium text-slate-600 mb-1">Hasta</label>
+                    <input type="date" id="report-end-date"
+                           class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <button id="btn-report-filter"
+                        class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">search</span>
+                    Consultar
+                </button>
+                <button id="btn-report-export"
+                        class="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">download</span>
+                    Exportar
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs del periodo -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wide">Tickets</p>
+                <p id="kpi-tickets" class="text-2xl font-bold text-slate-800 mt-1">—</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wide">Ingreso Total</p>
+                <p id="kpi-revenue" class="text-2xl font-bold text-emerald-600 mt-1">—</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wide">Ticket Promedio</p>
+                <p id="kpi-avg-ticket" class="text-2xl font-bold text-indigo-600 mt-1">—</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wide">Propinas</p>
+                <p id="kpi-tips" class="text-2xl font-bold text-amber-600 mt-1">—</p>
+            </div>
+        </div>
+
+        <!-- Tabs + Contenido -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+            <div class="border-b border-slate-200">
+                <nav class="flex -mb-px" id="report-tabs">
+                    <button class="report-tab px-5 py-3 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600" data-tab="resumen">Resumen Diario</button>
+                    <button class="report-tab px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700" data-tab="categorias">Por Categoría</button>
+                    <button class="report-tab px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700" data-tab="platillos">Top Platillos</button>
+                    <button class="report-tab px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700" data-tab="meseros">Por Mesero</button>
+                    <button class="report-tab px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700" data-tab="detalle">Detalle</button>
+                </nav>
+            </div>
+
+            <!-- Gráfica -->
+            <div id="report-chart-container" class="p-5">
+                <canvas id="report-chart" height="280"></canvas>
+            </div>
+
+            <!-- Tabla -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead id="report-table-head" class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider"></thead>
+                    <tbody id="report-table-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div id="report-empty" class="hidden p-12 text-center">
+                <span class="material-symbols-outlined text-5xl text-slate-300">query_stats</span>
+                <p class="mt-3 text-slate-500">Selecciona un rango de fechas y presiona Consultar</p>
+            </div>
+        </div>
+    </div>
+</template>

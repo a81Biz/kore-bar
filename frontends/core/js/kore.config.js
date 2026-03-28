@@ -87,7 +87,8 @@ export const KORE_CONFIG = {
                 '_menu.html',
                 '_inventario.html',
                 '_turnos.html',
-                '_horarios.html'
+                '_horarios.html',
+                'reportes.html'
             ],
             CONTAINERS: {
                 ROOT: '#app-root',
