@@ -62,7 +62,7 @@ CREATE TABLE employees (
     last_name       VARCHAR(100) NOT NULL,
     hire_date       DATE,
     position_id     UUID REFERENCES positions(id) ON DELETE RESTRICT,
-    pin_code        VARCHAR(10) UNIQUE,
+    pin_code        VARCHAR(255) UNIQUE,
     is_active       BOOLEAN DEFAULT TRUE,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

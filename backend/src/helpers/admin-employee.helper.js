@@ -127,20 +127,47 @@ export const saveEmployee = async (state, c) => {
 };
 
 export const updateEmployee = async (state, c) => {
-    const payload = state.payload;
-    payload.employeeNumber = state.params?.employeeNumber;
+    const { employeeNumber } = state.params;
+    const patch = state.payload;
 
-    // Actualización: solo necesita saber a quién tocar
-    if (!payload.employeeNumber) {
+    if (!employeeNumber) {
         throw new AppError("Se requiere employeeNumber para actualizar", 400);
     }
 
     try {
+        // 1. Cargar datos actuales para actualización parcial
+        const existing = await modelEmployee.checkEmployeeExists(c, employeeNumber);
+        if (!existing) {
+            throw new AppError(`Empleado ${employeeNumber} no encontrado`, 404);
+        }
+
+        // 2. Fusionar datos (MAPEANDO alias de BD a camelCase del modelo)
+        const payload = {
+            employeeNumber: existing.employeeNumber,
+            firstName: existing.firstName,
+            lastName: existing.lastName,
+            areaId: existing.areaCode, // Mapeo de alias SQL a ID de modelo
+            jobTitleId: existing.jobCode, // Mapeo de alias SQL a ID de modelo
+            hireDate: existing.hireDate,
+            isActive: existing.isActive ?? true,
+            pinCode: existing.pinCode,
+            ...patch, // El patch sobreescribe lo anterior
+            employeeNumber // Asegurar que sea el de la ruta
+        };
+
+        // 3. Hashear PIN si se incluyó en el patch
         await _hashPinIfPresent(payload);
+
+        // 4. Guardar
+        console.log('[DEBUG-UPDATE] Payload sent to upsertEmployee:', JSON.stringify(payload));
         await modelEmployee.upsertEmployee(c, payload);
-        return { status: 'COMPLETED' };
+        
+        state.data = { employeeNumber };
+        state.message = 'Empleado actualizado correctamente';
     } catch (e) {
-        throw new AppError("Fallo en base de datos al actualizar empleado", 500);
+        if (e.isOperational) throw e;
+        console.error('[DEBUG-UPDATE] Error in updateEmployee:', e.message);
+        throw new AppError(`Fallo en base de datos al actualizar empleado: ${e.message}`, 500);
     }
 };
 

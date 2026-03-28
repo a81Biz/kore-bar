@@ -4,7 +4,7 @@
     "description": "Actualiza parcialmente la información operativa de un empleado existente. Solo los campos enviados serán modificados.",
     "api": {
         "method": "PUT",
-        "path": "/employees/:employeeNumber",
+        "path": "/employees/update/:employeeNumber",
         "tags": ["Admin / Empleados"],
         "body": {
             "properties": {

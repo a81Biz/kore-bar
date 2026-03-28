@@ -55,17 +55,33 @@ export const getTicketByFolio = async (state, c) => {
 // ── LOGIN CAJA ────────────────────────────────────────────────
 export const validateCashierPin = async (state, c) => {
     const { employeeNumber, pin } = state.payload;
-    const user = await getUserForPin(c, employeeNumber, String(pin));
+    
+    // 1. Buscar empleado en BD
+    const user = await getUserForPin(c, employeeNumber);
+    
+    if (!user || !user.isActive) {
+        throw new AppError('Número de empleado inválido o inactivo', 401);
+    }
 
-    if (!user || !user.isPinValid) throw new AppError('Número de empleado o PIN incorrecto', 401);
-    if (!user.canAccessCashier) throw new AppError('El empleado no tiene permisos de acceso a caja', 403);
+    // 2. Validar Hash de PIN (bcrypt)
+    const bcrypt = await import('bcryptjs').then(m => m.default || m);
+    const isValid = await bcrypt.compare(String(pin), user.pinHash || '');
+
+    if (!isValid) {
+        throw new AppError('PIN incorrecto', 401);
+    }
+
+    // 3. Validar permisos de Caja
+    if (!user.canAccessCashier) {
+        throw new AppError('El empleado no tiene permisos de acceso a caja', 403);
+    }
 
     state.employeeNumber = user.employeeNumber;
     state.firstName = user.firstName;
     state.lastName = user.lastName;
     state.message = `Bienvenido, ${user.firstName}`;
 
-    // ── CHECK-IN AUTOMÁTICO ────────────────────────────────────
+    // 4. Registro de check-in automático
     try {
         await turnosModel.recordAttendance(c, user.employeeNumber, 'CASHIER');
     } catch (attendanceErr) {

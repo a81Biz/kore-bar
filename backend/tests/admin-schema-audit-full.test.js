@@ -195,19 +195,19 @@ describe('RRHH — Empleados (GET + POST + PUT + DELETE)', () => {
         expect(r.status).toBe(400);
     });
 
-    it('EMP-PUT-01 PUT /admin/employees/:id — actualizar empleado', async () => {
+    it('EMP-PUT-01 PUT /admin/employees/update/:id — actualizar empleado', async () => {
         const payload = { firstName: 'FullActualizado', lastName: 'Audit', areaId: S.area, jobTitleId: S.job, isActive: true };
-        const r = await call('PUT', `/api/admin/employees/${S.emp}`, payload);
+        const r = await call('PUT', `/api/admin/employees/update/${S.emp}`, payload);
         console.log('\n  REQUEST payload keys:', Object.keys(payload));
-        audit('[EMP-PUT-01] PUT /admin/employees/:id', r, [
+        audit('[EMP-PUT-01] PUT /admin/employees/update/:id', r, [
             { desc: 'status 200', ok: r.status === 200 },
             { desc: 'body.success true', ok: r.body?.success === true },
         ]);
         expect(r.status).toBe(200);
     });
 
-    it('EMP-PUT-02 PUT /admin/employees/:id — 404 si no existe', async () => {
-        const r = await call('PUT', '/api/admin/employees/NO-EXISTO', { firstName: 'X', lastName: 'X', areaId: S.area, jobTitleId: S.job, isActive: true });
+    it('EMP-PUT-02 PUT /admin/employees/update/:id — 404 si no existe', async () => {
+        const r = await call('PUT', '/api/admin/employees/update/NO-EXISTO', { firstName: 'X', lastName: 'X', areaId: S.area, jobTitleId: S.job, isActive: true });
         audit('[EMP-PUT-02] PUT empleado inexistente', r, [
             { desc: 'status 404', ok: r.status === 404 },
         ]);

@@ -5,6 +5,10 @@
 // MIGRACIÓN Workers: eliminados fs, path y fileURLToPath.
 // Los schemas se obtienen del índice estático schema-registry.js
 // que esbuild resuelve en tiempo de compilación.
+//
+// FIX: Ordenamiento de rutas — las literales se registran antes
+// que las parametrizadas para evitar que /areas/:code capture
+// /areas/bulk (Hono matchea la primera ruta que coincide).
 // ============================================================
 
 import { executeWorkflow } from './orchestrator.js';
@@ -40,6 +44,21 @@ const validateNestedObject = (obj, properties = {}, required = [], parentKey) =>
 };
 
 /**
+ * Cuenta los segmentos parametrizados (:param) en una ruta.
+ * Rutas con menos parámetros se registran primero para que Hono
+ * no capture rutas literales como /bulk con /areas/:code.
+ */
+const routePriority = (path) => {
+    const segments = (path || '').split('/');
+    let paramCount = 0;
+    for (const seg of segments) {
+        if (seg.startsWith(':')) paramCount++;
+    }
+    // Rutas más largas (más específicas) primero entre las del mismo paramCount
+    return paramCount * 1000 - segments.length;
+};
+
+/**
  * Construye y registra rutas Hono desde el registro estático de schemas.
  *
  * @param {import('hono').Hono} router - Instancia de Hono donde se registran las rutas.
@@ -52,6 +71,16 @@ export const buildRoutes = (router, subDir = '') => {
     const schemas = subDir
         ? (schemasBySubDir[subDir] || [])
         : Object.values(schemasBySubDir).flat();
+
+    // ── FIX: Ordenar rutas para evitar conflictos de matching ──
+    // Rutas sin parámetros (literales como /areas/bulk) se registran
+    // ANTES que rutas con parámetros (/areas/:code) para que Hono
+    // no las capture erróneamente.
+    schemas.sort((a, b) => {
+        const pa = routePriority(a.api?.path || '');
+        const pb = routePriority(b.api?.path || '');
+        return pa - pb;
+    });
 
     schemas.forEach(schema => {
         if (!schema.api?.method || !schema.api?.path) return;

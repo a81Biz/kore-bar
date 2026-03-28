@@ -18,11 +18,11 @@ describe('Módulo Admin — Empleados y Catálogos', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 employeeNumber: 'TEST-001',
-                firstName:      'Test',
-                lastName:       'User',
-                areaId:         '20',
-                jobTitleId:     '04',
-                isActive:       true
+                firstName: 'Test',
+                lastName: 'User',
+                areaId: '20',
+                jobTitleId: '04',
+                isActive: true
             })
         });
 
@@ -62,15 +62,15 @@ describe('Módulo Admin — Empleados y Catálogos', () => {
     });
 
     it('EMP-04 Actualiza un empleado existente exitosamente', async () => {
-        const res = await app.request('/api/admin/employees/TEST-001', {
+        const res = await app.request('/api/admin/employees/update/TEST-001', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                firstName:  'TestActualizado',
-                lastName:   'User',
-                areaId:     '20',
+                firstName: 'TestActualizado',
+                lastName: 'User',
+                areaId: '20',
                 jobTitleId: '04',
-                isActive:   true
+                isActive: true
             })
         });
 
@@ -80,7 +80,7 @@ describe('Módulo Admin — Empleados y Catálogos', () => {
     });
 
     it('EMP-05 Devuelve 404 al actualizar un empleado inexistente', async () => {
-        const res = await app.request('/api/admin/employees/NO-EXISTO', {
+        const res = await app.request('/api/admin/employees/update/NO-EXISTO', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ firstName: 'No', lastName: 'Existo', areaId: '10', jobTitleId: '01', isActive: true })
@@ -171,10 +171,10 @@ describe('Módulo Admin — Empleados y Catálogos', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 catalogo_puestos: [{
-                    codigo_area:    '99',
-                    nombre_area:    'Mantenimiento Test',
-                    codigo_puesto:  '999',
-                    nombre_puesto:  'Técnico de Pruebas'
+                    codigo_area: '99',
+                    nombre_area: 'Mantenimiento Test',
+                    codigo_puesto: '999',
+                    nombre_puesto: 'Técnico de Pruebas'
                 }]
             })
         });

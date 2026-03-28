@@ -4,35 +4,43 @@
 // Códigos: TUR-xx
 // ============================================================
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import bcrypt from 'bcryptjs';
 import app from '../src/index.js';
 import { executeQuery } from '../src/db/connection.js';
 
 describe('Módulo Admin — Turnos y Asistencia', () => {
     const TEST_SHIFT_CODE = 'TEST-NOCTURNO';
     const TEST_EMP_NUMBER = 'TUR-TEST-EMP-01';
+    const TEST_PIN = '1234';
 
     // ── SETUP ─────────────────────────────────────────────────
-    // Crea un empleado de test hermético para los tests de reset-pin.
-    // Usa ON CONFLICT DO UPDATE para ser idempotente en reruns.
     beforeAll(async () => {
-        await executeQuery(null, `
-            INSERT INTO employees (employee_number, first_name, last_name, pin_code, is_active)
-            VALUES ($1, 'Test', 'Turnos', '1234', true)
-            ON CONFLICT (employee_number) DO UPDATE
-                SET is_active = true, pin_code = '1234'
-        `, [TEST_EMP_NUMBER]);
+        await app.request('/api/admin/employees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                employeeNumber: TEST_EMP_NUMBER,
+                firstName: 'Test',
+                lastName: 'Turnos',
+                areaId: '20',
+                jobTitleId: '04',
+                isActive: true
+            })
+        });
+
+        await app.request(`/api/admin/employees/${TEST_EMP_NUMBER}/reset-pin`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPin: TEST_PIN })
+        });
     });
 
     // ── TEARDOWN ──────────────────────────────────────────────
     afterAll(async () => {
-        await executeQuery(null,
-            `DELETE FROM shift_catalog WHERE code = $1`,
-            [TEST_SHIFT_CODE]
-        );
-        await executeQuery(null,
-            `DELETE FROM employees WHERE employee_number = $1`,
-            [TEST_EMP_NUMBER]
-        );
+        await executeQuery(null, `DELETE FROM shift_catalog WHERE code = $1`, [TEST_SHIFT_CODE]);
+        // employee_schedules y shifts tienen ON DELETE CASCADE desde employees
+        await executeQuery(null, `DELETE FROM system_users WHERE employee_number = $1`, [TEST_EMP_NUMBER]);
+        await executeQuery(null, `DELETE FROM employees WHERE employee_number = $1`, [TEST_EMP_NUMBER]);
     });
 
     // ══════════════════════════════════════════════════════════
@@ -74,7 +82,6 @@ describe('Módulo Admin — Turnos y Asistencia', () => {
         expect(res.status).toBe(201);
         expect(json.success).toBe(true);
 
-        // Verificar inserción real en BD
         const rows = await executeQuery(null,
             `SELECT code FROM shift_catalog WHERE code = $1`,
             [TEST_SHIFT_CODE]
@@ -164,28 +171,32 @@ describe('Módulo Admin — Turnos y Asistencia', () => {
     // ══════════════════════════════════════════════════════════
 
     it('TUR-09 Resetea el PIN de un empleado activo', async () => {
+        const NEW_PIN = '9999';
+
         const res = await app.request(`/api/admin/employees/${TEST_EMP_NUMBER}/reset-pin`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ newPin: '9999' })
+            body: JSON.stringify({ newPin: NEW_PIN })
         });
         const json = await res.json();
 
         expect(res.status).toBe(200);
         expect(json.success).toBe(true);
 
-        // Verificar que el PIN realmente cambió en BD
+        // Verificar que el PIN en BD es un hash bcrypt válido
         const rows = await executeQuery(null,
             `SELECT pin_code FROM employees WHERE employee_number = $1`,
             [TEST_EMP_NUMBER]
         );
-        expect(rows[0].pin_code).toBe('9999');
+        expect(rows[0].pin_code).toMatch(/^\$2[aby]\$/);
+        const isValid = await bcrypt.compare(NEW_PIN, rows[0].pin_code);
+        expect(isValid).toBe(true);
 
         // Restaurar
         await app.request(`/api/admin/employees/${TEST_EMP_NUMBER}/reset-pin`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ newPin: '1234' })
+            body: JSON.stringify({ newPin: TEST_PIN })
         });
     });
 

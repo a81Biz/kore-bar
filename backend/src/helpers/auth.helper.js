@@ -92,17 +92,14 @@ export const loginHandler = async (state, c) => {
         process.env.NODE_ENV === 'production' ? 'Secure' : ''
     ].filter(Boolean).join('; '));
 
-    return {
-        ...state,
-        data: {
-            employeeNumber: user.employeeNumber,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            roleCode: user.roleCode,
-            areaCode: user.areaCode
-        },
-        message: `Bienvenido, ${user.firstName}`
+    state.data = {
+        employeeNumber: user.employeeNumber,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleCode: user.roleCode,
+        areaCode: user.areaCode
     };
+    state.message = `Bienvenido, ${user.firstName}`;
 };
 
 
@@ -154,16 +151,13 @@ export const validatePinHandler = async (state, c) => {
     // 5. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
     const token = await sign(tokenPayload, JWT_SECRET);
 
-    return {
-        ...state,
-        data: {
-            token,
-            employeeNumber: user.employeeNumber,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            areaCode: user.areaCode,
-            canAccessCashier: user.canAccessCashier ?? false
-        },
-        message: `PIN válido — ${user.firstName}`
+    state.data = {
+        token,
+        employeeNumber: user.employeeNumber,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        areaCode: user.areaCode,
+        canAccessCashier: user.canAccessCashier ?? false
     };
+    state.message = `PIN válido — ${user.firstName}`;
 };

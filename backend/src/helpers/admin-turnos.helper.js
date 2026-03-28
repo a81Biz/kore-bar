@@ -66,10 +66,14 @@ export const resetEmployeePin = async (state, c) => {
     }
 
     try {
-        await turnosModel.resetPin(c, employeeNumber, String(newPin));
+        // Hashear el PIN antes de guardarlo en la base de datos
+        const bcrypt = await import('bcryptjs').then(m => m.default || m);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPin = await bcrypt.hash(String(newPin), salt);
+
+        await turnosModel.resetPin(c, employeeNumber, hashedPin);
 
         if (!state.data) state.data = {};
-
         state.data.message = `PIN del empleado ${employeeNumber} actualizado exitosamente`;
     } catch (error) {
         if (error.isOperational) throw error;

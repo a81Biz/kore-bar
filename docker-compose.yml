@@ -11,6 +11,10 @@ services:
       - DATABASE_URL=postgres://admin:admin@db:5432/kore_local_db
     depends_on:
       - db
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
 
   nginx:
     image: nginx:alpine
