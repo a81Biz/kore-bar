@@ -23,6 +23,18 @@
 -- Idempotente: si ya existe un DRAFT para el mismo proveedor del mismo día,
 -- lo reutiliza (ON CONFLICT en purchase_order_items).
 -- Retorna el número de órdenes generadas como RAISE NOTICE.
+-- 1. PARA CADA insumo donde stock_bodega <= minimum_stock Y minimum_stock > 0:
+--    a. Buscar proveedor óptimo:
+--       - Criterio 1: precio más bajo (supplier_prices.price ASC)
+--       - Criterio 2: menor lead_time como desempate
+--    b. Calcular cantidad sugerida:
+--       qty = MAX( (minimum_stock × 2) - stock_actual, 1 )
+--       → Pide el doble del mínimo (stock de seguridad 2x)
+--    c. Agrupar por proveedor → un purchase_order DRAFT por proveedor por día
+--    d. Idempotente: re-ejecutar actualiza en lugar de duplicar (ON CONFLICT)
+
+-- 2. RESULTADO: purchase_orders con status DRAFT
+--    → Admin revisa en panel → Confirma → PATCH /purchase-orders/:id/send → SENT
 
 CREATE OR REPLACE PROCEDURE sp_generate_purchase_suggestions()
 LANGUAGE plpgsql AS $$

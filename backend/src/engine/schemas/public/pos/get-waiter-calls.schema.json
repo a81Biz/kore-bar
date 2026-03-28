@@ -1,0 +1,30 @@
+{
+    "id": "get_waiter_calls",
+    "name": "Obtener Llamadas Pendientes de Mesero",
+    "description": "Devuelve las llamadas PENDING de las últimas 2 horas para mostrar en el dashboard del mesero.",
+    "api": {
+        "method": "GET",
+        "path": "/waiters/calls",
+        "tags": [
+            "Waiters"
+        ]
+    },
+    "startAt": "fetch_calls",
+    "nodes": {
+        "fetch_calls": {
+            "type": "action",
+            "handler": "getPendingCalls",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "calls": "{{state.calls}}"
+                }
+            }
+        }
+    }
+}

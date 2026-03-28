@@ -8,6 +8,8 @@
 -- los alimentos que se han consumido."
 -- ============================================================
 
+DROP VIEW IF EXISTS vw_daily_theoretical_consumption;
+ 
 CREATE OR REPLACE VIEW vw_daily_theoretical_consumption AS
 SELECT
     dr.item_id,
@@ -16,13 +18,11 @@ SELECT
     ii.unit_measure,
     SUM(oi.quantity * dr.quantity_required)     AS theoretical_qty
 FROM order_items   oi
-JOIN order_headers oh  ON oh.id    = oi.order_id
+JOIN order_headers oh  ON oh.id      = oi.order_id
 JOIN dish_recipes  dr  ON dr.dish_id = oi.dish_id
-JOIN inventory_items ii ON ii.id   = dr.item_id
+JOIN inventory_items ii ON ii.id     = dr.item_id
 WHERE DATE(oh.created_at) = CURRENT_DATE
-  AND oi.status IN ('DELIVERED', 'COLLECTED', 'READY', 'PREPARING')
 GROUP BY dr.item_id, ii.code, ii.name, ii.unit_measure;
-
 -- Verificación:
 -- SELECT * FROM vw_daily_theoretical_consumption;
 -- Debe mostrar cada insumo con la cantidad teórica consumida hoy.

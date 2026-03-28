@@ -66,9 +66,9 @@ export const getKardex = async (state, c) => {
 // El test envía: { supplierCode, itemCode, itemName, itemUnit, price }
 // El SP espera:  sp_upsert_supplier_price(p_supplier_code, p_item_code, ...)
 export const upsertSupplierPriceHandler = async (state, c) => {
-    const { supplierCode, itemCode, itemName, itemUnit, price } = state.payload;
+    const { supplierCode, itemCode, itemName, itemUnit, price, minimumStock } = state.payload;
     try {
-        await inventoryModel.upsertSupplierPrice(c, supplierCode, itemCode, itemName, itemUnit, price);
+        await inventoryModel.upsertSupplierPrice(c, supplierCode, itemCode, itemName, itemUnit, price, minimumStock ?? null);
         state.message = 'Precio de proveedor actualizado exitosamente';
     } catch (error) {
         if (error.isOperational) throw error;

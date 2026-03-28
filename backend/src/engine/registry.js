@@ -133,7 +133,9 @@ import {
 // ── MENÚ PÚBLICO ──────────────────────────────────────────────
 import {
     getPublicMenu,
-    registerWaiterCall
+    registerWaiterCall,
+    getPendingCalls,
+    attendWaiterCall
 } from '../helpers/public-menu.helper.js';
 
 // ── TURNOS Y ASISTENCIA ───────────────────────────────────────
@@ -282,6 +284,8 @@ export const ActionRegistry = {
     // Menú público
     getPublicMenu,
     registerWaiterCall,
+    getPendingCalls,
+    attendWaiterCall,
 
     // Turnos y Asistencia
     getShifts,

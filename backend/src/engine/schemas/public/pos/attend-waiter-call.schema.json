@@ -1,0 +1,30 @@
+{
+    "id": "attend_waiter_call",
+    "name": "Atender Llamada de Mesero",
+    "description": "Marca una llamada de mesa como atendida (PENDING → ATTENDED).",
+    "api": {
+        "method": "PUT",
+        "path": "/waiters/calls/:callId/attend",
+        "tags": [
+            "Waiters"
+        ]
+    },
+    "startAt": "attend_call",
+    "nodes": {
+        "attend_call": {
+            "type": "action",
+            "handler": "attendWaiterCall",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": {
+                    "message": "{{state.message}}"
+                }
+            }
+        }
+    }
+}

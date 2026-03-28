@@ -175,6 +175,11 @@ INSERT INTO inventory_items (code, name, unit_measure, recipe_unit, conversion_f
     ('INS-020', 'Pan Artesanal',          'Pz',  'Pz',     1, 30.000, 10.000)
 ON CONFLICT (code) DO NOTHING;
 
+UPDATE inventory_items SET minimum_stock = 5.000  WHERE code IN ('INS-SAL','INS-TOMATE','INS-CEBOLLA','INS-LIMON');
+UPDATE inventory_items SET minimum_stock = 3.000  WHERE code IN ('INS-POLLO','INS-RES','INS-AGUACATE');
+UPDATE inventory_items SET minimum_stock = 2.000  WHERE code IN ('INS-QUESO','INS-CREMA');
+UPDATE inventory_items SET minimum_stock = 10.000 WHERE code LIKE 'INS-COCA%' OR code LIKE 'INS-CERVEZA%';
+
 -- ── PRECIOS DE PROVEEDOR ─────────────────────────────────────
 INSERT INTO supplier_prices (supplier_id, item_id, price, lead_time_days) VALUES
     ((SELECT id FROM suppliers WHERE code='PROV-02'), (SELECT id FROM inventory_items WHERE code='INS-001'), 85.00, 1),

@@ -243,12 +243,16 @@ $$;
 
 
 -- ── UPSERT PRECIO PROVEEDOR ───────────────────────────────────
+DROP PROCEDURE IF EXISTS public.sp_upsert_supplier_price(VARCHAR,VARCHAR,VARCHAR,VARCHAR,NUMERIC);
+DROP PROCEDURE IF EXISTS public.sp_upsert_supplier_price(VARCHAR,VARCHAR,VARCHAR,VARCHAR,NUMERIC,NUMERIC);
+ 
 CREATE OR REPLACE PROCEDURE public.sp_upsert_supplier_price(
     p_supplier_code VARCHAR,
     p_item_code     VARCHAR,
     p_item_name     VARCHAR,
     p_item_unit     VARCHAR,
-    p_price         NUMERIC
+    p_price         NUMERIC,
+    p_minimum_stock NUMERIC DEFAULT NULL
 )
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -259,24 +263,31 @@ BEGIN
     IF v_supplier_id IS NULL THEN
         RAISE EXCEPTION 'Proveedor no encontrado: %', p_supplier_code;
     END IF;
-
-    INSERT INTO inventory_items (code, name, unit_measure)
-    VALUES (p_item_code, p_item_name, p_item_unit)
-    ON CONFLICT (code) DO UPDATE
-    SET name = EXCLUDED.name, unit_measure = EXCLUDED.unit_measure
+ 
+    INSERT INTO inventory_items (code, name, unit_measure, minimum_stock)
+    VALUES (
+        p_item_code, p_item_name, p_item_unit,
+        COALESCE(p_minimum_stock, 0)
+    )
+    ON CONFLICT (code) DO UPDATE SET
+        name          = EXCLUDED.name,
+        unit_measure  = EXCLUDED.unit_measure,
+        minimum_stock = CASE
+            WHEN p_minimum_stock IS NOT NULL THEN p_minimum_stock
+            ELSE inventory_items.minimum_stock
+        END
     RETURNING id INTO v_item_id;
-
+ 
     IF v_item_id IS NULL THEN
         SELECT id INTO v_item_id FROM inventory_items WHERE code = p_item_code;
     END IF;
-
+ 
     INSERT INTO supplier_prices (supplier_id, item_id, price)
     VALUES (v_supplier_id, v_item_id, p_price)
     ON CONFLICT (supplier_id, item_id) DO UPDATE
     SET price = EXCLUDED.price;
 END;
 $$;
-
 
 -- ── ALTA DE PROVEEDOR ─────────────────────────────────────────
 -- Reemplaza el INSERT raw que vivía en admin-inventory.model.js

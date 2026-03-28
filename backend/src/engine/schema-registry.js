@@ -141,6 +141,12 @@ import fetchSalesByWaiter from './schemas/inventory/get-sales-by-waiter.schema.j
 import fetchDashboardKpis from './schemas/inventory/get-dashboard-kpis.schema.json'   assert { type: 'json' };
 import fetchTicketPrintData from './schemas/admin/cashier/get-ticket-print.schema.json'   assert { type: 'json' };
 
+
+import getWaiterCalls from './schemas/public/pos/get-waiter-calls.schema.json'   assert { type: 'json' };
+import attendWaiterCall from './schemas/public/pos/attend-waiter-call.schema.json'   assert { type: 'json' };
+
+
+
 // ============================================================
 // REGISTRO CENTRAL organizado por subDir
 // (subDir coincide con las claves de RouteRegistry)
@@ -152,7 +158,7 @@ export const schemasBySubDir = {
         loginHandler, authPin,
         cashierBoard, cashierCorte, cashierEmployees, cashierGetTicket,
         cashierInvoiceRequest, cashierLogin, cashierProcessPayment,
-        getAreas, updateArea, createArea, deactivateArea, 
+        getAreas, updateArea, createArea, deactivateArea,
         getJobTitles, updateJobTitle, createJobTitle, deactivateJobTitle,
         getShifts, createShift,
         getAttendance, getEmployees, hrWebhook,
@@ -166,7 +172,7 @@ export const schemasBySubDir = {
         createZone, deleteZone, getZones, updateZone,
         createSchedule, getSchedules, deleteSchedule, getAbsences,
         createPayrollDeduction, deletePayrollDeduction, exportPayrollData,
-        getPayrollHistory, recordAdminCheckin, fetchTicketPrintData
+        getPayrollHistory, recordAdminCheckin, fetchTicketPrintData,
     ],
 
     inventory: [
@@ -189,7 +195,7 @@ export const schemasBySubDir = {
         getWaiter, waiterCloseTable, waiterCollectItem, waiterDeliverItem,
         waiterFloorStock, waiterLayout, waiterLogin, waiterOpenTable,
         waiterOrderStatus, waiterSubmitOrder,
-        callWaiter,
+        callWaiter, getWaiterCalls, attendWaiterCall,
     ],
 };
 

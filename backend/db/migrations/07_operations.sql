@@ -19,3 +19,11 @@ CREATE TABLE waiter_calls (
 CREATE TRIGGER update_waiter_calls_modtime
     BEFORE UPDATE ON waiter_calls
     FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+
+-- Canal Realtime 
+ALTER TABLE waiter_calls ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "realtime_read_waiter_calls"
+  ON waiter_calls FOR SELECT
+  USING (true);

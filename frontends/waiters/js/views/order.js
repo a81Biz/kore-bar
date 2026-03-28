@@ -88,7 +88,7 @@ export async function mount(container, data = {}) {
                             name: d.name,
                             price: parseFloat(d.price),
                             category: cat.categoryName,
-                            location: d.hasRecipe ? 'Cocina' : 'Piso',
+                            location: cat.routeToKds ? 'Cocina' : 'Barra',
                             stock: stockMap[d.dishCode] ?? 99,
                             img: d.imageUrl || ''
                         }))
@@ -149,7 +149,7 @@ export async function mount(container, data = {}) {
             badge.className = `absolute top-2 right-2 p-1 rounded-lg ${item.location === 'Cocina' ? 'bg-primary/90' : 'bg-blue-500/90'} text-white`;
             const badgeIcon = document.createElement('span');
             badgeIcon.className = 'material-symbols-outlined text-sm block';
-            badgeIcon.textContent = item.location === 'Cocina' ? 'soup_kitchen' : 'kitchen';
+            badgeIcon.textContent = item.location === 'Cocina' ? 'soup_kitchen' : 'local_bar';
             badge.appendChild(badgeIcon);
 
             imgDiv.appendChild(bgDiv);

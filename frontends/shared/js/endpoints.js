@@ -12,7 +12,8 @@ export const ENDPOINTS = {
             waiters: '/waiters',
             layout: '/waiters/layout',
             orderStatus: '/waiters/tables/:tableCode/order',
-            floorStock: '/waiters/floor-stock'
+            floorStock: '/waiters/floor-stock',
+            calls: `/waiters/calls`
         },
         post: {
             login: '/admin/auth/pin',
@@ -22,7 +23,8 @@ export const ENDPOINTS = {
         },
         put: {
             collectItem: '/waiters/tables/:tableCode/items/:itemId/collect',
-            deliverItem: '/waiters/tables/:tableCode/items/:itemId/deliver'
+            deliverItem: '/waiters/tables/:tableCode/items/:itemId/deliver',
+            attendCall: `/waiters/calls/:callId/attend`
         }
     },
 

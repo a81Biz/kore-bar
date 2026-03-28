@@ -21,13 +21,14 @@ export const getSupplierByCode = async (c, code) => {
 
 // ── PRECIOS ───────────────────────────────────────────────────
 
-export const upsertSupplierPrice = async (c, supplierCode, itemCode, itemName, itemUnit, price) =>
+export const upsertSupplierPrice = async (c, supplierCode, itemCode, itemName, itemUnit, price, minimumStock = null) =>
     await executeStoredProcedure(c, 'sp_upsert_supplier_price', {
         p_supplier_code: supplierCode,
         p_item_code: itemCode,
         p_item_name: itemName,
         p_item_unit: itemUnit,
-        p_price: price
+        p_price: price,
+        p_minimum_stock: minimumStock
     });
 
 // ── COMPRAS ───────────────────────────────────────────────────
