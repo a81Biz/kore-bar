@@ -54,11 +54,13 @@ class MenuApp {
     }
 
     async _init() {
-        // Indicador de mesa — solo si viene en la URL; si no, se oculta
+        // Indicador de mesa y llamadas — solo si viene en la URL; si no, se ocultan
         if (this.tableCode) {
             this.DOM.tableIndicator.textContent = `Mesa ${this.tableCode}`;
+            this.DOM.callWaiterBtn.classList.remove('hidden');
         } else {
             this.DOM.tableIndicator.closest('div')?.classList.add('hidden');
+            this.DOM.callWaiterBtn.classList.add('hidden');
         }
 
         this._logoArea();

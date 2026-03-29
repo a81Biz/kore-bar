@@ -49,6 +49,7 @@ const PROTOCOL = IS_DEV ? 'http' : 'https';
 export const KORE_CONFIG = {
 
     BASE_DOMAIN: BASE_DOMAIN,
+    PROTOCOL: PROTOCOL,
 
     ENV: IS_DEV ? 'development' : 'production',
     DEBUG: IS_DEV,

@@ -7,6 +7,7 @@ import { showErrorModal } from '/shared/js/ui.js';
 export async function mount(container) {
     let pinCode = '';
     let selectedEmployee = null;
+    let eligibleWaiters = [];
 
     const employeeSelect = container.querySelector('#employee-select');
     const pinPadButtons = container.querySelectorAll('#pin-pad button');
@@ -16,6 +17,7 @@ export async function mount(container) {
     try {
         const res = await fetchData(ENDPOINTS.waiters.get.waiters);
         if (res.success && res.data) {
+            eligibleWaiters = res.data;
             res.data.forEach(emp => {
                 const option = document.createElement('option');
                 option.value = emp.employee_number;
@@ -73,10 +75,14 @@ export async function mount(container) {
                     });
 
                     if (res.success) {
+                        const fullData = eligibleWaiters.find(w => w.employee_number === selectedEmployee) || {};
+                        localStorage.setItem('pos_token', res.data.body.token);
                         PubSub.publish('AUTH_SUCCESS', {
-                            employeeNumber: res.data.body.employeeNumber,
-                            name: res.data.body.name,
-                            role: res.data.body.role
+                            employeeNumber: res.data.body?.employeeNumber || fullData.employee_number,
+                            name: res.data.body?.name || fullData.nombre,
+                            shift: fullData.shift,
+                            zona: fullData.zona,
+                            role: res.data.body?.role || 'WAITERS'
                         });
                     }
                 } catch (err) {

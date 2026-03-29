@@ -3,6 +3,7 @@ import { PubSub } from '/shared/js/pubsub.js';
 import { formatCurrency } from '/shared/js/utils.js';
 import { fetchData, postData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
+import { KORE_CONFIG } from '/core/js/kore.config.js';
 import { showErrorModal, confirmAction } from '/shared/js/ui.js';
 
 export async function mount(container, data = {}) {
@@ -19,6 +20,7 @@ export async function mount(container, data = {}) {
     // ── DOM ───────────────────────────────────────────────────────────────
     const btnHome = container.querySelector('#btn-home');
     const btnCloseOrder = container.querySelector('#btn-close-order');
+    const btnShowQr = container.querySelector('#btn-show-qr');
     const categoryTabs = container.querySelector('#category-tabs');
     const menuGrid = container.querySelector('#menu-grid');
     const cartTableLabel = container.querySelector('.col-cart-table');
@@ -55,44 +57,33 @@ export async function mount(container, data = {}) {
     // que no expone el dominio de inventario admin.
     const loadMenuData = async () => {
         try {
-            const [menuRes, stockRes] = await Promise.all([
-                fetchData(ENDPOINTS.menu.get.public),
-                fetchData(ENDPOINTS.waiters.get.floorStock)
-            ]);
+            const stockRes = await fetchData(ENDPOINTS.waiters.get.floorStock);
+            if (stockRes.success) {
+                const stockArray = stockRes.data?.stock || stockRes.data || [];
 
-            // menu.get.public devuelve [{categoryCode, categoryName, dishes:[{dishCode, name, price, ...}]}]
-            if (menuRes.success && Array.isArray(menuRes.data)) {
-                CATEGORIES = menuRes.data.map(cat => ({
-                    id: cat.categoryName,
-                    code: cat.categoryCode,
-                    icon: 'restaurant_menu'
-                }));
+                const catMap = new Map();
+                MENU_ITEMS = stockArray.map(d => {
+                    if (!catMap.has(d.categoryCode)) {
+                        catMap.set(d.categoryCode, {
+                            id: d.categoryName,
+                            code: d.categoryCode,
+                            icon: 'restaurant_menu'
+                        });
+                    }
+                    return {
+                        id: d.dishCode,
+                        dishCode: d.dishCode,
+                        name: d.name,
+                        price: parseFloat(d.price),
+                        category: d.categoryName,
+                        location: d.routeToKds ? 'Cocina' : 'Barra',
+                        stock: parseFloat(d.stock_available ?? 99),
+                        img: d.imageUrl || ''
+                    };
+                });
+
+                CATEGORIES = Array.from(catMap.values());
                 activeCategory = CATEGORIES[0]?.id || null;
-
-                // Construir stockMap para cruzar con inventario de piso
-                const stockMap = {};
-                if (stockRes.success) {
-                    const stockArray = stockRes.data?.stock || stockRes.data || [];
-                    stockArray.forEach(s => {
-                        stockMap[s.item_code || s.code] = parseFloat(s.stock_available ?? s.stock ?? 99);
-                    });
-                }
-
-                // Aplanar categorías → platillos activos con stock de piso
-                MENU_ITEMS = menuRes.data.flatMap(cat =>
-                    (cat.dishes || [])
-                        .filter(d => d.isActive !== false)
-                        .map(d => ({
-                            id: d.dishCode,
-                            dishCode: d.dishCode,
-                            name: d.name,
-                            price: parseFloat(d.price),
-                            category: cat.categoryName,
-                            location: cat.routeToKds ? 'Cocina' : 'Barra',
-                            stock: stockMap[d.dishCode] ?? 99,
-                            img: d.imageUrl || ''
-                        }))
-                );
             }
 
             renderCategories();
@@ -105,88 +96,77 @@ export async function mount(container, data = {}) {
     // ── Categorías ────────────────────────────────────────────────────────
     const renderCategories = () => {
         categoryTabs.innerHTML = '';
+        const tpl = document.getElementById('tpl-order-category-tab');
+
         CATEGORIES.forEach(cat => {
-            const btn = document.createElement('button');
+            const clone = tpl.content.cloneNode(true);
+            const btn = clone.querySelector('button');
+            const iconEl = clone.querySelector('.col-icon');
+            const nameEl = clone.querySelector('.col-name');
+
             const isActive = activeCategory === cat.id;
-            btn.className = [
-                'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0',
-                isActive
-                    ? 'bg-primary text-white shadow-primary/20'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-            ].join(' ');
 
-            const iconSpan = document.createElement('span');
-            iconSpan.className = 'material-symbols-outlined text-lg';
-            iconSpan.textContent = cat.icon;
+            if (isActive) {
+                btn.className = 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-primary text-white shadow-primary/20';
+            } else {
+                btn.className = 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50';
+            }
 
-            btn.appendChild(iconSpan);
-            btn.appendChild(document.createTextNode(` ${cat.id}`));
+            iconEl.textContent = cat.icon;
+            nameEl.textContent = cat.id;
 
             btn.addEventListener('click', () => {
                 activeCategory = cat.id;
                 renderCategories();
                 renderMenu();
             });
-            categoryTabs.appendChild(btn);
+            categoryTabs.appendChild(clone);
         });
     };
 
     // ── Grid de platillos ─────────────────────────────────────────────────
     const renderMenu = () => {
         menuGrid.innerHTML = '';
+        const tpl = document.getElementById('tpl-order-menu-item');
+
         MENU_ITEMS.filter(i => i.category === activeCategory).forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 flex flex-col';
+            const clone = tpl.content.cloneNode(true);
+            const el = clone.querySelector('.group');
+            const imgDiv = clone.querySelector('.col-img');
+            const badgeBg = clone.querySelector('.col-badge-bg');
+            const badgeIcon = clone.querySelector('.col-badge-icon');
+            const nameEl = clone.querySelector('.col-name');
+            const priceSpan = clone.querySelector('.col-price');
+            const stockSpan = clone.querySelector('.col-stock');
 
-            const imgDiv = document.createElement('div');
-            imgDiv.className = 'relative h-32 w-full bg-slate-200 dark:bg-slate-700 shrink-0';
+            imgDiv.style.backgroundImage = `url(${item.img || ''})`;
 
-            const bgDiv = document.createElement('div');
-            bgDiv.className = 'absolute inset-0 bg-cover bg-center';
-            bgDiv.style.backgroundImage = `url(${item.img || ''})`;
-
-            const badge = document.createElement('div');
-            badge.className = `absolute top-2 right-2 p-1 rounded-lg ${item.location === 'Cocina' ? 'bg-primary/90' : 'bg-blue-500/90'} text-white`;
-            const badgeIcon = document.createElement('span');
-            badgeIcon.className = 'material-symbols-outlined text-sm block';
-            badgeIcon.textContent = item.location === 'Cocina' ? 'soup_kitchen' : 'local_bar';
-            badge.appendChild(badgeIcon);
-
-            imgDiv.appendChild(bgDiv);
-            imgDiv.appendChild(badge);
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'p-3 flex flex-col justify-between flex-1';
-
-            const nameEl = document.createElement('h3');
-            nameEl.className = 'font-bold text-sm leading-tight group-hover:text-primary transition-colors';
-            nameEl.textContent = item.name;
-
-            const footerDiv = document.createElement('div');
-            footerDiv.className = 'flex items-center justify-between mt-2';
-
-            const priceSpan = document.createElement('span');
-            priceSpan.className = 'text-primary font-bold';
-            priceSpan.textContent = formatCurrency(item.price);
-
-            const rightSpan = document.createElement('span');
-            if (item.stock <= 5) {
-                rightSpan.className = 'bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold animate-pulse';
-                rightSpan.textContent = `STOCK: ${item.stock}`;
+            if (item.location === 'Cocina') {
+                badgeBg.classList.add('bg-primary/90');
+                badgeIcon.textContent = 'soup_kitchen';
             } else {
-                rightSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
-                rightSpan.textContent = item.id;
+                badgeBg.classList.add('bg-blue-500/90');
+                badgeIcon.textContent = 'local_bar';
             }
 
-            footerDiv.appendChild(priceSpan);
-            footerDiv.appendChild(rightSpan);
-            infoDiv.appendChild(nameEl);
-            infoDiv.appendChild(footerDiv);
+            nameEl.textContent = item.name;
+            priceSpan.textContent = formatCurrency(item.price);
 
-            el.appendChild(imgDiv);
-            el.appendChild(infoDiv);
+            if (item.location === 'Cocina') {
+                stockSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
+                stockSpan.textContent = item.id;
+            } else {
+                if (item.stock <= 5) {
+                    stockSpan.className = 'bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold animate-pulse';
+                    stockSpan.textContent = `STOCK: ${item.stock}`;
+                } else {
+                    stockSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
+                    stockSpan.textContent = item.id;
+                }
+            }
+
             el.addEventListener('click', () => addToCart(item));
-            menuGrid.appendChild(el);
+            menuGrid.appendChild(clone);
         });
     };
 
@@ -224,6 +204,8 @@ export async function mount(container, data = {}) {
 
     const renderCart = () => {
         cartItemsContainer.innerHTML = '';
+        const tplNew = document.getElementById('tpl-order-cart-new-item');
+        const tplSent = document.getElementById('tpl-order-cart-sent-item');
 
         if (sentItems.length > 0) {
             const header = document.createElement('div');
@@ -234,32 +216,14 @@ export async function mount(container, data = {}) {
             sentItems.forEach(item => {
                 const cfg = STATUS_CONFIG[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-500', action: null };
 
-                const row = document.createElement('div');
-                row.className = 'flex items-start gap-3 py-2 border-b border-slate-50 last:border-0';
+                const clone = tplSent.content.cloneNode(true);
+                const qtyName = clone.querySelector('.col-qty-name');
+                const badge = clone.querySelector('.col-badge');
+                const botRow = clone.querySelector('.col-bot-row');
 
-                const info = document.createElement('div');
-                info.className = 'flex-1';
-
-                const topRow = document.createElement('div');
-                topRow.className = 'flex justify-between items-center font-medium text-xs';
-
-                const itemLabel = document.createElement('span');
-                itemLabel.textContent = `${item.quantity}x ${item.name}`;
-
-                const badge = document.createElement('span');
-                badge.className = `px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cfg.cls}`;
+                qtyName.textContent = `${item.quantity}x ${item.name}`;
+                badge.className = `col-badge px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cfg.cls}`;
                 badge.textContent = cfg.label;
-
-                topRow.appendChild(itemLabel);
-                topRow.appendChild(badge);
-
-                const botRow = document.createElement('div');
-                botRow.className = 'flex justify-between items-center mt-1';
-
-                const sentTag = document.createElement('span');
-                sentTag.className = 'text-[10px] text-slate-400 italic';
-                sentTag.textContent = 'Enviado';
-                botRow.appendChild(sentTag);
 
                 if (cfg.action) {
                     const actionBtn = document.createElement('button');
@@ -272,10 +236,7 @@ export async function mount(container, data = {}) {
                     botRow.appendChild(actionBtn);
                 }
 
-                info.appendChild(topRow);
-                info.appendChild(botRow);
-                row.appendChild(info);
-                cartItemsContainer.appendChild(row);
+                cartItemsContainer.appendChild(clone);
             });
         }
 
@@ -286,67 +247,21 @@ export async function mount(container, data = {}) {
             cartItemsContainer.appendChild(header);
 
             cart.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'flex items-start gap-4 fade-in py-2';
+                const clone = tplNew.content.cloneNode(true);
+                const btnPlus = clone.querySelector('.btn-qty-plus');
+                const btnMinus = clone.querySelector('.btn-qty-minus');
+                const btnRemove = clone.querySelector('.btn-remove');
 
-                const qtyCol = document.createElement('div');
-                qtyCol.className = 'flex flex-col items-center';
-
-                const btnPlus = document.createElement('button');
-                btnPlus.className = 'w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-primary';
-                const plusIcon = document.createElement('span');
-                plusIcon.className = 'material-symbols-outlined text-sm pointer-events-none';
-                plusIcon.textContent = 'add';
-                btnPlus.appendChild(plusIcon);
-
-                const qtySpan = document.createElement('span');
-                qtySpan.className = 'font-bold py-1 text-sm';
-                qtySpan.textContent = item.qty;
-
-                const btnMinus = document.createElement('button');
-                btnMinus.className = 'w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-primary';
-                const minusIcon = document.createElement('span');
-                minusIcon.className = 'material-symbols-outlined text-sm pointer-events-none';
-                minusIcon.textContent = 'remove';
-                btnMinus.appendChild(minusIcon);
-
-                qtyCol.appendChild(btnPlus);
-                qtyCol.appendChild(qtySpan);
-                qtyCol.appendChild(btnMinus);
-
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'flex-1';
-
-                const topRow = document.createElement('div');
-                topRow.className = 'flex justify-between font-medium text-sm';
-                const nameEl = document.createElement('span');
-                nameEl.textContent = item.name;
-                const priceEl = document.createElement('span');
-                priceEl.textContent = formatCurrency(item.price * item.qty);
-                topRow.appendChild(nameEl);
-                topRow.appendChild(priceEl);
-
-                const codeEl = document.createElement('p');
-                codeEl.className = 'text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold';
-                codeEl.textContent = item.id;
-                infoDiv.appendChild(topRow);
-                infoDiv.appendChild(codeEl);
-
-                const btnRemove = document.createElement('button');
-                btnRemove.className = 'text-slate-300 hover:text-red-500';
-                const removeIcon = document.createElement('span');
-                removeIcon.className = 'material-symbols-outlined text-lg pointer-events-none';
-                removeIcon.textContent = 'delete';
-                btnRemove.appendChild(removeIcon);
+                clone.querySelector('.col-qty').textContent = item.qty;
+                clone.querySelector('.col-name').textContent = item.name;
+                clone.querySelector('.col-price').textContent = formatCurrency(item.price * item.qty);
+                clone.querySelector('.col-code').textContent = item.id;
 
                 btnPlus.addEventListener('click', () => updateQty(item.id, 1));
                 btnMinus.addEventListener('click', () => updateQty(item.id, -1));
                 btnRemove.addEventListener('click', () => removeItem(item.id));
 
-                el.appendChild(qtyCol);
-                el.appendChild(infoDiv);
-                el.appendChild(btnRemove);
-                cartItemsContainer.appendChild(el);
+                cartItemsContainer.appendChild(clone);
             });
 
             btnSendKitchen.disabled = false;
@@ -359,13 +274,10 @@ export async function mount(container, data = {}) {
         if (cart.length === 0 && sentItems.length === 0) {
             const emptyWrap = document.createElement('div');
             emptyWrap.className = 'h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 italic text-center py-20';
-            const emptyIcon = document.createElement('span');
-            emptyIcon.className = 'material-symbols-outlined text-6xl mb-2';
-            emptyIcon.textContent = 'shopping_basket';
-            const emptyText = document.createElement('p');
-            emptyText.textContent = 'La orden está vacía';
-            emptyWrap.appendChild(emptyIcon);
-            emptyWrap.appendChild(emptyText);
+            emptyWrap.innerHTML = `
+                <span class="material-symbols-outlined text-6xl mb-2">shopping_basket</span>
+                <p>La orden está vacía</p>
+            `;
             cartItemsContainer.appendChild(emptyWrap);
         }
 
@@ -460,10 +372,69 @@ export async function mount(container, data = {}) {
         }
     };
 
+    // ── Mostrar QR de Mesa ────────────────────────────────────────────────
+    const openQrModal = () => {
+        if (!tableCode) {
+            showErrorModal('No hay mesa asignada para generar el QR.', 'Atención');
+            return;
+        }
+
+        const tpl = document.getElementById('tpl-modal-qr');
+        if (!tpl) return;
+
+        const clone = tpl.content.cloneNode(true);
+        const modalBackdrop = clone.querySelector('#modal-qr-backdrop');
+        const modalContent = clone.querySelector('#modal-qr-content');
+        const qrContainer = clone.querySelector('.col-qr-container');
+        const qrTableLabel = clone.querySelector('.col-qr-table');
+        const btnClose = clone.querySelector('.btn-close');
+
+        qrTableLabel.textContent = `Mesa ${tableCode}`;
+
+        // Generar QR apuntando al menú público con bind de mesa
+        const qrUrl = `${KORE_CONFIG.PROTOCOL}://menu.${KORE_CONFIG.BASE_DOMAIN}/?table=${tableCode}`;
+
+        // Se inyecta temporalmente al DOM para que la librería pueda medir el div
+        document.body.appendChild(clone);
+
+        // La clase QRCode es global y viene del qrcode.min.js
+        try {
+            new QRCode(document.body.lastElementChild.querySelector('.col-qr-container'), {
+                text: qrUrl,
+                width: 220,
+                height: 220,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (err) {
+            console.error('[Order] error rendering QR:', err);
+        }
+
+        // Animar entrada fluidamente
+        requestAnimationFrame(() => {
+            modalBackdrop.classList.remove('opacity-0');
+            modalContent.classList.remove('opacity-0', 'scale-95');
+        });
+
+        // Función de cierre y autodestrucción del modal
+        const closeModal = () => {
+            modalBackdrop.classList.add('opacity-0');
+            modalContent.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => modalBackdrop.remove(), 300);
+        };
+
+        btnClose.addEventListener('click', closeModal);
+        modalBackdrop.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) closeModal();
+        });
+    };
+
     // ── Listeners y arranque ──────────────────────────────────────────────
     [btnHome, btnCloseOrder].forEach(btn => btn?.addEventListener('click', () => PubSub.publish('ORDER_COMPLETED')));
     btnSendKitchen?.addEventListener('click', sendOrder);
     btnPayClose?.addEventListener('click', closeTable);
+    btnShowQr?.addEventListener('click', openQrModal);
 
     loadMenuData();
 }

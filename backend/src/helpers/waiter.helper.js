@@ -186,7 +186,7 @@ export const deliverItem = deliverItemHandler;
 export const getWaiterFloorStock = async (state, c) => {
     try {
         const rows = await waiterModel.getFloorStock(c);
-        state.stock = rows;
+        state.data = { stock: rows };
     } catch (error) {
         if (error.isOperational) throw error;
         throw new AppError('Error obteniendo stock de piso', 500);

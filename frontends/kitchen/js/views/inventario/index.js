@@ -30,17 +30,17 @@ const render = {
         state.dom.tableBody.innerHTML = '';
         state.stock.forEach((item, index) => {
             const clon = state.dom.tplRow.content.cloneNode(true);
-            clon.querySelector('.col-name').textContent = item.itemName;
-            clon.querySelector('.col-code').textContent = item.itemCode;
+            clon.querySelector('.col-name').textContent = item.name;
+            clon.querySelector('.col-code').textContent = item.code;
 
-            const stock = parseFloat(item.currentStock) || 0;
+            const stock = parseFloat(item.stock) || 0;
             const consumed = parseFloat(item.dailyConsumption) || 0;
             const expected = stock - consumed;
 
-            clon.querySelector('.col-teorico').textContent = `${stock} ${item.unit}`;
-            clon.querySelector('.col-consumo').textContent = `${consumed} ${item.unit}`;
-            clon.querySelector('.col-esperado').textContent = `${expected.toFixed(3)} ${item.unit}`;
-            clon.querySelector('.col-unit').textContent = item.unit;
+            clon.querySelector('.col-teorico').textContent = `${stock} ${item.unitMeasure}`;
+            clon.querySelector('.col-consumo').textContent = `${consumed} ${item.unitMeasure}`;
+            clon.querySelector('.col-esperado').textContent = `${expected.toFixed(3)} ${item.unitMeasure}`;
+            clon.querySelector('.col-unit').textContent = item.unitMeasure;
 
             const inputReal = clon.querySelector('.input-real-stock');
             inputReal.setAttribute('data-index', index);
@@ -58,7 +58,7 @@ const logic = {
     loadStock: async () => {
         try {
             const res = await fetchData(ENDPOINTS.kitchen.get.kitchenStock);
-            state.stock = res.data || [];   // FIX: era "state = res.data"
+            state.stock = res.data.stock || [];   // FIX: era "state = res.data"
             render.stockList();
         } catch (error) {
             showErrorModal('No se pudo cargar el inventario teórico local.', 'Error de Lectura');

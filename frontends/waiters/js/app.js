@@ -29,7 +29,7 @@ function initApp() {
         state.session = employee;
 
         const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.DASHBOARD);
-        mountDashboard(root);
+        mountDashboard(root, state.session);
 
         // Conectar notificaciones Realtime — falla silenciosamente si Supabase
         // no está configurado (ver realtime-notifications.js)
@@ -53,13 +53,14 @@ function initApp() {
         state.selectedTable = null;
 
         const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.DASHBOARD);
-        mountDashboard(root);
+        mountDashboard(root, state.session);
     });
 
     // ── Logout ────────────────────────────────────────────────────────────
     PubSub.subscribe('LOGOUT_TRIGGERED', () => {
         // Desconectar notificaciones Realtime antes de limpiar sesión
         WaiterNotifications.disconnect();
+        localStorage.removeItem('pos_token');
 
         state.session       = null;
         state.selectedTable = null;

@@ -13,11 +13,18 @@ const CALL_REASONS = {
 export async function mount(container, authData) {
     const clockDisplay = container.querySelector('#clock-display');
     const btnLogout = container.querySelector('#btn-logout');
-    const btnQuickOrder = container.querySelector('#btn-quick-order');
     const tablesGrid = container.querySelector('#tables-grid');
+    
+    // Elementos del Top Bar del Mesero
     const nameLabel = container.querySelector('.col-waiter-name');
+    const numberLabel = container.querySelector('.col-waiter-number');
+    const shiftLabel = container.querySelector('.col-waiter-shift');
+    const zoneLabel = container.querySelector('.col-waiter-zone');
 
     if (nameLabel && authData?.name) nameLabel.textContent = authData.name;
+    if (numberLabel && authData?.employeeNumber) numberLabel.textContent = `#${authData.employeeNumber}`;
+    if (shiftLabel && authData?.shift) shiftLabel.textContent = authData.shift;
+    if (zoneLabel && authData?.zona) zoneLabel.textContent = authData.zona;
 
     // ── Estado local ──────────────────────────────────────────
     let pendingCalls = [];   // llamadas PENDING activas
@@ -39,7 +46,9 @@ export async function mount(container, authData) {
         try {
             const res = await fetchData(ENDPOINTS.waiters.get.layout);
             if (res.success && res.data?.body?.layout.length > 0) {
-                const allTables = res.data.body.layout.flatMap(zone => zone.tables);
+                const waiterZone = authData?.zona;
+                const filteredZone = res.data.body.layout.find(z => z.zoneName === waiterZone);
+                const allTables = filteredZone ? filteredZone.tables : [];
                 renderTables(allTables);
             }
         } catch (e) {
@@ -231,10 +240,7 @@ export async function mount(container, authData) {
         PubSub.publish('LOGOUT_TRIGGERED');
     });
 
-    btnQuickOrder?.addEventListener('click', () => {
-        cleanup();
-        PubSub.publish('TABLE_SELECTED', { tableCode: null, authData });
-    });
+
 
     // ── Boot ──────────────────────────────────────────────────
     await refreshAll();

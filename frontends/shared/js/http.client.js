@@ -19,13 +19,22 @@ const buildUrl = (endpointRaw, params = {}) => {
     return `${KORE_CONFIG.API.BASE_URL}${finalPath}`;
 };
 
+const getHeaders = () => {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem('pos_token');
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+};
+
 export async function postData(endpoint, data = {}, params = {}) {
     try {
         const url = buildUrl(endpoint, params);
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
 
@@ -48,7 +57,7 @@ export async function fetchData(endpoint, params = {}) {
 
         const response = await fetch(url, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
+            headers: getHeaders()
         });
 
         const jsonResponse = await response.json();
@@ -70,7 +79,7 @@ export async function putData(endpoint, data = {}, params = {}) {
 
         const response = await fetch(url, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
 
@@ -94,7 +103,7 @@ export async function deleteData(endpoint, params = {}) {
 
         const response = await fetch(url, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
+            headers: getHeaders()
         });
 
         const jsonResponse = await response.json();

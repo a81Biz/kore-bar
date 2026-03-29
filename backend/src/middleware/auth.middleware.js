@@ -36,7 +36,7 @@ const extractAndVerifyToken = async (c) => {
 
     try {
         // hono/jwt.verify retorna Promise<JWTPayload> y valida exp automáticamente
-        return await verify(token, JWT_SECRET);
+        return await verify(token, JWT_SECRET, "HS256");
     } catch (err) {
         const msg = (err.message || '').toLowerCase();
         if (msg.includes('expir') || msg.includes('exp')) {

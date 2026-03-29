@@ -81,7 +81,7 @@ export const loginHandler = async (state, c) => {
     };
 
     // 4. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
-    const token = await sign(tokenPayload, JWT_SECRET);
+    const token = await sign(tokenPayload, JWT_SECRET, "HS256");
 
     // 5. Establecer cookie httpOnly
     c.header('Set-Cookie', [
@@ -149,7 +149,7 @@ export const validatePinHandler = async (state, c) => {
     };
 
     // 5. Firmar JWT con hono/jwt (WebCrypto — compatible con Workers)
-    const token = await sign(tokenPayload, JWT_SECRET);
+    const token = await sign(tokenPayload, JWT_SECRET, "HS256");
 
     state.data = {
         token,
