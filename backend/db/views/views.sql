@@ -43,7 +43,7 @@ ORDER BY a.code, jt.name ASC;
 -- ── MENÚ ─────────────────────────────────────────────────────
 
 CREATE OR REPLACE VIEW vw_menu_dishes AS
-SELECT
+    SELECT
     d.code   AS dish_code,
     c.code   AS category_code,
     c.name   AS category_name,
@@ -52,11 +52,13 @@ SELECT
     d.price,
     d.image_url,
     d.is_active,
+    d.can_pickup,
     d.has_recipe,
     d.preparation_method
 FROM menu_dishes d
 JOIN menu_categories c ON d.category_id = c.id
 ORDER BY c.name, d.name;
+
 
 
 -- ── INVENTARIO ────────────────────────────────────────────────
@@ -142,19 +144,32 @@ ORDER BY p.method;
 
 CREATE OR REPLACE VIEW vw_waiter_floor_layout AS
 SELECT
-    z.code       AS zone_code,
-    z.name       AS zone_name,
-    t.code       AS table_code,
+    z.code        AS zone_code,
+    z.name        AS zone_name,
+    t.code        AS table_code,
     t.capacity,
     CASE
-        WHEN oh.id IS NOT NULL THEN 'OCCUPIED'
+        WHEN EXISTS (
+            SELECT 1 FROM order_headers
+            WHERE table_id = t.id AND status = 'OPEN'
+        ) THEN 'OCCUPIED'
+        WHEN EXISTS (
+            SELECT 1 FROM order_headers
+            WHERE table_id = t.id AND status = 'AWAITING_PAYMENT'
+        ) THEN 'AWAITING_PAYMENT'
         ELSE 'AVAILABLE'
-    END          AS status,
-    e.first_name AS waiter_name
+    END AS status,
+    (
+        SELECT e.first_name
+        FROM order_headers oh
+        JOIN employees e ON e.id = oh.waiter_id
+        WHERE oh.table_id = t.id
+          AND oh.status IN ('OPEN', 'AWAITING_PAYMENT')
+        ORDER BY oh.created_at DESC
+        LIMIT 1
+    ) AS waiter_name
 FROM restaurant_zones z
-JOIN restaurant_tables t   ON t.zone_id   = z.id AND t.is_active = true
-LEFT JOIN order_headers oh  ON oh.table_id = t.id AND oh.status = 'OPEN'
-LEFT JOIN employees e       ON oh.waiter_id = e.id
+JOIN restaurant_tables t ON t.zone_id = z.id AND t.is_active = true
 WHERE z.is_active = true
 ORDER BY z.name, t.code;
 

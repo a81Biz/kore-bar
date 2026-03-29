@@ -115,9 +115,31 @@ export const initBoard = async () => {
 export const loadBoard = async () => {
     try {
         const json = await fetchData(ENDPOINTS.cashier.get.board);
-        state.board = json.data?.body?.tables || json.data?.tables || [];
-        renderBoard();
-        attachBoardEvents();
+        const newBoard = json.data?.body?.tables || json.data?.tables || [];
+        state.board = newBoard;
+
+        if (state.selectedTable) {
+            const updated = newBoard.find(t => t.tableCode === state.selectedTable.tableCode);
+            if (!updated) {
+                // Mesa ya cobrada — limpiar selección
+                state.selectedTable = null;
+                state.orderItems = [];
+                renderBoard();
+                attachBoardEvents();
+            } else {
+                // Actualizar datos sin perder el panel de detalle
+                state.selectedTable = updated;
+                renderBoard();
+                attachBoardEvents();
+                // FIX: re-renderizar detalle y re-agregar listener tras polling
+                renderTableDetail();
+                document.getElementById('btn-open-payment')
+                    ?.addEventListener('click', openPaymentModal);
+            }
+        } else {
+            renderBoard();
+            attachBoardEvents();
+        }
     } catch (e) {
         showToast('Error cargando el tablero', 'error');
     }
@@ -184,11 +206,11 @@ function startFallbackPolling() {
         if (state.currentScreen === 'board' && document.visibilityState === 'visible') {
             loadBoard();
         }
-    }, 30000);
+    }, 10000);
 
     _visibilityHandler = () => {
         if (document.visibilityState === 'visible' && state.currentScreen === 'board') {
-            loadBoard();
+            loadBoard();  // Refresh inmediato al volver a la pestaña
         }
     };
     document.addEventListener('visibilitychange', _visibilityHandler);
@@ -228,7 +250,10 @@ function attachBoardEvents() {
         initLogin();
     });
 
-    document.getElementById('btn-open-payment')?.addEventListener('click', openPaymentModal);
+    // FIX 3: btn-open-payment NO existe aquí (está en tpl-cashier-detail, no en tpl-cashier-board).
+    // Se agrega en selectTable() DESPUÉS de que renderTableDetail() lo crea.
+    // Eliminar la línea siguiente que siempre fallaba silenciosamente:
+    // document.getElementById('btn-open-payment')?.addEventListener('click', openPaymentModal);
 }
 
 // ── 5. Seleccionar mesa y cargar su detalle de consumo ─────────────────────
@@ -241,29 +266,32 @@ async function selectTable(table) {
     renderBoard();
     attachBoardEvents();
 
-    // Cargar desglose de consumo usando el endpoint de meseros (order status)
+    // Cargar items de la orden (busca OPEN o AWAITING_PAYMENT con el fix del modelo)
     try {
         const json = await fetchData(
             ENDPOINTS.waiters.get.orderStatus.replace(':tableCode', table.tableCode)
         );
-        const d = json.data?.body || json.data || {};
-        state.orderItems = (d.items || []).map(i => ({
-            name: i.name || i.dish_name,
-            quantity: i.quantity,
-            unitPrice: parseFloat(i.unit_price || i.unitPrice || 0),
-            subtotal: parseFloat(i.subtotal || 0)
+        const items = json.data?.body?.items || json.data?.items || [];
+        state.orderItems = items.map(i => ({
+            name: i.name || i.dish_name || '',
+            quantity: i.quantity ?? 1,
+            unitPrice: parseFloat(i.unit_price ?? i.unitPrice ?? i.price ?? 0),
+            subtotal: parseFloat(i.subtotal ?? 0)
         }));
     } catch {
         state.orderItems = [];
     }
 
-    const detailPanel = document.getElementById('detail-panel');
-    if (detailPanel) {
-        detailPanel.innerHTML = renderTableDetail();
-    }
-    document.getElementById('btn-open-payment')?.addEventListener('click', openPaymentModal);
-}
+    // FIX 1: renderTableDetail() es void — manipula el DOM directamente.
+    //         Antes: detailPanel.innerHTML = renderTableDetail() → innerHTML = undefined → panel vacío.
+    renderTableDetail();
 
+    // FIX 2: btn-open-payment vive en tpl-cashier-detail.
+    //         attachBoardEvents() se ejecuta antes de renderTableDetail() → no existe aún → listener no se agrega.
+    //         Hay que agregarlo DESPUÉS de renderTableDetail().
+    document.getElementById('btn-open-payment')
+        ?.addEventListener('click', openPaymentModal);
+}
 // ── 6. Modal de pago ───────────────────────────────────────────────────────
 function openPaymentModal() {
     state.paymentLines = [];

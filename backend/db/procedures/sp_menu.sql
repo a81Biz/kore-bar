@@ -12,11 +12,10 @@ DROP FUNCTION IF EXISTS sp_create_menu_category(VARCHAR, VARCHAR, TEXT);
 DROP FUNCTION IF EXISTS sp_update_menu_category(VARCHAR, VARCHAR, TEXT, BOOLEAN);
 DROP FUNCTION IF EXISTS sp_delete_menu_category_smart(VARCHAR);
 DROP FUNCTION IF EXISTS sp_create_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR);
-DROP FUNCTION IF EXISTS sp_update_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR, BOOLEAN);
+DROP FUNCTION IF EXISTS sp_update_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR, BOOLEAN, BOOLEAN);
 DROP FUNCTION IF EXISTS sp_delete_menu_dish_smart(VARCHAR);
 DROP FUNCTION IF EXISTS sp_create_ingredient(VARCHAR, VARCHAR, VARCHAR);
 DROP FUNCTION IF EXISTS sp_add_recipe_item(VARCHAR, VARCHAR, DECIMAL);
-
 
 -- ── CATEGORÍAS ────────────────────────────────────────────────
 
@@ -99,7 +98,8 @@ CREATE OR REPLACE PROCEDURE sp_update_menu_dish(
     p_description   TEXT,
     p_price         DECIMAL,
     p_image_url     VARCHAR,
-    p_is_active     BOOLEAN
+    p_is_active     BOOLEAN,
+    p_can_pickup BOOLEAN
 )
 LANGUAGE plpgsql AS $$
 DECLARE v_cat_id UUID;
@@ -108,11 +108,15 @@ BEGIN
     IF v_cat_id IS NULL THEN
         RAISE EXCEPTION 'Categoría % no existe', p_category_code USING ERRCODE = 'P0002';
     END IF;
-    UPDATE menu_dishes
-    SET category_id = v_cat_id, name = p_name, description = p_description,
-        price = p_price, image_url = p_image_url, is_active = p_is_active,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE code = p_code;
+    UPDATE menu_dishes SET
+    category_id = (SELECT id FROM menu_categories WHERE code = p_category_code),
+    name = p_name,
+    description = p_description,
+    price = p_price,
+    image_url = p_image_url,
+    is_active = p_is_active,
+    can_pickup = p_can_pickup   -- ← agregar esta línea
+WHERE code = p_code;
 END;
 $$;
 

@@ -129,22 +129,22 @@ export const getRecipeBOM = async (c, dishCode) =>
 // Tablero KDS completo (PENDING_KITCHEN + PREPARING)
 export const getKitchenBoard = async (c) =>
     await executeQuery(c, `
-        SELECT oi.id        AS item_id,
-               md.name      AS dish_name,
+        SELECT oi.id          AS item_id,
+               md.name        AS dish_name,
                oi.quantity,
                oi.notes,
                oi.status,
                oi.started_at,
                oi.created_at,
-               oh.code      AS order_code,
-               rt.code      AS table_code,
-               e.first_name AS waiter_name
+               oh.code        AS order_code,
+               rt.code        AS table_code,
+               e.first_name   AS waiter_name
         FROM order_items oi
-        JOIN order_headers oh    ON oh.id = oi.order_id
+        JOIN order_headers oh     ON oh.id = oi.order_id
         JOIN restaurant_tables rt ON rt.id = oh.table_id
-        JOIN menu_dishes md      ON md.id = oi.dish_id
-        JOIN employees e         ON e.id  = oh.waiter_id
-        WHERE oi.status IN ('PENDING_KITCHEN', 'PREPARING')
+        JOIN menu_dishes md       ON md.id = oi.dish_id
+        JOIN employees e          ON e.id  = oh.waiter_id
+        WHERE oi.status IN ('PENDING_KITCHEN', 'PREPARING', 'READY')
         ORDER BY oi.created_at ASC
     `);
 

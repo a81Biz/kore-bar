@@ -78,6 +78,7 @@ const render = {
         state.dom.revTechMethod = container.querySelector('#rev-tech-method');
         state.dom.revBomList = container.querySelector('#rev-bom-list');
         state.dom.revBomEmpty = container.querySelector('#rev-bom-empty');
+        state.dom.revCanPickup = container.querySelector('#rev-can-pickup');
     },
 
     // =========================================================================
@@ -137,6 +138,19 @@ const render = {
             badgeReceta.appendChild(iconSpan);
             badgeReceta.appendChild(document.createTextNode(` ${uiReceta.text}`));
 
+            if (plat.canPickup && !plat.hasRecipe) {
+                const badgePickup = clon.querySelector('.col-receta-status');
+                // Sobrescribir el badge de "Sin Receta" con "Recoger"
+                badgePickup.className = 'col-receta-status inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800';
+                badgePickup.textContent = '';
+                const iconP = document.createElement('span');
+                iconP.className = 'material-symbols-outlined text-[12px]';
+                iconP.textContent = 'local_bar';
+                badgePickup.appendChild(iconP);
+                badgePickup.appendChild(document.createTextNode(' Recoger'));
+            }
+
+
             const btnEliminar = clon.querySelector('.btn-eliminar');
             btnEliminar.setAttribute('data-action', 'delete-platillo');
             btnEliminar.setAttribute('data-id', plat.dishCode);
@@ -176,6 +190,7 @@ const render = {
         state.dom.revDesc.value = plat.description || '';
         state.dom.revPrice.value = plat.price;
         state.dom.revActive.checked = plat.isActive;
+        state.dom.revCanPickup.checked = plat.canPickup ?? false;
 
         if (plat.imageUrl) {
             state.dom.revImgPreview.src = plat.imageUrl;
@@ -345,9 +360,9 @@ const logic = {
             description: state.dom.revDesc.value.trim(),
             price: parseFloat(state.dom.revPrice.value),
             isActive: state.dom.revActive.checked,
+            canPickup: state.dom.revCanPickup.checked,
             imageUrl: state.datos.currentImageBase64 || plat.imageUrl || ''
         };
-
         // ✅ putData ahora está importado correctamente
         const url = ENDPOINTS.admin.put.menuDish.replace(':code', plat.dishCode);
         await putData(url, payloadAPI);

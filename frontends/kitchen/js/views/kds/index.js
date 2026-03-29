@@ -6,8 +6,6 @@ import { showErrorModal } from '/shared/js/ui.js';
 import { waitForEnv } from '/core/js/kore.env.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-
-
 // ── 1. ESTADO PRIVADO ─────────────────────────────────────────────────────
 const state = {
     dom: {},
@@ -26,23 +24,27 @@ const _cacheDOM = (container) => {
     state.dom.colPending = container.querySelector('#col-pending');
     state.dom.colPreparing = container.querySelector('#col-preparing');
     state.dom.colReady = container.querySelector('#col-ready');
-
     state.dom.countPending = container.querySelector('#count-pending');
     state.dom.countPreparing = container.querySelector('#count-preparing');
     state.dom.countReady = container.querySelector('#count-ready');
-
     state.dom.navButtons = container.querySelectorAll('[data-nav]');
     state.dom.btnClockIn = container.querySelector('[data-action="open-pin-modal"]');
 };
 
 const startRealtime = async () => {
-    const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    state.channel = supabase
-        .channel('kds-order-items')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' },
-            () => fetchBoardData())
-        .subscribe();
+    try {
+        const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        state.channel = supabase
+            .channel('kds-order-items')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' },
+                () => fetchBoardData())
+            .subscribe();
+    } catch (e) {
+        // Supabase no configurado — polling de 5s como fallback
+        console.warn('[KDS] Supabase no disponible, usando polling:', e.message);
+        state.pollingInterval = setInterval(fetchBoardData, 5000);
+    }
 };
 
 const _bindEvents = () => {
@@ -52,7 +54,6 @@ const _bindEvents = () => {
             if (targetView) PubSub.publish('NAVIGATE', targetView);
         });
     });
-
     state.dom.btnClockIn?.addEventListener('click', () => {
         PubSub.publish('OPEN_MODAL', 'pin-modal');
     });
@@ -63,7 +64,20 @@ const fetchBoardData = async () => {
     try {
         const res = await fetchData(ENDPOINTS.kitchen.get.board);
         if (res.success) {
-            state.items = res.data.board || [];
+            const board = res.data.board;
+            if (Array.isArray(board)) {
+                // API devuelve array plano
+                state.items = board;
+            } else if (board && typeof board === 'object') {
+                // API devuelve { pending: [], preparing: [], ready: [] } — normalizar
+                state.items = [
+                    ...(board.pending || []),
+                    ...(board.preparing || []),
+                    ...(board.ready || [])
+                ];
+            } else {
+                state.items = [];
+            }
             renderBoard();
         }
     } catch (e) {
@@ -82,8 +96,15 @@ const renderBoard = () => {
         READY: []
     };
 
-    if (state.items.pending.length < 1 || state.items.preparing.length < 1 || state.items.ready.length < 1) {
-        return
+    // FIX: El código anterior hacía:
+    //   if (state.items.pending.length < 1 || state.items.preparing.length < 1 || ...)
+    // state.items es un array plano → .pending es undefined → crash.
+    // Además el || hacía que saliera cuando CUALQUIER columna estaba vacía (siempre al inicio).
+    if (!state.items || state.items.length === 0) {
+        state.dom.countPending.textContent = '0';
+        state.dom.countPreparing.textContent = '0';
+        state.dom.countReady.textContent = '0';
+        return;
     }
 
     state.items.forEach(item => {
@@ -100,8 +121,8 @@ const renderBoard = () => {
         READY: state.dom.colReady
     };
 
-    Object.entries(colMap).forEach(([status, container]) => {
-        groups[status].forEach(item => container.appendChild(createOrderCard(item)));
+    Object.entries(colMap).forEach(([status, col]) => {
+        groups[status].forEach(item => col.appendChild(createOrderCard(item)));
     });
 };
 
@@ -110,17 +131,14 @@ const createOrderCard = (item) => {
     const card = template.content.cloneNode(true);
     const root = card.querySelector('div');
 
-    // ✅ textContent para todos los campos que vienen de la API
     root.querySelector('.col-mesa').textContent = `Mesa ${item.table_code || '--'}`;
     root.querySelector('.col-ticket').textContent = `#${item.order_code}`;
     root.querySelector('.col-mesero').textContent = item.waiter_name || 'Personal';
 
-    // Timer
     const startTime = new Date(item.started_at || item.created_at).getTime();
     root.setAttribute('data-start-time', startTime);
     root.classList.add('kds-card');
 
-    // ✅ Items del pedido — textContent, sin innerHTML con template literals
     const itemsContainer = root.querySelector('.col-items');
     const itemDiv = document.createElement('div');
     itemDiv.className = 'flex justify-between items-center text-white font-bold';
@@ -129,17 +147,21 @@ const createOrderCard = (item) => {
     itemDiv.appendChild(itemSpan);
     itemsContainer.appendChild(itemDiv);
 
-    // Acciones por estado
+    if (item.notes) {
+        const notesDiv = document.createElement('div');
+        notesDiv.className = 'text-xs text-slate-400 italic mt-1';
+        notesDiv.textContent = item.notes;
+        itemsContainer.appendChild(notesDiv);
+    }
+
     const actionsContainer = root.querySelector('.col-actions');
 
     if (item.status === 'PENDING_KITCHEN') {
         const btn = document.createElement('button');
         btn.className = 'flex-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black py-3 rounded-lg transition-colors uppercase text-sm tracking-widest';
         btn.textContent = 'COMENZAR';
-        // ✅ addEventListener en lugar de onclick
         btn.addEventListener('click', () => updateItemStatus(item.id, 'PREPARING'));
         actionsContainer.appendChild(btn);
-
     } else if (item.status === 'PREPARING') {
         root.classList.replace('border-amber-500', 'border-orange-500');
         const btn = document.createElement('button');
@@ -147,7 +169,6 @@ const createOrderCard = (item) => {
         btn.textContent = 'LISTO';
         btn.addEventListener('click', () => updateItemStatus(item.id, 'READY'));
         actionsContainer.appendChild(btn);
-
     } else if (item.status === 'READY') {
         root.classList.replace('border-amber-500', 'border-emerald-500');
         root.querySelector('.col-tiempo').classList.replace('text-slate-300', 'text-emerald-400');
@@ -161,7 +182,6 @@ const updateItemStatus = async (itemId, newStatus) => {
         const res = await putData(ENDPOINTS.kitchen.put.itemStatus, { status: newStatus }, { itemId });
         if (res.success) await fetchBoardData();
     } catch (e) {
-        // ✅ showErrorModal en lugar de alert()
         showErrorModal('Error al actualizar estado: ' + e.message, 'Error KDS');
     }
 };
@@ -178,7 +198,6 @@ const startTimers = () => {
             const timerEl = card.querySelector('.col-tiempo');
             if (!timerEl) return;
 
-            // ✅ Construir el timer con DOM — sin innerHTML
             timerEl.textContent = '';
             const iconSpan = document.createElement('span');
             iconSpan.className = 'material-symbols-outlined text-[14px]';
@@ -191,7 +210,7 @@ const startTimers = () => {
     }, 1000);
 };
 
-// ── 5. CICLO DE VIDA PÚBLICO ──────────────────────────────────────────────
+// ── 5. CICLO DE VIDA PÚBLICO ─────────────────────────────────────────────
 export const KdsController = {
     mount: async (container) => {
         _cacheDOM(container);
@@ -199,13 +218,10 @@ export const KdsController = {
         await fetchBoardData();
         await startRealtime();
         startTimers();
-        //state.pollingInterval = setInterval(fetchBoardData, 5000);
     },
     unmount: () => {
-        // if (state.pollingInterval) clearInterval(state.pollingInterval);
-        // if (state.timerInterval) clearInterval(state.timerInterval);
         state.channel?.unsubscribe();
         if (state.timerInterval) clearInterval(state.timerInterval);
-
+        if (state.pollingInterval) clearInterval(state.pollingInterval);
     }
 };

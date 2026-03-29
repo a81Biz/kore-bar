@@ -101,24 +101,24 @@ export const updateTechSheet = updateTechSheetHandler;
 export const getKitchenBoard = async (state, c) => {
     try {
         const rows = await kitchenModel.getKitchenBoard(c);
-        const board = { pending: [], preparing: [], ready: [] };
-        for (const row of rows) {
-            const card = {
-                itemId: row.item_id,
-                dishName: row.dish_name,
-                quantity: row.quantity,
-                notes: row.notes,
-                startedAt: row.started_at,
-                createdAt: row.created_at,
-                orderCode: row.order_code,
-                tableCode: row.table_code,
-                waiterName: row.waiter_name
-            };
-            if (row.status === 'PENDING_KITCHEN') board.pending.push(card);
-            else if (row.status === 'PREPARING') board.preparing.push(card);
-            else if (row.status === 'READY') board.ready.push(card);
-        }
-        state.board = board;
+
+        // FIX 1: 'status' faltaba en el card → groups[undefined] → nada se renderizaba
+        // FIX 2: campos en camelCase (itemId, dishName) pero KDS espera snake_case (id, name)
+        // FIX 3: state.data = array plano → schemaRouter lo expone en res.data.board directamente
+        const items = rows.map(row => ({
+            id: row.item_id,      // KDS usa item.id
+            name: row.dish_name,    // KDS usa item.name
+            quantity: row.quantity,
+            notes: row.notes,
+            status: row.status,       // ← CRÍTICO: faltaba
+            started_at: row.started_at,
+            created_at: row.created_at,
+            order_code: row.order_code,   // KDS usa item.order_code
+            table_code: row.table_code,   // KDS usa item.table_code
+            waiter_name: row.waiter_name   // KDS usa item.waiter_name
+        }));
+
+        state.data = { board: items };
     } catch (error) {
         if (error.isOperational) throw error;
         throw new AppError('Error obteniendo el tablero de cocina', 500);

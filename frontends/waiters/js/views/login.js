@@ -76,13 +76,13 @@ export async function mount(container) {
 
                     if (res.success) {
                         const fullData = eligibleWaiters.find(w => w.employee_number === selectedEmployee) || {};
-                        localStorage.setItem('pos_token', res.data.body.token);
+                        localStorage.setItem('pos_token', res.data.token);
                         PubSub.publish('AUTH_SUCCESS', {
-                            employeeNumber: res.data.body?.employeeNumber || fullData.employee_number,
-                            name: res.data.body?.name || fullData.nombre,
+                            employeeNumber: res.data.employeeNumber || fullData.employee_number,
+                            name: res.data.firstName || fullData.nombre,
                             shift: fullData.shift,
                             zona: fullData.zona,
-                            role: res.data.body?.role || 'WAITERS'
+                            role: res.data.role || 'WAITERS'
                         });
                     }
                 } catch (err) {

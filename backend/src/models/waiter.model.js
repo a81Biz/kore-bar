@@ -136,7 +136,9 @@ export const getOpenOrderWithId = async (c, tableCode) =>
     await executeQuery(c, `
         SELECT oh.id, oh.code FROM order_headers oh
         JOIN restaurant_tables rt ON rt.id = oh.table_id
-        WHERE rt.code = $1 AND oh.status = 'OPEN'
+        WHERE rt.code = $1
+          AND oh.status IN ('OPEN', 'AWAITING_PAYMENT')
+        ORDER BY oh.created_at DESC
         LIMIT 1
     `, [tableCode]);
 
@@ -156,22 +158,29 @@ export const setOrderAwaitingPayment = async (c, orderCode) =>
 export const getFloorStock = async (c) =>
     await executeQuery(c, `
         SELECT 
-            mc.name AS "categoryName",
-            mc.code AS "categoryCode",
-            mc.route_to_kds AS "routeToKds",
-            md.code AS "dishCode",
-            md.name AS "name",
+            mc.name          AS "categoryName",
+            mc.code          AS "categoryCode",
+            mc.route_to_kds  AS "routeToKds",
+            md.code          AS "dishCode",
+            md.name          AS "name",
             md.price,
-            md.image_url AS "imageUrl",
-            md.has_recipe AS "hasRecipe",
-            md.is_active AS "isActive",
+            md.image_url     AS "imageUrl",
+            md.has_recipe    AS "hasRecipe",
+            md.can_pickup    AS "canPickup",
+            md.is_active     AS "isActive",
             COALESCE(SUM(isl.stock), 99)::numeric AS "stock_available"
         FROM menu_dishes md
         JOIN menu_categories mc ON md.category_id = mc.id
-        LEFT JOIN inventory_items ii ON ii.code = md.code
-        LEFT JOIN inventory_stock_locations isl ON isl.item_id = ii.id
-        LEFT JOIN inventory_locations il ON il.id = isl.location_id AND il.code = 'LOC-PISO'
-        WHERE md.is_active = true AND mc.is_active = true
+        LEFT JOIN inventory_items ii
+            ON ii.code = md.code
+        LEFT JOIN inventory_stock_locations isl
+            ON isl.item_id = ii.id
+        LEFT JOIN inventory_locations il
+            ON il.id = isl.location_id AND il.code = 'LOC-PISO'
+        WHERE md.is_active = true
+          AND mc.is_active = true
+          -- FIX: Solo platillos que van a cocina (has_recipe) O que se recogen directamente (can_pickup)
+          AND (md.has_recipe = true OR md.can_pickup = true)
         GROUP BY mc.id, md.id
         ORDER BY mc.name ASC, md.name ASC;
     `);

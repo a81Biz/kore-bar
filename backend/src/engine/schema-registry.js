@@ -145,6 +145,8 @@ import fetchTicketPrintData from './schemas/admin/cashier/get-ticket-print.schem
 import getWaiterCalls from './schemas/public/pos/get-waiter-calls.schema.json'   assert { type: 'json' };
 import attendWaiterCall from './schemas/public/pos/attend-waiter-call.schema.json'   assert { type: 'json' };
 
+import getEnvConfig from './schemas/public/env/get-env.schema.json' assert { type: 'json' };
+
 
 
 // ============================================================
@@ -195,7 +197,7 @@ export const schemasBySubDir = {
         getWaiter, waiterCloseTable, waiterCollectItem, waiterDeliverItem,
         waiterFloorStock, waiterLayout, waiterLogin, waiterOpenTable,
         waiterOrderStatus, waiterSubmitOrder,
-        callWaiter, getWaiterCalls, attendWaiterCall,
+        callWaiter, getWaiterCalls, attendWaiterCall, getEnvConfig,
     ],
 };
 

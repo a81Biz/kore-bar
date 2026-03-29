@@ -165,6 +165,8 @@ import {
     fetchTicketPrintData
 } from '../helpers/cashier-print.helper.js';
 
+import { getEnvConfig } from '../helpers/env.helper.js';
+
 // ============================================================
 // MAPA CENTRAL — KEY = handler en schema JSON
 // ============================================================
@@ -318,5 +320,8 @@ export const ActionRegistry = {
 
     // Impresión de tickets
     fetchTicketPrintData,
+
+    //env
+    getEnvConfig,
 
 };

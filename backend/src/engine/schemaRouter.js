@@ -205,7 +205,11 @@ export const buildRoutes = (router, subDir = '') => {
                         }
                         return obj;
                     };
-                    responseData.body = interpolate(finalState.response.body);
+                    const freshBody = JSON.parse(JSON.stringify(finalState.response.body));
+                    responseData = {
+                        status: finalState.response.status,
+                        body: interpolate(freshBody)
+                    };
                 }
 
                 const httpStatus = finalState.response?.status || 200;

@@ -33,16 +33,15 @@ export const PublicMenuModel = {
         return result;
     },
 
-    // CU-PUB-02: Registrar alerta al mesero desde la mesa
     registerCall: async (tableCode, reason) => {
         const sql = `
-            INSERT INTO waiter_calls (table_id, reason, status)
-            VALUES (
-                (SELECT id FROM restaurant_tables WHERE code = $1),
-                $2,
-                'PENDING'
-            ) RETURNING id;
-        `;
+        INSERT INTO waiter_calls (table_id, reason, status)
+        VALUES (
+            (SELECT id FROM restaurant_tables WHERE code = $1),
+            $2,
+            'PENDING'
+        ) RETURNING id;
+    `;
         try {
             const res = await executeQuery(null, sql, [tableCode, reason]);
             return res[0];
@@ -57,18 +56,18 @@ export const PublicMenuModel = {
     // CU-PUB-03: Obtener llamadas pendientes (para polling fallback)
     getPendingCalls: async () => {
         const sql = `
-            SELECT
-                wc.id,
-                rt.code          AS "tableCode",
-                wc.reason,
-                wc.status,
-                wc.created_at    AS "createdAt"
-            FROM waiter_calls wc
-            JOIN restaurant_tables rt ON rt.id = wc.table_id
-            WHERE wc.status = 'PENDING'
-              AND wc.created_at > NOW() - INTERVAL '2 hours'
-            ORDER BY wc.created_at ASC
-        `;
+        SELECT
+            wc.id,
+            rt.code       AS "tableCode",
+            wc.reason,
+            wc.status,
+            wc.created_at AS "createdAt"
+        FROM waiter_calls wc
+        JOIN restaurant_tables rt ON rt.id = wc.table_id
+        WHERE wc.status = 'PENDING'
+          AND wc.created_at > NOW() - INTERVAL '8 hours'
+        ORDER BY wc.created_at ASC
+    `;
         return await executeQuery(null, sql);
     },
 

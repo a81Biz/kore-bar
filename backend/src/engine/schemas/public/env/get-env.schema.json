@@ -1,0 +1,21 @@
+{
+    "id": "get_env_config",
+    "name": "Get Public Env Config",
+    "description": "Devuelve las variables de entorno públicas para los micrositios frontend (Supabase anon key).",
+    "api": {
+        "method": "GET",
+        "path": "/env",
+        "auth": "none",
+        "tags": [
+            "Sistema"
+        ]
+    },
+    "startAt": "fetch_env",
+    "nodes": {
+        "fetch_env": {
+            "type": "action",
+            "handler": "getEnvConfig",
+            "next": "end"
+        }
+    }
+}

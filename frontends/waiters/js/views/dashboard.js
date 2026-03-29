@@ -1,8 +1,8 @@
+// frontends/waiters/js/views/dashboard.js
 import { PubSub } from '/shared/js/pubsub.js';
 import { fetchData, putData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
 
-// Razones de llamada en español
 const CALL_REASONS = {
     ORDER: '📋 Quiere ordenar',
     BILL: '💳 Pide la cuenta',
@@ -14,8 +14,7 @@ export async function mount(container, authData) {
     const clockDisplay = container.querySelector('#clock-display');
     const btnLogout = container.querySelector('#btn-logout');
     const tablesGrid = container.querySelector('#tables-grid');
-    
-    // Elementos del Top Bar del Mesero
+
     const nameLabel = container.querySelector('.col-waiter-name');
     const numberLabel = container.querySelector('.col-waiter-number');
     const shiftLabel = container.querySelector('.col-waiter-shift');
@@ -26,9 +25,10 @@ export async function mount(container, authData) {
     if (shiftLabel && authData?.shift) shiftLabel.textContent = authData.shift;
     if (zoneLabel && authData?.zona) zoneLabel.textContent = authData.zona;
 
-    // ── Estado local ──────────────────────────────────────────
-    let pendingCalls = [];   // llamadas PENDING activas
-    let pollTimer = null;
+    let pendingCalls = [];
+    let pollTableTimer = null;  // mesas: 30s
+    let pollCallsTimer = null;  // llamadas: 8s
+    let _callSub = null;
 
     // ── Reloj ─────────────────────────────────────────────────
     const updateTime = () => {
@@ -45,7 +45,7 @@ export async function mount(container, authData) {
     const fetchTables = async () => {
         try {
             const res = await fetchData(ENDPOINTS.waiters.get.layout);
-            if (res.success && res.data?.body?.layout.length > 0) {
+            if (res.success && res.data?.body?.layout?.length > 0) {
                 const waiterZone = authData?.zona;
                 const filteredZone = res.data.body.layout.find(z => z.zoneName === waiterZone);
                 const allTables = filteredZone ? filteredZone.tables : [];
@@ -59,26 +59,24 @@ export async function mount(container, authData) {
     // ── Llamadas pendientes ───────────────────────────────────
     const fetchCalls = async () => {
         try {
-            // Endpoint: GET /api/public/waiters/calls
             const res = await fetchData(ENDPOINTS.waiters.get.calls);
             if (res.success) {
                 pendingCalls = res.data?.body?.calls || res.data?.calls || [];
                 renderCallsBanner();
+                await fetchTables(); // re-render mesas con indicador de llamada
             }
         } catch (e) {
-            // Silencioso — el endpoint puede no existir aún
             console.warn('[Dashboard] Calls endpoint no disponible:', e.message);
         }
     };
 
-    // ── Banner de llamadas pendientes ─────────────────────────
+    // ── Banner de llamadas ────────────────────────────────────
     const renderCallsBanner = () => {
         let banner = container.querySelector('#calls-banner');
         if (!banner) {
             banner = document.createElement('div');
             banner.id = 'calls-banner';
             banner.className = 'flex flex-col gap-2 px-6 py-3';
-            // Insertar antes del grid de mesas
             const gridParent = tablesGrid?.parentElement;
             if (gridParent) gridParent.insertBefore(banner, tablesGrid);
         }
@@ -119,6 +117,7 @@ export async function mount(container, authData) {
                     await putData(ENDPOINTS.waiters.put.attendCall, {}, { callId: call.id });
                     card.remove();
                     pendingCalls = pendingCalls.filter(c => c.id !== call.id);
+                    await fetchTables();
                 } catch (e) {
                     console.error('[Dashboard] Error atendiendo llamada:', e);
                 }
@@ -137,48 +136,60 @@ export async function mount(container, authData) {
 
         tables.forEach(table => {
             const btn = document.createElement('button');
-            const isOccupied = table.status === 'OCCUPIED';
 
-            // Verificar si esta mesa tiene llamadas pendientes
+            const isOccupied = table.status === 'OCCUPIED';
+            const isAwaitingPayment = table.status === 'AWAITING_PAYMENT';
             const tableCall = pendingCalls.find(c => c.tableCode === table.tableCode);
 
             btn.className = [
                 'group relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all shadow-sm aspect-square',
-                isOccupied
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
-                    : tableCall
-                        ? 'bg-amber-50 border-amber-400 animate-pulse'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary'
+                isOccupied ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                    : isAwaitingPayment ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400'
+                        : tableCall ? 'bg-amber-50 border-amber-400 animate-pulse'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary'
             ].join(' ');
 
             const iconWrap = document.createElement('div');
             iconWrap.className = [
                 'size-20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform',
                 isOccupied ? 'bg-green-500 shadow-md'
-                    : tableCall ? 'bg-amber-400 shadow-md'
-                        : 'bg-slate-100 dark:bg-slate-700'
+                    : isAwaitingPayment ? 'bg-blue-400 shadow-md'
+                        : tableCall ? 'bg-amber-400 shadow-md'
+                            : 'bg-slate-100 dark:bg-slate-700'
             ].join(' ');
 
             const iconSpan = document.createElement('span');
-            iconSpan.className = `material-symbols-outlined text-4xl ${isOccupied || tableCall ? 'text-white' : 'text-slate-400'}`;
-            iconSpan.textContent = tableCall ? 'notifications_active' : isOccupied ? 'person' : 'event_seat';
+            iconSpan.className = `material-symbols-outlined text-4xl ${isOccupied || isAwaitingPayment || tableCall ? 'text-white' : 'text-slate-400'
+                }`;
+            iconSpan.textContent = tableCall ? 'notifications_active'
+                : isOccupied ? 'person'
+                    : isAwaitingPayment ? 'payments'
+                        : 'event_seat';
             iconWrap.appendChild(iconSpan);
 
             const mesaLabel = document.createElement('span');
-            mesaLabel.className = `text-2xl font-black mb-1 ${isOccupied ? 'text-green-700 dark:text-green-400' : tableCall ? 'text-amber-700' : 'text-slate-800 dark:text-white'}`;
+            mesaLabel.className = `text-2xl font-black mb-1 ${isOccupied ? 'text-green-700 dark:text-green-400'
+                    : isAwaitingPayment ? 'text-blue-600 dark:text-blue-400'
+                        : tableCall ? 'text-amber-700'
+                            : 'text-slate-800 dark:text-white'
+                }`;
             mesaLabel.textContent = `MESA ${table.tableCode}`;
 
             const statusLabel = document.createElement('span');
-            statusLabel.className = `font-bold text-sm uppercase ${isOccupied ? 'text-green-600' : tableCall ? 'text-amber-600' : 'text-slate-400'}`;
-            statusLabel.textContent = tableCall
-                ? (CALL_REASONS[tableCall.reason] || 'Llamando')
-                : isOccupied
-                    ? (table.waiterName || `${table.capacity} Comensales`)
-                    : 'Libre';
+            statusLabel.className = `font-bold text-sm uppercase ${isOccupied ? 'text-green-600'
+                    : isAwaitingPayment ? 'text-blue-500'
+                        : tableCall ? 'text-amber-600'
+                            : 'text-slate-400'
+                }`;
+            statusLabel.textContent = tableCall ? (CALL_REASONS[tableCall.reason] || 'Llamando')
+                : isOccupied ? (table.waiterName || `${table.capacity} Comensales`)
+                    : isAwaitingPayment ? '💳 Esperando Cuenta'
+                        : 'Libre';
 
-            if (isOccupied && table.waiterName) {
+            if ((isOccupied || isAwaitingPayment) && table.waiterName) {
                 const badge = document.createElement('div');
-                badge.className = 'absolute top-4 right-4 text-white text-[10px] font-bold px-2 py-1 rounded-full bg-green-500';
+                badge.className = `absolute top-4 right-4 text-white text-[10px] font-bold px-2 py-1 rounded-full ${isOccupied ? 'bg-green-500' : 'bg-blue-400'
+                    }`;
                 badge.textContent = table.waiterName;
                 btn.appendChild(badge);
             }
@@ -201,48 +212,44 @@ export async function mount(container, authData) {
         });
     };
 
-    // ── Polling fallback (30s, visibility-aware) ──────────────
-    const refreshAll = async () => {
-        await Promise.all([fetchTables(), fetchCalls()]);
-    };
-
+    // ── Polling doble — FIX: 30s mesas / 8s llamadas ─────────
     const startPolling = () => {
         stopPolling();
-        pollTimer = setInterval(() => {
-            if (!document.hidden) refreshAll();
-        }, 30000);
+        pollTableTimer = setInterval(() => { if (!document.hidden) fetchTables(); }, 30000);
+        pollCallsTimer = setInterval(() => { if (!document.hidden) fetchCalls(); }, 8000);
     };
 
     const stopPolling = () => {
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        if (pollTableTimer) { clearInterval(pollTableTimer); pollTableTimer = null; }
+        if (pollCallsTimer) { clearInterval(pollCallsTimer); pollCallsTimer = null; }
     };
 
-    // Refresh inmediato cuando la pestaña vuelve a ser visible
     const onVisibility = () => {
-        if (!document.hidden) refreshAll();
+        if (!document.hidden) { fetchTables(); fetchCalls(); }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
-    // ── Escuchar llamadas vía Realtime (si está conectado) ────
-    const onRealtimeCall = () => refreshAll();
-    PubSub.subscribe('WAITER_CALL_RECEIVED', onRealtimeCall);
+    // FIX: Guardar token de suscripción para limpiarlo en cleanup
+    const onRealtimeCall = () => fetchCalls();
+    _callSub = PubSub.subscribe('WAITER_CALL_RECEIVED', onRealtimeCall);
 
     // ── Cleanup ───────────────────────────────────────────────
     const cleanup = () => {
         clearInterval(clockInterval);
         stopPolling();
         document.removeEventListener('visibilitychange', onVisibility);
+        // FIX: Cancelar suscripción PubSub — evita listeners zombie
+        if (typeof _callSub === 'function') _callSub();
+        else PubSub.unsubscribe?.('WAITER_CALL_RECEIVED', onRealtimeCall);
     };
 
-    // ── Eventos ───────────────────────────────────────────────
     btnLogout?.addEventListener('click', () => {
         cleanup();
         PubSub.publish('LOGOUT_TRIGGERED');
     });
 
-
-
     // ── Boot ──────────────────────────────────────────────────
-    await refreshAll();
+    await fetchTables();
+    await fetchCalls();
     startPolling();
 }

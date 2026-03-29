@@ -5,17 +5,41 @@
     "api": {
         "method": "PUT",
         "path": "/menu/dishes/:code",
-        "tags": ["Admin / Menú"],
+        "tags": [
+            "Admin / Menú"
+        ],
         "body": {
             "properties": {
-                "categoryCode": { "type": "string" },
-                "name": { "type": "string" },
-                "description": { "type": "string" },
-                "price": { "type": "number", "minimum": 0 },
-                "imageUrl": { "type": "string" },
-                "isActive": { "type": "boolean" }
+                "categoryCode": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "canPickup": {
+                    "type": "boolean",
+                    "description": "Si true, el platillo aparece en el menú del mesero aunque no tenga receta (se recoge directamente)."
+                }
             },
-            "required": ["categoryCode", "name", "price", "isActive"]
+            "required": [
+                "categoryCode",
+                "name",
+                "price",
+                "isActive"
+            ]
         }
     },
     "startAt": "update_dish",

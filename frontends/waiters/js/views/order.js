@@ -1,4 +1,4 @@
-// waiters/js/views/order.js
+// frontends/waiters/js/views/order.js
 import { PubSub } from '/shared/js/pubsub.js';
 import { formatCurrency } from '/shared/js/utils.js';
 import { fetchData, postData, putData } from '/shared/js/http.client.js';
@@ -7,17 +7,16 @@ import { KORE_CONFIG } from '/core/js/kore.config.js';
 import { showErrorModal, confirmAction } from '/shared/js/ui.js';
 
 export async function mount(container, data = {}) {
-    // ── Estado ────────────────────────────────────────────────────────────
     let cart = [];
     let sentItems = [];
     let activeCategory = null;
     let MENU_ITEMS = [];
     let CATEGORIES = [];
+    let syncTimer = null;
 
     const { tableCode, status, waiterName, authData } = data;
     const employeeNumber = authData?.employeeNumber;
 
-    // ── DOM ───────────────────────────────────────────────────────────────
     const btnHome = container.querySelector('#btn-home');
     const btnCloseOrder = container.querySelector('#btn-close-order');
     const btnShowQr = container.querySelector('#btn-show-qr');
@@ -38,7 +37,19 @@ export async function mount(container, data = {}) {
     if (cartTime) cartTime.textContent = new Date().toLocaleTimeString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
     if (orderWaiterLabel && authData?.name) orderWaiterLabel.textContent = authData.name;
 
-    // ── Abrir sesión de mesa ──────────────────────────────────────────────
+    // FIX: Cambiar "Enviar a Cocina" → "Enviar Orden" (no todos los items van a cocina)
+    if (btnSendKitchen) {
+        const textNode = [...btnSendKitchen.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
+        if (textNode) textNode.textContent = ' Enviar Orden';
+        else {
+            const icon = btnSendKitchen.querySelector('.material-symbols-outlined');
+            btnSendKitchen.textContent = '';
+            if (icon) btnSendKitchen.appendChild(icon);
+            btnSendKitchen.appendChild(document.createTextNode(' Enviar Orden'));
+        }
+    }
+
+    // ── Sesión de mesa ────────────────────────────────────────────────────
     const ensureTableSession = async () => {
         if (!tableCode) return;
         if (status === 'OCCUPIED') { await syncOrderStatus(); return; }
@@ -48,27 +59,17 @@ export async function mount(container, data = {}) {
             console.warn('[Order] Error abriendo sesión de mesa:', e);
         }
     };
-    ensureTableSession();
 
-    // ── Carga de datos ────────────────────────────────────────────────────
-    // FIX #15: Reemplazar ENDPOINTS.admin.get.menuCategories + ENDPOINTS.admin.get.menuDishes
-    // por ENDPOINTS.menu.get.public — el micrositio de meseros no debe depender del dominio Admin.
-    // ENDPOINTS.waiters.get.floorStock apunta al nuevo endpoint propio de meseros (/waiters/floor-stock)
-    // que no expone el dominio de inventario admin.
+    // ── Carga de menú ─────────────────────────────────────────────────────
     const loadMenuData = async () => {
         try {
             const stockRes = await fetchData(ENDPOINTS.waiters.get.floorStock);
             if (stockRes.success) {
                 const stockArray = stockRes.data?.stock || stockRes.data || [];
-
                 const catMap = new Map();
                 MENU_ITEMS = stockArray.map(d => {
                     if (!catMap.has(d.categoryCode)) {
-                        catMap.set(d.categoryCode, {
-                            id: d.categoryName,
-                            code: d.categoryCode,
-                            icon: 'restaurant_menu'
-                        });
+                        catMap.set(d.categoryCode, { id: d.categoryName, code: d.categoryCode, icon: 'restaurant_menu' });
                     }
                     return {
                         id: d.dishCode,
@@ -77,15 +78,14 @@ export async function mount(container, data = {}) {
                         price: parseFloat(d.price),
                         category: d.categoryName,
                         location: d.routeToKds ? 'Cocina' : 'Barra',
+                        isKitchen: !!d.routeToKds,  // FIX: flag booleano para uso en UI
                         stock: parseFloat(d.stock_available ?? 99),
                         img: d.imageUrl || ''
                     };
                 });
-
                 CATEGORIES = Array.from(catMap.values());
                 activeCategory = CATEGORIES[0]?.id || null;
             }
-
             renderCategories();
             renderMenu();
         } catch (e) {
@@ -93,54 +93,32 @@ export async function mount(container, data = {}) {
         }
     };
 
-    // ── Categorías ────────────────────────────────────────────────────────
     const renderCategories = () => {
         categoryTabs.innerHTML = '';
         const tpl = document.getElementById('tpl-order-category-tab');
-
         CATEGORIES.forEach(cat => {
             const clone = tpl.content.cloneNode(true);
             const btn = clone.querySelector('button');
-            const iconEl = clone.querySelector('.col-icon');
-            const nameEl = clone.querySelector('.col-name');
-
             const isActive = activeCategory === cat.id;
-
-            if (isActive) {
-                btn.className = 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-primary text-white shadow-primary/20';
-            } else {
-                btn.className = 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50';
-            }
-
-            iconEl.textContent = cat.icon;
-            nameEl.textContent = cat.id;
-
-            btn.addEventListener('click', () => {
-                activeCategory = cat.id;
-                renderCategories();
-                renderMenu();
-            });
+            btn.className = isActive
+                ? 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-primary text-white shadow-primary/20'
+                : 'px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all shrink-0 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50';
+            clone.querySelector('.col-icon').textContent = cat.icon;
+            clone.querySelector('.col-name').textContent = cat.id;
+            btn.addEventListener('click', () => { activeCategory = cat.id; renderCategories(); renderMenu(); });
             categoryTabs.appendChild(clone);
         });
     };
 
-    // ── Grid de platillos ─────────────────────────────────────────────────
     const renderMenu = () => {
         menuGrid.innerHTML = '';
         const tpl = document.getElementById('tpl-order-menu-item');
-
         MENU_ITEMS.filter(i => i.category === activeCategory).forEach(item => {
             const clone = tpl.content.cloneNode(true);
             const el = clone.querySelector('.group');
-            const imgDiv = clone.querySelector('.col-img');
+            clone.querySelector('.col-img').style.backgroundImage = `url(${item.img || ''})`;
             const badgeBg = clone.querySelector('.col-badge-bg');
             const badgeIcon = clone.querySelector('.col-badge-icon');
-            const nameEl = clone.querySelector('.col-name');
-            const priceSpan = clone.querySelector('.col-price');
-            const stockSpan = clone.querySelector('.col-stock');
-
-            imgDiv.style.backgroundImage = `url(${item.img || ''})`;
-
             if (item.location === 'Cocina') {
                 badgeBg.classList.add('bg-primary/90');
                 badgeIcon.textContent = 'soup_kitchen';
@@ -148,41 +126,42 @@ export async function mount(container, data = {}) {
                 badgeBg.classList.add('bg-blue-500/90');
                 badgeIcon.textContent = 'local_bar';
             }
-
-            nameEl.textContent = item.name;
-            priceSpan.textContent = formatCurrency(item.price);
-
-            if (item.location === 'Cocina') {
+            clone.querySelector('.col-name').textContent = item.name;
+            clone.querySelector('.col-price').textContent = formatCurrency(item.price);
+            const stockSpan = clone.querySelector('.col-stock');
+            if (item.location !== 'Cocina' && item.stock <= 5) {
+                stockSpan.className = 'bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold animate-pulse';
+                stockSpan.textContent = `STOCK: ${item.stock}`;
+            } else {
                 stockSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
                 stockSpan.textContent = item.id;
-            } else {
-                if (item.stock <= 5) {
-                    stockSpan.className = 'bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold animate-pulse';
-                    stockSpan.textContent = `STOCK: ${item.stock}`;
-                } else {
-                    stockSpan.className = 'text-[10px] uppercase font-bold text-slate-400';
-                    stockSpan.textContent = item.id;
-                }
             }
-
             el.addEventListener('click', () => addToCart(item));
             menuGrid.appendChild(clone);
         });
     };
 
-    // ── Sincronizar estado de la orden ────────────────────────────────────
+    // ── Sincronizar comanda ───────────────────────────────────────────────
     const syncOrderStatus = async () => {
         if (!tableCode) return;
         try {
             const res = await fetchData(ENDPOINTS.waiters.get.orderStatus, { tableCode });
             if (res.success) {
-                sentItems = res.data.items || [];
+                // FIX: Los items vienen en res.data.body.items (schema template response),
+                // NO en res.data.items. Antes siempre era undefined → sentItems = [] → comanda vacía.
+                sentItems = res.data?.body?.items
+                    || res.data?.items
+                    || [];
+
+                const canClose = res.data?.body?.canClose ?? res.data?.canClose ?? false;
+
                 if (btnPayClose) {
-                    const canClose = res.data.canClose;
                     btnPayClose.disabled = !canClose;
                     btnPayClose.className = [
-                        'w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 mt-4 active:scale-[0.98] transition-all',
-                        canClose ? 'bg-green-600 text-white shadow-green-200' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        'w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 mt-3 active:scale-[0.98] transition-all',
+                        canClose
+                            ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/30'
+                            : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     ].join(' ');
                 }
                 renderCart();
@@ -192,12 +171,31 @@ export async function mount(container, data = {}) {
         }
     };
 
+    // FIX: Polling periódico de comanda mientras haya items activos
+    // Evita que el mesero tenga que refrescar manualmente para ver el estado de cocina.
+    const startSyncPolling = () => {
+        stopSyncPolling();
+        syncTimer = setInterval(() => {
+            if (!document.hidden && sentItems.length > 0) {
+                const hasActive = sentItems.some(i =>
+                    ['PENDING_KITCHEN', 'PREPARING', 'PENDING_FLOOR', 'COLLECTED'].includes(i.status)
+                );
+                if (hasActive) syncOrderStatus();
+            }
+        }, 10000);
+    };
+
+    const stopSyncPolling = () => {
+        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+    };
+
     // ── Carrito ───────────────────────────────────────────────────────────
+    // FIX: Labels más descriptivos para el mesero
     const STATUS_CONFIG = {
-        PENDING_KITCHEN: { label: 'En Cola', cls: 'bg-orange-100 text-orange-600', action: null },
+        PENDING_KITCHEN: { label: 'En Cola 🍳', cls: 'bg-orange-100 text-orange-600', action: null },
         PREPARING: { label: 'Cocinando', cls: 'bg-blue-100 text-blue-600 animate-pulse', action: null },
-        READY: { label: 'Listo', cls: 'bg-green-100 text-green-600', action: 'collect' },
-        PENDING_FLOOR: { label: 'Piso', cls: 'bg-purple-100 text-purple-600', action: 'collect' },
+        READY: { label: '✅ Listo', cls: 'bg-green-100 text-green-700 font-black', action: 'collect' },
+        PENDING_FLOOR: { label: 'Por Recoger 🍹', cls: 'bg-purple-100 text-purple-600', action: 'collect' },
         COLLECTED: { label: 'Recolectado', cls: 'bg-blue-600 text-white', action: 'deliver' },
         DELIVERED: { label: 'Entregado', cls: 'bg-slate-200 text-slate-500', action: null }
     };
@@ -215,7 +213,6 @@ export async function mount(container, data = {}) {
 
             sentItems.forEach(item => {
                 const cfg = STATUS_CONFIG[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-500', action: null };
-
                 const clone = tplSent.content.cloneNode(true);
                 const qtyName = clone.querySelector('.col-qty-name');
                 const badge = clone.querySelector('.col-badge');
@@ -235,7 +232,6 @@ export async function mount(container, data = {}) {
                     );
                     botRow.appendChild(actionBtn);
                 }
-
                 cartItemsContainer.appendChild(clone);
             });
         }
@@ -248,19 +244,25 @@ export async function mount(container, data = {}) {
 
             cart.forEach(item => {
                 const clone = tplNew.content.cloneNode(true);
-                const btnPlus = clone.querySelector('.btn-qty-plus');
-                const btnMinus = clone.querySelector('.btn-qty-minus');
-                const btnRemove = clone.querySelector('.btn-remove');
-
                 clone.querySelector('.col-qty').textContent = item.qty;
                 clone.querySelector('.col-name').textContent = item.name;
                 clone.querySelector('.col-price').textContent = formatCurrency(item.price * item.qty);
-                clone.querySelector('.col-code').textContent = item.id;
 
-                btnPlus.addEventListener('click', () => updateQty(item.id, 1));
-                btnMinus.addEventListener('click', () => updateQty(item.id, -1));
-                btnRemove.addEventListener('click', () => removeItem(item.id));
+                // FIX: Badge de destino visible antes de enviar
+                const codeEl = clone.querySelector('.col-code');
+                if (codeEl) {
+                    codeEl.textContent = item.id;
+                    const tag = document.createElement('span');
+                    tag.className = item.isKitchen
+                        ? 'ml-1 bg-orange-100 text-orange-600 text-[9px] font-bold px-1 py-0.5 rounded uppercase'
+                        : 'ml-1 bg-blue-100 text-blue-600 text-[9px] font-bold px-1 py-0.5 rounded uppercase';
+                    tag.textContent = item.isKitchen ? 'Cocina' : 'Barra';
+                    codeEl.appendChild(tag);
+                }
 
+                clone.querySelector('.btn-qty-plus').addEventListener('click', () => updateQty(item.id, 1));
+                clone.querySelector('.btn-qty-minus').addEventListener('click', () => updateQty(item.id, -1));
+                clone.querySelector('.btn-remove').addEventListener('click', () => removeItem(item.id));
                 cartItemsContainer.appendChild(clone);
             });
 
@@ -274,21 +276,29 @@ export async function mount(container, data = {}) {
         if (cart.length === 0 && sentItems.length === 0) {
             const emptyWrap = document.createElement('div');
             emptyWrap.className = 'h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 italic text-center py-20';
-            emptyWrap.innerHTML = `
-                <span class="material-symbols-outlined text-6xl mb-2">shopping_basket</span>
-                <p>La orden está vacía</p>
-            `;
+            const icon = document.createElement('span');
+            icon.className = 'material-symbols-outlined text-6xl mb-2';
+            icon.textContent = 'shopping_basket';
+            const p = document.createElement('p');
+            p.textContent = 'La orden está vacía';
+            emptyWrap.appendChild(icon);
+            emptyWrap.appendChild(p);
             cartItemsContainer.appendChild(emptyWrap);
         }
 
-        const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
+        const newSubtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
+        const sentSubtotal = sentItems.reduce((acc, i) => {
+            const price = parseFloat(i.unit_price ?? i.unitPrice ?? i.price ?? 0);
+            const qty = parseInt(i.quantity ?? i.qty ?? 1, 10);
+            return acc + price * qty;
+        }, 0);
+        const subtotal = newSubtotal + sentSubtotal;
         const tax = subtotal * 0.16;
         cartSubtotal.textContent = formatCurrency(subtotal);
         cartTax.textContent = formatCurrency(tax);
         cartTotal.textContent = formatCurrency(subtotal + tax);
     };
 
-    // ── Acciones del carrito ──────────────────────────────────────────────
     const addToCart = (item) => {
         const existing = cart.find(i => i.id === item.id);
         if (existing) existing.qty++;
@@ -306,7 +316,7 @@ export async function mount(container, data = {}) {
         renderCart();
     };
 
-    // ── Enviar orden a cocina ─────────────────────────────────────────────
+    // ── Enviar orden ──────────────────────────────────────────────────────
     const sendOrder = async () => {
         if (!cart.length || !employeeNumber || !tableCode) return;
         try {
@@ -316,56 +326,44 @@ export async function mount(container, data = {}) {
                 { tableCode }
             );
             cart = [];
-            await syncOrderStatus();
+            renderCart(); // limpiar canasta optimistamente
             notificationBanner.classList.remove('hidden');
-            setTimeout(() => notificationBanner.classList.add('hidden'), 2000);
+            setTimeout(() => notificationBanner.classList.add('hidden'), 2500);
+            // FIX: pequeño delay antes de sincronizar — da tiempo al backend de persistir
+            setTimeout(async () => {
+                await syncOrderStatus();
+                startSyncPolling();
+            }, 600);
         } catch (error) {
             showErrorModal('Error enviando la orden: ' + error.message, 'Error de Envío');
         }
     };
 
-    // ── Recoger ítem ──────────────────────────────────────────────────────
-    // FIX #12-collect: collect SÍ envía employeeNumber (lo requiere sp_pos_collect_item)
     const collectItem = async (itemId) => {
         try {
-            const res = await putData(
-                ENDPOINTS.waiters.put.collectItem,
-                { employeeNumber },
-                { tableCode, itemId }
-            );
+            const res = await putData(ENDPOINTS.waiters.put.collectItem, { employeeNumber }, { tableCode, itemId });
             if (res.success) await syncOrderStatus();
         } catch (e) {
             showErrorModal('Error al recoger el ítem: ' + e.message, 'Error');
         }
     };
 
-    // ── Entregar ítem ─────────────────────────────────────────────────────
-    // FIX #12-deliver: deliver NO envía body — el SP no requiere identificación adicional.
-    // El Gatekeeper Zero Trust rechaza cualquier payload no declarado en el schema.
     const deliverItem = async (itemId) => {
         try {
-            const res = await putData(
-                ENDPOINTS.waiters.put.deliverItem,
-                {},
-                { tableCode, itemId }
-            );
+            const res = await putData(ENDPOINTS.waiters.put.deliverItem, {}, { tableCode, itemId });
             if (res.success) await syncOrderStatus();
         } catch (e) {
             showErrorModal('Error al entregar el ítem: ' + e.message, 'Error');
         }
     };
 
-    // ── Cobrar y cerrar mesa ──────────────────────────────────────────────
     const closeTable = async () => {
         if (!employeeNumber || !tableCode) return;
         const confirmed = await confirmAction(`¿Desea cobrar y CERRAR la mesa ${tableCode}?`);
         if (!confirmed) return;
         try {
-            await postData(
-                ENDPOINTS.waiters.post.closeTable,
-                { employeeNumber, paymentMethod: 'EFECTIVO' },
-                { tableCode }
-            );
+            await postData(ENDPOINTS.waiters.post.closeTable, { employeeNumber, paymentMethod: 'EFECTIVO' }, { tableCode });
+            stopSyncPolling();
             PubSub.publish('ORDER_COMPLETED');
         } catch (error) {
             showErrorModal('Error al intentar cobrar: ' + error.message, 'Error de Cobro');
@@ -430,11 +428,23 @@ export async function mount(container, data = {}) {
         });
     };
 
-    // ── Listeners y arranque ──────────────────────────────────────────────
-    [btnHome, btnCloseOrder].forEach(btn => btn?.addEventListener('click', () => PubSub.publish('ORDER_COMPLETED')));
+
+    // ── Eventos ───────────────────────────────────────────────────────────
+
+    btnHome?.addEventListener('click', () => { stopSyncPolling(); PubSub.publish('ORDER_COMPLETED'); });
+    btnCloseOrder?.addEventListener('click', async () => {
+        const ok = await confirmAction('¿Regresar al dashboard sin cerrar la mesa?');
+        if (ok) { stopSyncPolling(); PubSub.publish('ORDER_COMPLETED'); }
+    });
     btnSendKitchen?.addEventListener('click', sendOrder);
     btnPayClose?.addEventListener('click', closeTable);
     btnShowQr?.addEventListener('click', openQrModal);
 
-    loadMenuData();
+
+    // ── Boot ──────────────────────────────────────────────────────────────
+    await ensureTableSession();
+    await loadMenuData();
+    await syncOrderStatus();
+    if (sentItems.length > 0) startSyncPolling();
+
 }

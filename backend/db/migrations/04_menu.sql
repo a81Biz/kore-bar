@@ -15,6 +15,7 @@ CREATE TABLE menu_categories (
     code        VARCHAR(50) UNIQUE NOT NULL,
     name        VARCHAR(100) NOT NULL,
     description TEXT,
+    can_pickup BOOLEAN NOT NULL DEFAULT false,
     is_active   BOOLEAN DEFAULT TRUE,
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -30,6 +31,7 @@ CREATE TABLE menu_dishes (
     image_url          TEXT,
     is_active          BOOLEAN DEFAULT TRUE,
     has_recipe         BOOLEAN DEFAULT FALSE,
+    can_pickup         BOOLEAN NOT NULL DEFAULT false,
     preparation_method TEXT,
     created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

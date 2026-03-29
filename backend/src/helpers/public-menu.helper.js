@@ -33,7 +33,7 @@ export const registerWaiterCall = async (state, c) => {
 export const getPendingCalls = async (state, c) => {
     try {
         const calls = await PublicMenuModel.getPendingCalls();
-        state.calls = calls;
+        state.data = { calls };
     } catch (error) {
         console.error('[Helper] getPendingCalls Error:', error);
         throw error;

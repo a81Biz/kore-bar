@@ -33,6 +33,7 @@ export const getWaiterLayout = async (state, c) => {
     try {
         const rows = await waiterModel.getLayout(c);
         const layoutMap = {};
+
         for (const row of rows) {
             if (!layoutMap[row.zone_code]) {
                 layoutMap[row.zone_code] = {
@@ -41,13 +42,22 @@ export const getWaiterLayout = async (state, c) => {
                     tables: []
                 };
             }
-            layoutMap[row.zone_code].tables.push({
-                tableCode: row.table_code,
-                capacity: row.capacity,
-                status: row.status,
-                waiterName: row.waiter_name || null
-            });
+
+            // FIX: Deduplicar por tableCode — la vista anterior con LEFT JOINs
+            // generaba N filas por mesa si había N órdenes → datos corruptos.
+            const alreadyExists = layoutMap[row.zone_code].tables
+                .some(t => t.tableCode === row.table_code);
+
+            if (!alreadyExists) {
+                layoutMap[row.zone_code].tables.push({
+                    tableCode: row.table_code,
+                    capacity: row.capacity,
+                    status: row.status,
+                    waiterName: row.waiter_name || null
+                });
+            }
         }
+
         state.layout = Object.values(layoutMap);
     } catch (error) {
         if (error.isOperational) throw error;
@@ -59,32 +69,23 @@ export const openTableHandler = async (state, c) => {
     const { params = {}, payload } = state;
     const { tableCode } = params;
     const { employeeNumber, diners } = payload;
+
     try {
-        const tables = await waiterModel.getTableByCode(c, tableCode);
-        if (tables.length === 0) throw new AppError('La mesa no existe o está inactiva', 404);
-        const tableId = tables[0].id;
+        // FIX: Antes usaba getTableByCode + getEmployeeByNumber + insertOrder en cadena.
+        // Si cualquier paso fallaba silenciosamente (sin await en el frontend),
+        // la mesa nunca se marcaba como OCCUPIED.
+        // Ahora usa sp_pos_open_table — el mismo SP idempotente que usa el resto del sistema.
+        await waiterModel.openTable(c, tableCode, employeeNumber, diners ?? 2);
 
-        const employees = await waiterModel.getEmployeeByNumber(c, employeeNumber);
-        if (employees.length === 0) throw new AppError('El empleado no existe o está inactivo', 404);
-        const waiterId = employees[0].id;
-
-        const existingOrder = await waiterModel.getOpenOrder(c, tableId);
-        if (existingOrder.length > 0) {
-            state.orderCode = existingOrder[0].code;
-            return;
-        }
-
-        const orderCode = `ORD-${new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const result = await waiterModel.insertOrder(c, orderCode, tableId, waiterId, diners || 1);
-        state.orderCode = result[0].code;
+        const res = await waiterModel.getOpenOrderByTableCode(c, tableCode);
+        state.orderCode = res[0]?.code ?? null;
         state.message = 'Mesa abierta exitosamente';
     } catch (error) {
         if (error.isOperational) throw error;
-        throw new AppError('Error al abrir la mesa', 500);
+        throw new AppError(`Error al abrir la mesa: ${error.message}`, 500);
     }
 };
 
-// Alias que usa el registry
 export const openTable = openTableHandler;
 
 export const submitOrderHandler = async (state, c) => {
@@ -202,6 +203,9 @@ export const getWaiterOrderStatus = async (state, c) => {
             state.orderCode = null;
             state.items = [];
             state.canClose = false;
+            // FIX: Sin state.data, schemaRouter pone los items en res.data.body.items
+            // pero order.js lee res.data.items → siempre undefined → comanda vacía
+            state.data = { orderCode: null, items: [], canClose: false };
             return;
         }
         const order = orderResult[0];
@@ -210,6 +214,12 @@ export const getWaiterOrderStatus = async (state, c) => {
         state.items = items;
         const pending = items.filter(i => i.status !== 'DELIVERED');
         state.canClose = items.length > 0 && pending.length === 0;
+        // FIX: Exponer en state.data para que llegue directo en res.data
+        state.data = {
+            orderCode: order.code,
+            items,
+            canClose: state.canClose
+        };
     } catch (error) {
         if (error.isOperational) throw error;
         throw new AppError('Error al obtener el estado de la orden', 500);

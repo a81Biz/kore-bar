@@ -72,9 +72,9 @@ export const createDishHandler = async (state, c) => {
 
 export const updateDishHandler = async (state, c) => {
     const { code } = state.params; // ← antes: state.params (objeto completo)
-    const { categoryCode, name, description, price, imageUrl, isActive } = state.payload;
+    const { categoryCode, name, description, price, imageUrl, isActive, canPickup } = state.payload;
     try {
-        await MenuModel.updateDish(c, code, categoryCode, name, description, price, imageUrl, isActive);
+        await MenuModel.updateDish(c, code, categoryCode, name, description, price, imageUrl, isActive, canPickup);
         state.message = 'Platillo actualizado exitosamente';
     } catch (error) {
         if (error.code === 'P0002') throw new AppError('La categoría asignada no existe', 400);

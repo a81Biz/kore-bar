@@ -346,13 +346,16 @@ class MenuApp {
             await postData(
                 ENDPOINTS.menu.post.callWaiter,
                 { reason },
-                { tableCode: this.tableCode }   // ✅ buildUrl reemplaza :tableCode
+                { tableCode: this.tableCode }
             );
             this._showToast('¡Mesero notificado! Enseguida te atenderemos.', 'success');
             this._closeModal();
-        } catch (error) {
-            console.error('[Menu] Error llamando al mesero:', error);
-            this._showToast(error.message, 'error');
+        } catch (err) {
+            // FIX: Si la cuenta ya está cerrada, el backend devuelve 404
+            const msg = err.message?.includes('sin sesión') || err.message?.includes('cerrada')
+                ? 'La cuenta de esta mesa ya fue cerrada. El mesero te atenderá en un momento.'
+                : 'No se pudo notificar al mesero. Inténtalo de nuevo.';
+            this._showToast(msg, 'error');
             this._closeModal();
         }
     }

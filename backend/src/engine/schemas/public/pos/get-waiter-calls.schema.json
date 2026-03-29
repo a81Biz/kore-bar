@@ -14,17 +14,8 @@
         "fetch_calls": {
             "type": "action",
             "handler": "getPendingCalls",
-            "next": "end_success",
+            "next": "end",
             "onError": "end"
-        },
-        "end_success": {
-            "type": "end",
-            "response": {
-                "status": 200,
-                "body": {
-                    "calls": "{{state.calls}}"
-                }
-            }
         }
     }
 }
