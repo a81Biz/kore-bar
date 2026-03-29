@@ -10,6 +10,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica agrupa las funcionalidades administrativas del sistema del restaurante.</p>",
                 "comment": {
                     "comments": [],
@@ -35,6 +36,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:44.368-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -85,6 +87,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica contiene las funcionalidades que permiten a los meseros gestionar mesas y pedidos.</p>",
                 "comment": {
                     "comments": [],
@@ -110,6 +113,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:45.506-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -160,6 +164,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica contempla la visualización y gestión de pedidos desde cocina mediante una pizarra interactiva.</p>",
                 "comment": {
                     "comments": [],
@@ -185,6 +190,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:46.309-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -235,6 +241,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica agrupa la gestión de inventario y generación de órdenes de compra.</p>",
                 "comment": {
                     "comments": [],
@@ -260,6 +267,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:47.069-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -310,6 +318,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica incluye la generación de tickets y facturación electrónica.</p>",
                 "comment": {
                     "comments": [],
@@ -335,6 +344,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:47.973-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -385,6 +395,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica cubre el diseño técnico del sistema y diagramas UML.</p>",
                 "comment": {
                     "comments": [],
@@ -410,6 +421,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:48.750-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -460,6 +472,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica abarca el diseño de interfaces (UI/UX) y creación de wireframes/prototipos.</p>",
                 "comment": {
                     "comments": [],
@@ -485,6 +498,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:49.494-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -535,6 +549,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:03 AM",
+                "customfield_10020": null,
                 "description": "<p>Esta épica contiene las tareas de cierre manuales y README del proyecto.</p>",
                 "comment": {
                     "comments": [],
@@ -560,6 +575,7 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:03:50.456-0600",
+                "customfield_10020": null,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -610,6 +626,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo de desarrollo, queremos definir la arquitectura cliente-servidor del sistema para establecer la base técnica. Criterios: 1. Definir tipo de arquitectura. 2. Incluir diagrama de componentes. 3. Considerar red local 200 Mbps. 4. Contemplar tablets, PCs y pizarra interactiva.</p>",
                 "comment": {
                     "comments": [
@@ -647,8 +664,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "sábado 8:08 PM",
-                            "updated": "sábado 8:08 PM",
+                            "created": "21/mar/26 8:08 PM",
+                            "updated": "21/mar/26 8:08 PM",
                             "jsdPublic": true
                         }
                     ],
@@ -712,6 +729,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:23.003-0600",
+                "customfield_10020": [
+                    {
+                        "id": 39,
+                        "name": "Sprint 1 – Análisis y Diseño",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Todas las historias de análisis\n- Modelo ER\n- Casos de uso\n- Diagrama de clases\n- Arquitectura",
+                        "startDate": "2026-03-22T04:56:58.273Z",
+                        "endDate": "2026-03-22T06:00:00.000Z",
+                        "completeDate": "2026-03-22T04:57:41.580Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -844,6 +873,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo de desarrollo, queremos diseñar el modelo entidad-relación para estructurar la base de datos del sistema. Criterios: 1. Incluir entidades principales. 2. Definir relaciones y cardinalidades. 3. Incluir claves primarias y foráneas.</p>",
                 "comment": {
                     "comments": [
@@ -881,8 +911,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "sábado 8:41 PM",
-                            "updated": "sábado 8:41 PM",
+                            "created": "21/mar/26 8:41 PM",
+                            "updated": "21/mar/26 8:41 PM",
                             "jsdPublic": true
                         }
                     ],
@@ -946,6 +976,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:24.258-0600",
+                "customfield_10020": [
+                    {
+                        "id": 39,
+                        "name": "Sprint 1 – Análisis y Diseño",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Todas las historias de análisis\n- Modelo ER\n- Casos de uso\n- Diagrama de clases\n- Arquitectura",
+                        "startDate": "2026-03-22T04:56:58.273Z",
+                        "endDate": "2026-03-22T06:00:00.000Z",
+                        "completeDate": "2026-03-22T04:57:41.580Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -1096,6 +1138,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo, queremos modelar los casos de uso para representar la interacción entre los actores (Gerente, Mesero, Cocinero, Cajero, Comensal) y el sistema.</p>",
                 "comment": {
                     "comments": [
@@ -1133,8 +1176,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "sábado 10:35 PM",
-                            "updated": "sábado 10:35 PM",
+                            "created": "21/mar/26 10:35 PM",
+                            "updated": "21/mar/26 10:35 PM",
                             "jsdPublic": true
                         }
                     ],
@@ -1198,6 +1241,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:25.427-0600",
+                "customfield_10020": [
+                    {
+                        "id": 39,
+                        "name": "Sprint 1 – Análisis y Diseño",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Todas las historias de análisis\n- Modelo ER\n- Casos de uso\n- Diagrama de clases\n- Arquitectura",
+                        "startDate": "2026-03-22T04:56:58.273Z",
+                        "endDate": "2026-03-22T06:00:00.000Z",
+                        "completeDate": "2026-03-22T04:57:41.580Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -1345,6 +1400,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo, queremos diseñar el diagrama de clases para visualizar la estructura del código, los atributos de las entidades y sus métodos principales.</p>",
                 "comment": {
                     "comments": [
@@ -1382,8 +1438,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "sábado 10:48 PM",
-                            "updated": "sábado 10:48 PM",
+                            "created": "21/mar/26 10:48 PM",
+                            "updated": "21/mar/26 10:48 PM",
                             "jsdPublic": true
                         }
                     ],
@@ -1447,6 +1503,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:26.502-0600",
+                "customfield_10020": [
+                    {
+                        "id": 39,
+                        "name": "Sprint 1 – Análisis y Diseño",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Todas las historias de análisis\n- Modelo ER\n- Casos de uso\n- Diagrama de clases\n- Arquitectura",
+                        "startDate": "2026-03-22T04:56:58.273Z",
+                        "endDate": "2026-03-22T06:00:00.000Z",
+                        "completeDate": "2026-03-22T04:57:41.580Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -1612,7 +1680,7 @@
                             "timeZone": "America/Mexico_City",
                             "accountType": "atlassian"
                         },
-                        "created": "sábado 11:00 PM",
+                        "created": "21/mar/26 11:00 PM",
                         "size": "84 kB",
                         "mimeType": "image/png",
                         "content": "https://a81biz.atlassian.net/rest/api/3/attachment/content/10069",
@@ -1620,6 +1688,7 @@
                     }
                 ],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como administrador, quiero configurar cada semana el número de mesas disponibles para adaptar el sistema a la capacidad del restaurante. Criterios: 1. Permitir habilitar/deshabilitar mesas. 2. Numerar de 1 a n. 3. Guardar configuración.</p>",
                 "comment": {
                     "comments": [
@@ -1657,8 +1726,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "sábado 11:00 PM",
-                            "updated": "sábado 11:00 PM",
+                            "created": "21/mar/26 11:00 PM",
+                            "updated": "21/mar/26 11:00 PM",
                             "jsdPublic": true
                         }
                     ],
@@ -1748,6 +1817,18 @@
                     }
                 ],
                 "created": "2026-03-03T05:06:27.636-0600",
+                "customfield_10020": [
+                    {
+                        "id": 40,
+                        "name": "Sprint 2 – Diseño UI",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Wireframes\n- Refinamiento de historias\n- Diseño técnico",
+                        "startDate": "2026-03-22T04:57:52.496Z",
+                        "endDate": "2026-03-23T06:00:00.000Z",
+                        "completeDate": "2026-03-23T07:45:12.982Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -1919,7 +2000,7 @@
                             "timeZone": "America/Mexico_City",
                             "accountType": "atlassian"
                         },
-                        "created": "Ayer 12:45 AM",
+                        "created": "22/mar/26 12:45 AM",
                         "size": "40 kB",
                         "mimeType": "image/png",
                         "content": "https://a81biz.atlassian.net/rest/api/3/attachment/content/10070",
@@ -1927,6 +2008,7 @@
                     }
                 ],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como administrador, quiero asignar meseros a las mesas activas indicando su ID y turno (matutino o vespertino) para organizar el servicio. Criterios: 1. Obtener ID y nombres de RRHH. 2. Evitar choques de asignación.</p>",
                 "comment": {
                     "comments": [
@@ -1964,8 +2046,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Ayer 12:45 AM",
-                            "updated": "Ayer 12:45 AM",
+                            "created": "22/mar/26 12:45 AM",
+                            "updated": "22/mar/26 12:45 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -2055,6 +2137,18 @@
                     }
                 ],
                 "created": "2026-03-03T05:06:28.800-0600",
+                "customfield_10020": [
+                    {
+                        "id": 40,
+                        "name": "Sprint 2 – Diseño UI",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Wireframes\n- Refinamiento de historias\n- Diseño técnico",
+                        "startDate": "2026-03-22T04:57:52.496Z",
+                        "endDate": "2026-03-23T06:00:00.000Z",
+                        "completeDate": "2026-03-23T07:45:12.982Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -2208,6 +2302,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como gerente, quiero registrar las faltas de los empleados en el sistema para llevar el control y procesar los descuentos salariales correspondientes.</p>",
                 "comment": {
                     "comments": [
@@ -2245,8 +2340,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 1:20 AM",
-                            "updated": "Hoy 1:20 AM",
+                            "created": "lunes 1:20 AM",
+                            "updated": "lunes 1:20 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -2310,6 +2405,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:29.938-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -3115,6 +3222,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como administrador, quiero registrar, editar y eliminar platillos en el menú para mantener la oferta gastronómica actualizada. Criterios: 1. Ingresar nombre, ingredientes, precio con IVA y categoría.</p>",
                 "comment": {
                     "comments": [],
@@ -3178,6 +3286,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:31.089-0600",
+                "customfield_10020": [
+                    {
+                        "id": 40,
+                        "name": "Sprint 2 – Diseño UI",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Wireframes\n- Refinamiento de historias\n- Diseño técnico",
+                        "startDate": "2026-03-22T04:57:52.496Z",
+                        "endDate": "2026-03-23T06:00:00.000Z",
+                        "completeDate": "2026-03-23T07:45:12.982Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -3233,6 +3353,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como gerente, quiero generar un reporte ordenado por mesas que resuma las ventas y muestre los meseros asignados en un periodo y turno específico.</p>",
                 "comment": {
                     "comments": [
@@ -3270,8 +3391,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 1:28 AM",
-                            "updated": "Hoy 1:28 AM",
+                            "created": "lunes 1:28 AM",
+                            "updated": "lunes 1:28 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -3335,6 +3456,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:32.390-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -3490,6 +3623,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como mesero, quiero visualizar en mi tableta únicamente las mesas que tengo asignadas en mi turno actual para enfocarme en mis clientes.</p>",
                 "comment": {
                     "comments": [
@@ -3527,8 +3661,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:09 AM",
-                            "updated": "Hoy 2:09 AM",
+                            "created": "lunes 2:09 AM",
+                            "updated": "lunes 2:09 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -3592,6 +3726,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:33.499-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -3724,6 +3870,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como mesero, quiero anotar en la tableta los platillos y bebidas solicitadas por mis mesas para enviar la orden. Criterios: 1. Registrar timestamp. 2. Diferenciar artículos de cocina y de frigorífico.</p>",
                 "comment": {
                     "comments": [
@@ -3761,8 +3908,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 1:51 AM",
-                            "updated": "Hoy 1:51 AM",
+                            "created": "lunes 1:51 AM",
+                            "updated": "lunes 1:51 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -3826,6 +3973,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:34.590-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -3958,6 +4117,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como mesero, quiero que el sistema calcule el total de la cuenta en base a los costos del menú conforme agrego artículos, para evitar errores manuales.</p>",
                 "comment": {
                     "comments": [
@@ -3995,8 +4155,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 1:56 AM",
-                            "updated": "Hoy 1:56 AM",
+                            "created": "lunes 1:56 AM",
+                            "updated": "lunes 1:56 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -4060,6 +4220,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:35.890-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -4192,6 +4364,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como mesero, quiero cerrar el pedido de un comensal desde mi tableta y mandar a imprimir automáticamente el recibo a la caja.</p>",
                 "comment": {
                     "comments": [
@@ -4229,8 +4402,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:16 AM",
-                            "updated": "Hoy 2:16 AM",
+                            "created": "lunes 2:16 AM",
+                            "updated": "lunes 2:16 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -4294,6 +4467,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:36.955-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -4426,6 +4611,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como cajero, quiero tener un formulario para ingresar el RFC, código postal, régimen fiscal, uso de CFDI y correo del comensal que solicita factura.</p>",
                 "comment": {
                     "comments": [
@@ -4463,8 +4649,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:17 AM",
-                            "updated": "Hoy 2:17 AM",
+                            "created": "lunes 2:17 AM",
+                            "updated": "lunes 2:17 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -4528,6 +4714,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:38.188-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -4660,6 +4858,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como cocinero, quiero ver en la pizarra interactiva los platillos solicitados, ordenados por hora de petición y número de mesa.</p>",
                 "comment": {
                     "comments": [
@@ -4697,8 +4896,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:09 AM",
-                            "updated": "Hoy 2:09 AM",
+                            "created": "lunes 2:09 AM",
+                            "updated": "lunes 2:09 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -4762,6 +4961,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:39.334-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -4894,6 +5105,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como cocinero, quiero tocar la pantalla interactiva con un dedo para marcar un platillo como finalizado y que el sistema notifique al mesero.</p>",
                 "comment": {
                     "comments": [
@@ -4931,8 +5143,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:10 AM",
-                            "updated": "Hoy 2:10 AM",
+                            "created": "lunes 2:10 AM",
+                            "updated": "lunes 2:10 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -4996,6 +5208,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:40.560-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -5128,6 +5352,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como sistema, quiero capturar y guardar la hora exacta en la que el cocinero marca un platillo como terminado, para métricas de tiempo de elaboración.</p>",
                 "comment": {
                     "comments": [
@@ -5165,8 +5390,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:11 AM",
-                            "updated": "Hoy 2:11 AM",
+                            "created": "lunes 2:11 AM",
+                            "updated": "lunes 2:11 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -5230,6 +5455,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:41.906-0600",
+                "customfield_10020": [
+                    {
+                        "id": 41,
+                        "name": "Sprint 3 – Desarrollo Base",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Registro de pedido\n- Visualización cocina\n- Cambio de estado\n- Login",
+                        "startDate": "2026-03-23T07:46:26.196Z",
+                        "endDate": "2026-03-24T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:12:52.141Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -5362,6 +5599,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como jefe de cocina, quiero indicar en el sistema el tipo de alimento y las unidades necesarias para reabastecer el inventario.</p>",
                 "comment": {
                     "comments": [
@@ -5399,8 +5637,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:18 AM",
-                            "updated": "Hoy 2:18 AM",
+                            "created": "lunes 2:18 AM",
+                            "updated": "lunes 2:18 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -5464,6 +5702,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:43.001-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -5596,6 +5846,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como sistema, quiero evaluar los proveedores registrados y seleccionar el más adecuado para cada insumo, optimizando por precio y tiempo de entrega.</p>",
                 "comment": {
                     "comments": [
@@ -5633,8 +5884,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:18 AM",
-                            "updated": "Hoy 2:18 AM",
+                            "created": "lunes 2:18 AM",
+                            "updated": "lunes 2:18 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -5698,6 +5949,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:44.085-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -5830,6 +6093,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como jefe de cocina, quiero registrar en el sistema la entrada de los alimentos basándome en las facturas de los proveedores para actualizar el stock real.</p>",
                 "comment": {
                     "comments": [
@@ -5867,8 +6131,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:20 AM",
-                            "updated": "Hoy 2:20 AM",
+                            "created": "lunes 2:20 AM",
+                            "updated": "lunes 2:20 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -5932,6 +6196,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:45.262-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -6064,6 +6340,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como jefe de cocina, quiero ejecutar un proceso batch al final del día que calcule automáticamente los ingredientes consumidos basándose en los platillos preparados.</p>",
                 "comment": {
                     "comments": [
@@ -6101,8 +6378,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:20 AM",
-                            "updated": "Hoy 2:20 AM",
+                            "created": "lunes 2:20 AM",
+                            "updated": "lunes 2:20 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -6166,6 +6443,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:46.397-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -6298,6 +6587,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como cajero, quiero que el sistema genere el comprobante fiscal (CFDI) calculando y desglosando correctamente el IVA a partir del total consumido.</p>",
                 "comment": {
                     "comments": [
@@ -6335,8 +6625,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:21 AM",
-                            "updated": "Hoy 2:21 AM",
+                            "created": "lunes 2:21 AM",
+                            "updated": "lunes 2:21 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -6400,6 +6690,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:47.568-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -6532,6 +6834,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como sistema, quiero enviar el archivo PDF y XML de la factura automáticamente al correo proporcionado por el comensal tras su generación.</p>",
                 "comment": {
                     "comments": [
@@ -6569,8 +6872,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:23 AM",
-                            "updated": "Hoy 2:23 AM",
+                            "created": "lunes 2:23 AM",
+                            "updated": "lunes 2:23 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -6634,6 +6937,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:48.702-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -6766,6 +7081,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo de diseño, queremos crear los wireframes y el prototipo funcional para validar la interfaz con los usuarios antes de iniciar el desarrollo técnico.</p>",
                 "comment": {
                     "comments": [
@@ -6803,8 +7119,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 1:43 AM",
-                            "updated": "Hoy 1:43 AM",
+                            "created": "lunes 1:43 AM",
+                            "updated": "lunes 1:43 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -6868,6 +7184,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:49.915-0600",
+                "customfield_10020": [
+                    {
+                        "id": 40,
+                        "name": "Sprint 2 – Diseño UI",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Wireframes\n- Refinamiento de historias\n- Diseño técnico",
+                        "startDate": "2026-03-22T04:57:52.496Z",
+                        "endDate": "2026-03-23T06:00:00.000Z",
+                        "completeDate": "2026-03-23T07:45:12.982Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -6982,6 +7310,7 @@
                 "issuetype": null,
                 "attachment": [],
                 "created": "03/mar/26 5:06 AM",
+                "customfield_10020": null,
                 "description": "<p>Como equipo de desarrollo, queremos redactar la documentación técnica final, el manual de usuario y el README del proyecto para su entrega.</p>",
                 "comment": {
                     "comments": [
@@ -7019,8 +7348,8 @@
                                 "timeZone": "America/Mexico_City",
                                 "accountType": "atlassian"
                             },
-                            "created": "Hoy 2:23 AM",
-                            "updated": "Hoy 2:23 AM",
+                            "created": "lunes 2:23 AM",
+                            "updated": "lunes 2:23 AM",
                             "jsdPublic": true
                         }
                     ],
@@ -7084,6 +7413,18 @@
                 },
                 "attachment": [],
                 "created": "2026-03-03T05:06:51.064-0600",
+                "customfield_10020": [
+                    {
+                        "id": 42,
+                        "name": "Sprint 4 – Integración Cierre",
+                        "state": "closed",
+                        "boardId": 140,
+                        "goal": "- Facturación\n- Inventario\n- Reportes\n- Pruebas finales\n- README",
+                        "startDate": "2026-03-23T08:13:17.135Z",
+                        "endDate": "2026-03-30T06:00:00.000Z",
+                        "completeDate": "2026-03-23T08:24:10.283Z"
+                    }
+                ],
                 "description": {
                     "type": "doc",
                     "version": 1,
