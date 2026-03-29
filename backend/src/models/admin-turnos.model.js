@@ -34,84 +34,23 @@ export const createShift = async (c, code, name, startTime, endTime) =>
 // que sería costoso y no necesario (los IDs son distintos por fuente).
 
 export const getAttendance = async (c, { date, startDate, endDate, employeeNumber } = {}) => {
-    const conditions = [];
-    const params = [];
+    let pDate = null, pStartDate = null, pEndDate = null, pEmployeeNumber = employeeNumber || null;
 
     if (startDate && endDate) {
-        params.push(startDate);
-        conditions.push(`assignment_date >= $${params.length}`);
-        params.push(endDate);
-        conditions.push(`assignment_date <= $${params.length}`);
+        pStartDate = startDate;
+        pEndDate = endDate;
     } else {
-        params.push(date || new Date().toISOString().split('T')[0]);
-        conditions.push(`assignment_date = $${params.length}`);
+        pDate = date || new Date().toISOString().split('T')[0];
     }
-
-    if (employeeNumber) {
-        params.push(employeeNumber);
-        conditions.push(`employee_number = $${params.length}`);
-    }
-
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     return await executeQuery(c, `
-        SELECT  assignment_id,
-                employee_number   AS "employeeNumber",
-                first_name        AS "firstName",
-                last_name         AS "lastName",
-                shift,
-                shift_name        AS "shiftName",
-                start_time        AS "startTime",
-                end_time          AS "endTime",
-                assignment_date   AS "assignmentDate",
-                zone_name         AS "zoneName",
-                zone_code         AS "zoneCode",
-                attendance_id     AS "attendanceId",
-                check_in_at       AS "checkInAt",
-                source,
-                attendance_status AS "attendanceStatus"
-        FROM (
-            -- Fuente 1: Meseros de Piso (restaurant_assignments)
-            SELECT  assignment_id,
-                    employee_number,
-                    first_name,
-                    last_name,
-                    shift,
-                    shift_name,
-                    start_time,
-                    end_time,
-                    assignment_date,
-                    zone_name,
-                    zone_code,
-                    attendance_id,
-                    check_in_at,
-                    source,
-                    attendance_status
-            FROM    vw_attendance_monitor
-
-            UNION ALL
-
-            -- Fuente 2: Staff no-piso (employee_schedules)
-            SELECT  assignment_id,
-                    employee_number,
-                    first_name,
-                    last_name,
-                    shift,
-                    shift_name,
-                    start_time,
-                    end_time,
-                    assignment_date,
-                    zone_name,
-                    zone_code,
-                    attendance_id,
-                    check_in_at,
-                    source,
-                    attendance_status
-            FROM    vw_schedule_monitor
-        ) AS unified_monitor
-        ${where}
-        ORDER BY assignment_date DESC, shift, last_name ASC
-    `, params);
+        SELECT * FROM sp_get_attendance(
+            $1::DATE, 
+            $2::DATE, 
+            $3::DATE, 
+            $4::VARCHAR
+        )
+    `, [pDate, pStartDate, pEndDate, pEmployeeNumber]);
 };
 
 // ── RESET DE PIN ──────────────────────────────────────────────

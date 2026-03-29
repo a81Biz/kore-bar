@@ -187,3 +187,91 @@ BEGIN
     WHERE code = ANY(p_codes);
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION sp_get_attendance(
+    p_date           DATE    DEFAULT NULL,
+    p_start_date     DATE    DEFAULT NULL,
+    p_end_date       DATE    DEFAULT NULL,
+    p_employee_number VARCHAR DEFAULT NULL
+)
+RETURNS TABLE (
+    "assignmentId"   UUID,
+    "employeeNumber" VARCHAR,
+    "firstName"      VARCHAR,
+    "lastName"       VARCHAR,
+    "shift"          VARCHAR,
+    "shiftName"      VARCHAR,
+    "startTime"      TIME,
+    "endTime"        TIME,
+    "assignmentDate" DATE,
+    "zoneName"       VARCHAR,
+    "zoneCode"       VARCHAR,
+    "attendanceId"   UUID,
+    "checkInAt"      TIMESTAMP WITH TIME ZONE,
+    "source"         VARCHAR,
+    "attendanceStatus" TEXT
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY
+    SELECT  m.assignment_id,
+            m.employee_number,
+            m.first_name,
+            m.last_name,
+            m.shift,
+            m.shift_name,
+            m.start_time,
+            m.end_time,
+            m.assignment_date,
+            m.zone_name,
+            m.zone_code,
+            m.attendance_id,
+            m.check_in_at,
+            m.source,
+            m.attendance_status::TEXT
+    FROM (
+        SELECT  v1.assignment_id,
+                v1.employee_number,
+                v1.first_name,
+                v1.last_name,
+                v1.shift,
+                v1.shift_name,
+                v1.start_time,
+                v1.end_time,
+                v1.assignment_date,
+                v1.zone_name,
+                v1.zone_code,
+                v1.attendance_id,
+                v1.check_in_at,
+                v1.source,
+                v1.attendance_status
+        FROM    vw_attendance_monitor v1
+
+        UNION ALL
+
+        SELECT  v2.assignment_id,
+                v2.employee_number,
+                v2.first_name,
+                v2.last_name,
+                v2.shift,
+                v2.shift_name,
+                v2.start_time,
+                v2.end_time,
+                v2.assignment_date,
+                v2.zone_name,
+                v2.zone_code,
+                v2.attendance_id,
+                v2.check_in_at,
+                v2.source,
+                v2.attendance_status
+        FROM    vw_schedule_monitor v2
+    ) AS m
+    WHERE (
+        (p_start_date IS NOT NULL AND p_end_date IS NOT NULL AND m.assignment_date >= p_start_date AND m.assignment_date <= p_end_date)
+        OR
+        ((p_start_date IS NULL OR p_end_date IS NULL) AND p_date IS NOT NULL AND m.assignment_date = p_date)
+    )
+    AND (p_employee_number IS NULL OR m.employee_number = p_employee_number)
+    ORDER BY m.assignment_date DESC, m.shift, m.last_name ASC;
+END;
+$$;
