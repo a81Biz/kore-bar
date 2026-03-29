@@ -15,9 +15,8 @@
             </div>
             <div class="p-6">
                 <form id="form-hr-sync" class="flex gap-2 max-w-md">
-                    <input type="text" id="input-hr-url"
-                        class="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none"
-                        value="/shared/mock/rrhh_altas.json" required>
+                    <input type="file" id="input-hr-url" accept=".json"
+                        class="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none" required>
                     <button type="submit" id="btn-hr-sync"
                         class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 font-medium text-sm">
                         <span class="material-symbols-outlined text-[18px]">sync</span> Sincronizar

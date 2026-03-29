@@ -91,27 +91,29 @@ export const logic = {
     },
 
     syncHR: async () => {
-        const defaultUrl = '/shared/mock/rrhh_altas.json';
-        const inputUrl = state.dom.inputUrlSync?.value.trim() || defaultUrl;
-
-        const formPayload = { action: 'SYNC_HR', url: inputUrl, targetUrl: inputUrl };
-        if (state.dom.formSync) {
-            const formData = new FormData(state.dom.formSync);
-            for (const [key, value] of formData.entries()) {
-                if (value) formPayload[key] = value;
-            }
+        const fileInput = state.dom.inputUrlSync;
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            showErrorModal('Por favor selecciona un archivo JSON para sincronizar.', 'Archivo Requerido');
+            return;
         }
+
+        const formPayload = { action: 'SYNC_HR', targetUrl: 'file-upload' };
 
         const validacionSync = state.motorValidacion.execute(formPayload);
         if (!validacionSync.isValid) {
-            showErrorModal(validacionSync.error, 'URL Requerida');
+            showErrorModal(validacionSync.error, 'Validación Fallida');
             return;
         }
 
         try {
-            const response = await fetch(inputUrl);
-            if (!response.ok) throw new Error('No se pudo acceder al archivo de RRHH');
-            const jsonData = await response.json();
+            const file = fileInput.files[0];
+            const textData = await file.text();
+            let jsonData;
+            try {
+                jsonData = JSON.parse(textData);
+            } catch (err) {
+                throw new Error('El archivo seleccionado no tiene un formato JSON válido.');
+            }
 
             // 1. Sincronizar Catálogos en V2
             const catalogos = jsonData.catalogo_puestos || jsonData.catalogo_areas_puestos || [];

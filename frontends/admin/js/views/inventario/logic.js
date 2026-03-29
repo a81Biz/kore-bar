@@ -68,17 +68,12 @@ export const api = {
         await api.loadStock();
         await api.loadKardex();
     },
-    syncPurchases: async () => {
-        // Leer Mock JSON y Detonar PULL Sincronización
-        const mockRes = await fetch('/shared/mock/initial_purchase.json');
-        if (!mockRes.ok) throw new Error("No se pudo leer el documento base inicial.");
-        const payload = await mockRes.json();
-
+    syncPurchases: async (payload) => {
         await postData(ENDPOINTS.inventory.post.sync, payload);
         showSuccessModal('Mercancía sincronizada correctamente.');
         await api.loadStock();
         await api.loadKardex();
-        await api.loadSuppliers(); // 🟢 Obliga al DOM a recargar el catálogo de proveedores recién inyectado
+        await api.loadSuppliers();
     }
 };
 export const bindEvents = () => {
@@ -240,31 +235,46 @@ export const bindEvents = () => {
 
     // 🟢 Nuevo: Sincronizar Compras PULL
     if (state.dom.btnSyncPurchases) {
-        state.dom.btnSyncPurchases.addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            const textSpan = btn.querySelector('.btn-text');
-            const iconSpan = btn.querySelector('.btn-icon');
-            const originalText = textSpan ? textSpan.textContent : 'Sincronizar Compras';
+        const fileInput = state.dom.btnSyncPurchases.querySelector('#input-sync-purchases');
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                if (!e.target.files || e.target.files.length === 0) return;
+                const file = e.target.files[0];
+                const btn = state.dom.btnSyncPurchases;
+                const textSpan = btn.querySelector('.btn-text');
+                const iconSpan = btn.querySelector('.btn-icon');
+                const originalText = textSpan ? textSpan.textContent : 'Sincronizar Compras a Bodega';
 
-            try {
-                // Estado Visual: Loading
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                if (textSpan) textSpan.textContent = 'Sincronizando...';
-                if (iconSpan) iconSpan.classList.add('animate-spin');
+                try {
+                    // Estado Visual: Loading
+                    btn.style.pointerEvents = 'none';
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    if (textSpan) textSpan.textContent = 'Sincronizando...';
+                    if (iconSpan) iconSpan.classList.add('animate-spin');
 
-                await api.syncPurchases();
-            } catch (error) {
-                console.error("Error PULL Sync:", error);
-                showErrorModal(error.message || "Error conectando con la BD de Compras.", "Fallo de Sincronización");
-            } finally {
-                // Restaurar Botón
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                if (textSpan) textSpan.textContent = originalText;
-                if (iconSpan) iconSpan.classList.remove('animate-spin');
-            }
-        });
+                    const textData = await file.text();
+                    let payload;
+                    try {
+                        payload = JSON.parse(textData);
+                    } catch (err) {
+                        throw new Error('El archivo no tiene un formato JSON válido.');
+                    }
+
+                    await api.syncPurchases(payload);
+                } catch (error) {
+                    console.error("Error PULL Sync:", error);
+                    showErrorModal(error.message || "Error conectando con la BD de Compras.", "Fallo de Sincronización");
+                } finally {
+                    // Restaurar Botón
+                    btn.style.pointerEvents = 'auto';
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    if (textSpan) textSpan.textContent = originalText;
+                    if (iconSpan) iconSpan.classList.remove('animate-spin');
+                    fileInput.value = ''; // Reset
+                }
+            });
+        }
     }
 
     // Master-Detail Selección

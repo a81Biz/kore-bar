@@ -177,9 +177,9 @@ export const renderPaymentModal = () => {
   const { selectedTable, paymentLines, tip } = state;
   if (!selectedTable) return;
 
+  const totalToPay = selectedTable.total + (parseFloat(tip) || 0);
   const paid = paymentLines.reduce((s, l) => s + l.amount, 0);
-  const remaining = Math.max(0, selectedTable.total - paid);
-  const change = Math.max(0, paid - selectedTable.total);
+  const remaining = Math.max(0, totalToPay - paid);
 
   // Crear overlay si no existe
   let overlay = document.getElementById('payment-modal');
@@ -194,7 +194,7 @@ export const renderPaymentModal = () => {
   const clon = cloneTemplate('tpl-cashier-payment');
 
   clon.querySelector('.col-payment-subtitle').textContent =
-    `Mesa ${selectedTable.tableCode} · ${fmt(selectedTable.total)}`;
+    `Mesa ${selectedTable.tableCode} · Consumo: ${fmt(selectedTable.total)}`;
 
   // Líneas de cobro
   const linesContainer = clon.querySelector('#payment-lines');
@@ -211,33 +211,63 @@ export const renderPaymentModal = () => {
   if (remaining > 0) clon.querySelector('#inp-amount').value = remaining.toFixed(2);
   if (tip) clon.querySelector('#inp-tip').value = tip;
 
-  // Resumen de cobro
-  const summary = clon.querySelector('#payment-summary');
-  const balanceLabel = clon.querySelector('.col-balance-label');
-  const balanceAmount = clon.querySelector('.col-balance-amount');
-  clon.querySelector('.col-paid').textContent = fmt(paid);
+  overlay.appendChild(clon);
+  
+  updatePaymentSummaryUI();
+};
+
+export const updatePaymentSummaryUI = () => {
+  const { selectedTable, paymentLines, tip } = state;
+  if (!selectedTable) return;
+
+  const totalToPay = selectedTable.total + (parseFloat(tip) || 0);
+  const paidAdded = paymentLines.reduce((s, l) => s + l.amount, 0);
+
+  const inpAmountEl = document.getElementById('inp-amount');
+  const pendingAmount = inpAmountEl ? (parseFloat(inpAmountEl.value) || 0) : 0;
+  // If paymentLines doesn't cover total, we sum what's typed. Otherwise just use added to avoid confusing double counts.
+  const virtPaid = paidAdded < totalToPay ? paidAdded + pendingAmount : paidAdded;
+
+  const remaining = Math.max(0, totalToPay - virtPaid);
+  const change = Math.max(0, virtPaid - totalToPay);
+
+  const summary = document.getElementById('payment-summary');
+  const balanceLabel = document.querySelector('.col-balance-label');
+  const balanceAmount = document.querySelector('.col-balance-amount');
+  const labelPaid = document.querySelector('.col-paid');
+  const labelTotalToPay = document.querySelector('.col-total-to-pay');
+  const btnConfirm = document.getElementById('btn-confirm-payment');
+
+  if (!summary || !btnConfirm) return;
+
+  labelPaid.textContent = fmt(virtPaid);
+  if (labelTotalToPay) labelTotalToPay.textContent = fmt(totalToPay);
 
   if (change > 0) {
     summary.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border-green-200', 'dark:border-green-800');
     summary.classList.remove('bg-slate-50', 'dark:bg-slate-700/50', 'border-slate-200', 'dark:border-slate-600');
     balanceLabel.textContent = '🟢 Cambio:';
-    balanceLabel.className += ' text-green-700 dark:text-green-400 font-bold';
+    balanceLabel.className = 'col-balance-label text-green-700 dark:text-green-400 font-bold';
     balanceAmount.textContent = fmt(change);
-    balanceAmount.className += ' text-green-700 dark:text-green-400 font-black text-lg';
+    balanceAmount.className = 'col-balance-amount text-green-700 dark:text-green-400 font-black text-lg';
   } else {
+    summary.classList.remove('bg-green-50', 'dark:bg-green-900/20', 'border-green-200', 'dark:border-green-800');
+    summary.classList.add('bg-slate-50', 'dark:bg-slate-700/50', 'border-slate-200', 'dark:border-slate-600');
     balanceLabel.textContent = remaining > 0 ? '🔴 Pendiente:' : '✅ Cubierto';
+    balanceLabel.className = 'col-balance-label text-slate-600 dark:text-slate-400';
     balanceAmount.textContent = remaining > 0 ? fmt(remaining) : fmt(0);
+    balanceAmount.className = 'col-balance-amount font-bold text-amber-600';
   }
 
-  // Habilitar botón de confirmar cuando el cobro cubre el total
-  const btnConfirm = clon.querySelector('#btn-confirm-payment');
-  if (paid >= selectedTable.total) {
+  if (virtPaid >= totalToPay) {
     btnConfirm.disabled = false;
     btnConfirm.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400', 'cursor-not-allowed');
     btnConfirm.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'shadow-lg', 'shadow-green-600/30', 'active:scale-[0.98]');
+  } else {
+    btnConfirm.disabled = true;
+    btnConfirm.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400', 'cursor-not-allowed');
+    btnConfirm.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'shadow-lg', 'shadow-green-600/30', 'active:scale-[0.98]');
   }
-
-  overlay.appendChild(clon);
 };
 
 // ── Ticket de Éxito ────────────────────────────────────────────────────────

@@ -130,14 +130,18 @@ export const render = {
                 const td = document.createElement('td');
                 td.className = 'px-4 py-3 text-slate-700';
 
+                // 🟢 FIX: Busca la llave en formato original (snake) o formato JSON (camel)
+                const camelKey = h.key.replace(/_([a-z])/g, g => g[1].toUpperCase());
+                const valor = row[h.key] !== undefined ? row[h.key] : row[camelKey];
+
                 if (h.key === 'payment_method') {
                     const badge = document.createElement('span');
-                    const method = row[h.key] || 'DEFAULT';
+                    const method = valor || 'DEFAULT';
                     badge.className = `px-2 py-0.5 text-xs rounded-full ${uiConfig.paymentBadges[method] || uiConfig.paymentBadges.DEFAULT}`;
                     badge.textContent = method;
                     td.appendChild(badge);
                 } else {
-                    td.textContent = _formatCell(row[h.key], h.format);
+                    td.textContent = _formatCell(valor, h.format);
                 }
 
                 tr.appendChild(td);

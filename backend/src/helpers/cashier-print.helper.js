@@ -6,7 +6,7 @@
 import * as model from '../models/cashier-print.model.js';
 import { AppError } from '../utils/errors.util.js';
 
-export const fetchTicketPrintData = async (c, state) => {
+export const fetchTicketPrintData = async (state, c,) => {
     const folio = state.params?.folio || state.payload?.folio;
 
     if (!folio) {

@@ -16,7 +16,7 @@ import { state } from './state.js';
 import {
     renderLoginScreen, renderBoard, renderTableDetail,
     renderPaymentModal, renderTicketSuccess, renderCorteModal,
-    showToast, showLoading
+    showToast, showLoading, updatePaymentSummaryUI
 } from './view.js';
 import { TicketPrinter } from './ticket-print.js';
 
@@ -308,7 +308,12 @@ function attachPaymentEvents() {
     document.querySelectorAll('.quick-amount').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById('inp-amount').value = btn.dataset.quick;
+            updatePaymentSummaryUI();
         });
+    });
+
+    document.getElementById('inp-amount')?.addEventListener('input', () => {
+        updatePaymentSummaryUI();
     });
 
     document.getElementById('btn-add-line')?.addEventListener('click', () => {
@@ -332,15 +337,27 @@ function attachPaymentEvents() {
 
     document.getElementById('inp-tip')?.addEventListener('input', (e) => {
         state.tip = parseFloat(e.target.value) || 0;
+        updatePaymentSummaryUI();
     });
 
     document.getElementById('btn-confirm-payment')?.addEventListener('click', confirmPayment);
 }
 
-// ── 7. Confirmar pago ──────────────────────────────────────────────────────
 async function confirmPayment() {
-    const { selectedTable, paymentLines, tip, cashier } = state;
-    if (!selectedTable || paymentLines.length === 0) return;
+    const { selectedTable, tip, cashier, paymentLines } = state;
+    if (!selectedTable) return;
+
+    const currentInputAmt = parseFloat(document.getElementById('inp-amount')?.value) || 0;
+    const paidSoFar = paymentLines.reduce((s, l) => s + l.amount, 0);
+    const totalToPay = selectedTable.total + (parseFloat(tip) || 0);
+
+    // Auto-add the typed amount if it helps cover what's missing
+    if (paidSoFar < totalToPay && currentInputAmt > 0 && (paidSoFar + currentInputAmt >= totalToPay)) {
+        const method = document.getElementById('sel-method')?.value || 'CASH';
+        state.paymentLines.push({ method, amount: currentInputAmt });
+    }
+
+    if (paymentLines.length === 0) return;
 
     showLoading(true);
     try {

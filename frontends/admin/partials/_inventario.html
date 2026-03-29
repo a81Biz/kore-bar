@@ -157,11 +157,12 @@
                         <div class="flex flex-wrap justify-between items-center gap-4 mb-4 shrink-0">
                             <h3 class="font-bold text-slate-800 text-lg">Existencias y Resurtido</h3>
                             <div class="flex items-center gap-3">
-                                <button id="btn-sync-purchases"
-                                    class="text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm">
+                                <label for="input-sync-purchases" id="btn-sync-purchases"
+                                    class="cursor-pointer text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm">
                                     <span class="material-symbols-outlined text-[16px] btn-icon">sync</span>
                                     <span class="btn-text">Sincronizar Compras a Bodega</span>
-                                </button>
+                                    <input type="file" id="input-sync-purchases" accept=".json" class="hidden">
+                                </label>
                                 <label
                                     class="flex items-center gap-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">
                                     <input type="checkbox" id="toggle-suggested"

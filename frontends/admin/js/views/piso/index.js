@@ -28,6 +28,16 @@ export const PisoController = {
     mount: async (container) => {
         _iniciarReloj(container);
 
+        // Escuchamos actualizaciones globales PRIMERO para evitar condiciones de carrera
+        PubSub.subscribe('ZONAS_ACTUALIZADAS', (zonas) => {
+            MesasController.actualizarZonas(zonas);
+            AsignacionesController.actualizarZonas(zonas);
+        });
+
+        PubSub.subscribe('MESAS_ACTUALIZADAS', (mesas) => {
+            AsignacionesController.actualizarMesas(mesas);
+        });
+
         // Montamos los 3 submódulos
         await Promise.all([
             ZonasController.mount(container),
@@ -40,15 +50,6 @@ export const PisoController = {
         MesasController.actualizarZonas(zonasActuales);
         AsignacionesController.actualizarZonas(zonasActuales);
 
-        // Escuchamos actualizaciones globales
-        PubSub.subscribe('ZONAS_ACTUALIZADAS', (zonas) => {
-            MesasController.actualizarZonas(zonas);
-            AsignacionesController.actualizarZonas(zonas);
-        });
 
-        // 🟢 NUEVO: Cuando cambian las mesas, avisamos a Asignaciones para recalcular el PAX del Resumen
-        PubSub.subscribe('MESAS_ACTUALIZADAS', (mesas) => {
-            AsignacionesController.actualizarMesas(mesas);
-        });
     }
 };

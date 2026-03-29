@@ -16,8 +16,8 @@ import {
 
 // ── Paso 1: Mostrar buscador de folio ──────────────────────────────────────
 export const initSearch = () => {
-    state.step   = 'search';
-    state.folio  = null;
+    state.step = 'search';
+    state.folio = null;
     state.ticket = null;
     renderSearchStep();
     attachSearchEvents();
@@ -43,14 +43,14 @@ async function searchTicket() {
     showLoading(true);
     try {
         // Reutiliza el endpoint de caja: GET /cashier/tickets/:folio
-        const json   = await fetchData(ENDPOINTS.cashier.get.ticket, { folio });
-        const ticket = json.data?.ticket || json.data;
+        const json = await fetchData(ENDPOINTS.cashier.get.ticket, { folio });
+        const ticket = json.data?.ticket || json.data?.body?.ticket;
 
         if (!ticket?.folio) throw new Error('Ticket no encontrado');
 
-        state.folio  = ticket.folio;
+        state.folio = ticket.folio;
         state.ticket = ticket;
-        state.step   = 'form';
+        state.step = 'form';
 
         // Si ya fue facturado, mostramos la pantalla de advertencia
         if (ticket.isInvoiced) {
@@ -83,12 +83,12 @@ function attachFormEvents() {
 }
 
 async function submitInvoice() {
-    const rfc     = document.getElementById('inp-rfc')?.value?.trim().toUpperCase();
-    const cp      = document.getElementById('inp-cp')?.value?.trim();
-    const razon   = document.getElementById('inp-razon')?.value?.trim().toUpperCase();
+    const rfc = document.getElementById('inp-rfc')?.value?.trim().toUpperCase();
+    const cp = document.getElementById('inp-cp')?.value?.trim();
+    const razon = document.getElementById('inp-razon')?.value?.trim().toUpperCase();
     const regimen = document.getElementById('inp-regimen')?.value;
-    const uso     = document.getElementById('inp-uso')?.value;
-    const email   = document.getElementById('inp-email')?.value?.trim();
+    const uso = document.getElementById('inp-uso')?.value;
+    const email = document.getElementById('inp-email')?.value?.trim();
 
     if (!rfc || !cp || !razon || !regimen || !uso) {
         showToast('Completa todos los campos obligatorios (*)', 'error');

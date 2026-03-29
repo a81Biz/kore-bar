@@ -75,10 +75,14 @@
             <div id="payment-summary"
                 class="rounded-xl p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
                 <div class="flex justify-between text-sm mb-1">
-                    <span class="text-slate-600 dark:text-slate-400">Total cobrado:</span>
+                    <span class="text-slate-600 dark:text-slate-400">Total a Pagar (inc. propina):</span>
+                    <span class="col-total-to-pay font-bold text-slate-900 dark:text-white"></span>
+                </div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-slate-600 dark:text-slate-400">Total Recibido:</span>
                     <span class="col-paid font-bold text-slate-900 dark:text-white"></span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="flex justify-between text-sm pt-1 border-t border-slate-200 dark:border-slate-600 mt-2">
                     <span class="col-balance-label text-slate-600 dark:text-slate-400"></span>
                     <span class="col-balance-amount font-bold text-amber-600"></span>
                 </div>

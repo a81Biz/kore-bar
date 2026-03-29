@@ -17,14 +17,14 @@ DECLARE
     v_result  JSON;
 BEGIN
     -- Buscar el ticket por folio (llave natural)
-    SELECT
+ SELECT
         t.folio,
         t.created_at,
         t.subtotal,
         t.tax,
         t.total,
-        t.tip,
-        t.payment_method,
+        t.tip_total AS tip,
+        p.method          AS payment_method,
         t.is_invoiced,
         oh.code           AS order_code,
         rt.code           AS table_code,
@@ -37,7 +37,9 @@ BEGIN
     LEFT JOIN restaurant_tables rt ON oh.table_id = rt.id
     LEFT JOIN restaurant_zones rz  ON rt.zone_id  = rz.id
     LEFT JOIN employees e          ON oh.waiter_id = e.id
+    LEFT JOIN payments p ON oh.id = p.order_id
     WHERE t.folio = p_folio;
+
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Ticket con folio % no encontrado', p_folio

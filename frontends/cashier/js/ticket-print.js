@@ -7,44 +7,44 @@
 // ==========================================================================
 // 1. DEPENDENCIAS
 // ==========================================================================
-import { fetchData }       from '/shared/js/http.client.js';
-import { ENDPOINTS }       from '/shared/js/endpoints.js';
-import { showErrorModal }  from '/shared/js/ui.js';
+import { fetchData } from '/shared/js/http.client.js';
+import { ENDPOINTS } from '/shared/js/endpoints.js';
+import { showErrorModal } from '/shared/js/ui.js';
 
 // ==========================================================================
 // 2. ESTADO PRIVADO Y CONFIGURACIÓN
 // ==========================================================================
-const _dom  = {};
+const _dom = {};
 const _data = { currentTicket: null };
 
 const _paymentLabels = {
-    'CASH':     'Efectivo',
-    'CARD':     'Tarjeta',
+    'CASH': 'Efectivo',
+    'CARD': 'Tarjeta',
     'TRANSFER': 'Transferencia',
-    'MIXED':    'Mixto'
+    'MIXED': 'Mixto'
 };
 
 // ==========================================================================
 // 3. CACHÉ DEL DOM
 // ==========================================================================
 const _cacheDOM = () => {
-    _dom.container      = document.querySelector('#ticket-print-container');
-    _dom.businessName   = document.querySelector('#print-business-name');
-    _dom.rfc            = document.querySelector('#print-rfc');
-    _dom.address        = document.querySelector('#print-address');
-    _dom.folio          = document.querySelector('#print-folio');
-    _dom.date           = document.querySelector('#print-date');
-    _dom.table          = document.querySelector('#print-table');
-    _dom.zone           = document.querySelector('#print-zone');
-    _dom.waiter         = document.querySelector('#print-waiter');
-    _dom.items          = document.querySelector('#print-items');
-    _dom.subtotal       = document.querySelector('#print-subtotal');
-    _dom.tax            = document.querySelector('#print-tax');
-    _dom.tip            = document.querySelector('#print-tip');
-    _dom.total          = document.querySelector('#print-total');
-    _dom.paymentMethod  = document.querySelector('#print-payment-method');
-    _dom.footerMessage  = document.querySelector('#print-footer-message');
-    _dom.invoiceStatus  = document.querySelector('#print-invoice-status');
+    _dom.container = document.querySelector('#ticket-print-container');
+    _dom.businessName = document.querySelector('#print-business-name');
+    _dom.rfc = document.querySelector('#print-rfc');
+    _dom.address = document.querySelector('#print-address');
+    _dom.folio = document.querySelector('#print-folio');
+    _dom.date = document.querySelector('#print-date');
+    _dom.table = document.querySelector('#print-table');
+    _dom.zone = document.querySelector('#print-zone');
+    _dom.waiter = document.querySelector('#print-waiter');
+    _dom.items = document.querySelector('#print-items');
+    _dom.subtotal = document.querySelector('#print-subtotal');
+    _dom.tax = document.querySelector('#print-tax');
+    _dom.tip = document.querySelector('#print-tip');
+    _dom.total = document.querySelector('#print-total');
+    _dom.paymentMethod = document.querySelector('#print-payment-method');
+    _dom.footerMessage = document.querySelector('#print-footer-message');
+    _dom.invoiceStatus = document.querySelector('#print-invoice-status');
 };
 
 // ==========================================================================
@@ -59,14 +59,14 @@ const _hydrateTicket = (data) => {
     const { header, items, totals, footer } = data;
 
     // Header
-    _dom.businessName.textContent  = header.business_name;
-    _dom.rfc.textContent           = `RFC: ${header.rfc}`;
-    _dom.address.textContent       = header.address;
-    _dom.folio.textContent         = header.folio;
-    _dom.date.textContent          = header.date;
-    _dom.table.textContent         = header.table_code || '—';
-    _dom.zone.textContent          = header.zone_name  || '—';
-    _dom.waiter.textContent        = header.waiter_name || '—';
+    _dom.businessName.textContent = header.business_name;
+    _dom.rfc.textContent = `RFC: ${header.rfc}`;
+    _dom.address.textContent = header.address;
+    _dom.folio.textContent = header.folio;
+    _dom.date.textContent = header.date;
+    _dom.table.textContent = header.table_code || '—';
+    _dom.zone.textContent = header.zone_name || '—';
+    _dom.waiter.textContent = header.waiter_name || '—';
 
     // Items
     _dom.items.innerHTML = '';
@@ -83,10 +83,10 @@ const _hydrateTicket = (data) => {
     });
 
     // Totales
-    _dom.subtotal.textContent      = _formatCurrency(totals.subtotal);
-    _dom.tax.textContent           = _formatCurrency(totals.tax);
-    _dom.tip.textContent           = _formatCurrency(totals.tip);
-    _dom.total.textContent         = _formatCurrency(totals.total);
+    _dom.subtotal.textContent = _formatCurrency(totals.subtotal);
+    _dom.tax.textContent = _formatCurrency(totals.tax);
+    _dom.tip.textContent = _formatCurrency(totals.tip);
+    _dom.total.textContent = _formatCurrency(totals.total);
     _dom.paymentMethod.textContent = _paymentLabels[totals.payment_method] || totals.payment_method;
 
     // Footer
@@ -102,13 +102,13 @@ const _fetchAndPrint = async (folio) => {
         const endpoint = ENDPOINTS.cashier.get.ticketPrint.replace(':folio', folio);
         const res = await fetchData(endpoint);
 
-        if (!res.success || !res.data) {
+        if (!res.success || !res.data?.result?.data) {
             showErrorModal('No se encontraron datos del ticket.');
             return;
         }
 
-        _data.currentTicket = res.data;
-        _hydrateTicket(res.data);
+        _data.currentTicket = res.data.result.data;
+        _hydrateTicket(res.data.result.data);
 
         // Mostrar el contenedor, imprimir y volver a ocultar
         _dom.container.classList.remove('hidden');
