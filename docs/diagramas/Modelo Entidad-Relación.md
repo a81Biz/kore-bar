@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
     ROLES {
         uuid id PK
@@ -248,3 +249,5 @@ erDiagram
     ORDER_HEADERS ||--|| TICKETS : "genera"
 
     RESTAURANT_TABLES ||--o{ WAITER_CALLS : "genera llamada"
+
+```
