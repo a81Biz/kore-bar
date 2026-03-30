@@ -66,8 +66,11 @@ const _logic = {
         if (_state.isConnected) return;
 
         try {
-            const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
-            _state.client = createClient(supabaseUrl, supabaseAnonKey);
+            const { SUPABASE_URL, SUPABASE_ANON_KEY } = await waitForEnv();
+            if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                throw new Error("Variables de Supabase no definidas en KORE_ENV");
+            }
+            _state.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
             // ── Canal 1: Platillos listos (READY) ─────────────
             _state.channelItems = _state.client

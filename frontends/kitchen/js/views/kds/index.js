@@ -33,8 +33,11 @@ const _cacheDOM = (container) => {
 
 const startRealtime = async () => {
     try {
-        const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await waitForEnv();
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            throw new Error("Variables de Supabase no definidas en KORE_ENV");
+        }
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         state.channel = supabase
             .channel('kds-order-items')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' },
