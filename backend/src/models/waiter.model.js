@@ -156,7 +156,7 @@ export const setOrderAwaitingPayment = async (c, orderCode) =>
 // Reutiliza las mismas tablas que admin-inventory pero filtra por
 // la locación de piso — sin exponer el dominio de inventario admin.
 export const getFloorStock = async (c) =>
-    await executeQuery(c, `SELECT * FROM vw_floor_stock;`);
+    await executeQuery(c, `SELECT * FROM vw_floor_stock`);
 
 // consulta quiénes tienen zonas y mesas asignadas
 export const getWaiters = async (c) =>
