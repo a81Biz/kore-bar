@@ -21,6 +21,9 @@ CREATE TABLE menu_categories (
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE menu_categories 
+ADD COLUMN IF NOT EXISTS can_pickup BOOLEAN NOT NULL DEFAULT false;
+
 CREATE TABLE menu_dishes (
     id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code               VARCHAR(50) UNIQUE NOT NULL,
@@ -36,6 +39,9 @@ CREATE TABLE menu_dishes (
     created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE menu_dishes 
+ADD COLUMN IF NOT EXISTS can_pickup BOOLEAN NOT NULL DEFAULT false;
 
 -- Bill of Materials: ingredientes por platillo
 -- quantity_required está en recipe_unit del inventory_item
