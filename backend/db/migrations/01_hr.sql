@@ -68,6 +68,9 @@ CREATE TABLE employees (
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE employees 
+ALTER COLUMN pin_code TYPE VARCHAR(255);
+
 -- Usuarios de sistema (acceso lógico)
 CREATE TABLE system_users (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
