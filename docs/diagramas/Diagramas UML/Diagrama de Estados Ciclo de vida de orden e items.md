@@ -1,3 +1,4 @@
+```mermaid
 stateDiagram-v2
     direction TB
 
@@ -27,3 +28,5 @@ stateDiagram-v2
     OPEN --> AWAITING_PAYMENT : sp_pos_close_table\n(solicitar cuenta)
     AWAITING_PAYMENT --> CLOSED : sp_cashier_process_payment\n(pago procesado + ticket emitido)
     OPEN --> CANCELLED : cancelar orden
+
+```

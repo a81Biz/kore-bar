@@ -1,3 +1,5 @@
+
+```mermaid
 sequenceDiagram
     actor M as Mesero
     participant FW as Frontend Waiters
@@ -67,3 +69,5 @@ sequenceDiagram
     Note over DB: Inserta payments<br/>Genera folio TKT-YYYYMMDD-XXXX<br/>status → CLOSED
     DB-->>API: {folio, total}
     API-->>FC: Ticket emitido
+
+```

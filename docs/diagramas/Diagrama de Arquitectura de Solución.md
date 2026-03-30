@@ -1,3 +1,4 @@
+```mermaid
 graph TD
     subgraph INF["🐳 Infraestructura — Docker Compose + nginx"]
         DC[Docker Compose]
@@ -38,3 +39,4 @@ graph TD
     PG -.->|RLS + pg_notify| SB
     SB -.->|WebSocket push| W
     SB -.->|WebSocket push| K
+```

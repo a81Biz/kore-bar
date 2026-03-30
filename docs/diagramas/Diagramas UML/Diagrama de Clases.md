@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
     class Employee {
         +UUID id
@@ -150,3 +151,5 @@ classDiagram
     Payment "*" --> "1" Employee : recibido por cajero
     Ticket "1" --> "1" OrderHeader : folio de
     WaiterCall "*" --> "1" RestaurantTable : en mesa
+
+```

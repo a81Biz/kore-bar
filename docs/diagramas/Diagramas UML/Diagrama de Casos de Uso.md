@@ -1,3 +1,4 @@
+```mermaid
 graph LR
     M(("Mesero"))
     CO(("Cocinero"))
@@ -64,3 +65,5 @@ graph LR
     ADM --- UC19
     ADM --- UC20
     ADM --- UC21
+
+```
