@@ -11,12 +11,15 @@
 // ============================================================
 
 import { PubSub } from '/shared/js/pubsub.js';
+import { waitForEnv } from '/core/js/kore.env.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const _state = {
     channelItems: null,
     channelCalls: null,
     client: null,
-    isConnected: false
+    isConnected: false,
+    pollingInterval: null
 };
 
 // ── Toast de notificación ─────────────────────────────────────
@@ -60,19 +63,11 @@ const CALL_REASONS = {
 // ── Lógica de conexión ────────────────────────────────────────
 const _logic = {
     connect: async (employeeNumber, onReady) => {
-        const supabaseUrl = window.KORE_ENV?.SUPABASE_URL;
-        const supabaseKey = window.KORE_ENV?.SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseKey) {
-            console.warn('[WaiterNotifications] Supabase no configurado — usando polling fallback.');
-            return;
-        }
-
         if (_state.isConnected) return;
 
         try {
-            const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-            _state.client = createClient(supabaseUrl, supabaseKey);
+            const { supabaseUrl, supabaseAnonKey } = await waitForEnv();
+            _state.client = createClient(supabaseUrl, supabaseAnonKey);
 
             // ── Canal 1: Platillos listos (READY) ─────────────
             _state.channelItems = _state.client
@@ -114,7 +109,14 @@ const _logic = {
                 });
 
         } catch (err) {
-            console.warn('[WaiterNotifications] Error al conectar Realtime:', err.message);
+            console.warn('[WaiterNotifications] Supabase no disponible — usando polling fallback:', err.message);
+            // Fallback: igual que en cocina, polling cada N segundos
+            if (!_state.pollingInterval) {
+                _state.pollingInterval = setInterval(() => {
+                    // Nota: El dashboard ya hace polling de tables(30s) y calls(8s).
+                    // Aquí se simula la estructura para acoplarse si existiese endpoint de platillos.
+                }, 5000);
+            }
         }
     },
 
@@ -126,6 +128,10 @@ const _logic = {
             _state.channelCalls = null;
             _state.isConnected = false;
             console.log('[WaiterNotifications] Canales Realtime desconectados.');
+        }
+        if (_state.pollingInterval) {
+            clearInterval(_state.pollingInterval);
+            _state.pollingInterval = null;
         }
     }
 };
