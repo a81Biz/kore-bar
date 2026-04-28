@@ -28,7 +28,7 @@ export const uiConfig = {
     },
     tableHeaders: {
         'resumen': [
-            { key: 'sale_date',       label: 'Fecha' },
+            { key: 'sale_date',       label: 'Fecha',       format: 'date' },
             { key: 'total_tickets',   label: 'Tickets' },
             { key: 'total_items_sold',label: 'Platillos' },
             { key: 'total_revenue',   label: 'Ingreso',     format: 'currency' },

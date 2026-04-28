@@ -1,0 +1,37 @@
+{
+    "id": "add_purchase_order_item",
+    "name": "Agregar Insumo a Pedido de Compra",
+    "description": "Agrega una línea de insumo a un purchase_order existente (origin ADMIN). Actualiza el total de la orden.",
+    "api": {
+        "method": "POST",
+        "path": "/purchase-orders/:id/items",
+        "tags": ["Inventario / Pedidos"],
+        "body": {
+            "type": "object",
+            "required": ["itemCode", "qtySuggested"],
+            "properties": {
+                "itemCode":      { "type": "string" },
+                "supplierCode":  { "type": "string" },
+                "qtySuggested":  { "type": "number", "minimum": 0.001 },
+                "unitPrice":     { "type": "number", "minimum": 0 },
+                "origin":        { "type": "string", "enum": ["KITCHEN", "ADMIN", "MANUAL"] }
+            }
+        }
+    },
+    "startAt": "add_item",
+    "nodes": {
+        "add_item": {
+            "type": "action",
+            "handler": "addPurchaseOrderItem",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 201,
+                "body": { "message": "{{state.message}}" }
+            }
+        }
+    }
+}

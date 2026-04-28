@@ -38,7 +38,7 @@ export const createDish = async (c, code, catCode, name, desc, price, img) =>
         p_description: desc,
         p_price: price,
         p_image_url: img,
-        p_can_pickup: canPickup ?? false
+        p_can_pickup: false
     });
 
 export const updateDish = async (c, code, catCode, name, desc, price, img, isActive, canPickup) =>

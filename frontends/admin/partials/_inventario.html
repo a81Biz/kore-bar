@@ -157,12 +157,11 @@
                         <div class="flex flex-wrap justify-between items-center gap-4 mb-4 shrink-0">
                             <h3 class="font-bold text-slate-800 text-lg">Existencias y Resurtido</h3>
                             <div class="flex items-center gap-3">
-                                <label for="input-sync-purchases" id="btn-sync-purchases"
-                                    class="cursor-pointer text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm">
-                                    <span class="material-symbols-outlined text-[16px] btn-icon">sync</span>
-                                    <span class="btn-text">Sincronizar Compras a Bodega</span>
-                                    <input type="file" id="input-sync-purchases" accept=".json" class="hidden">
-                                </label>
+                                <button id="btn-sync-purchases"
+                                    class="cursor-pointer text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <span class="material-symbols-outlined text-[16px]">sync</span>
+                                    Sincronizar Compras a Bodega
+                                </button>
                                 <label
                                     class="flex items-center gap-2 cursor-pointer bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">
                                     <input type="checkbox" id="toggle-suggested"
@@ -173,7 +172,7 @@
                         </div>
 
                         <!-- Split: Bodega | Cocina -->
-                        <div class="flex-1 grid grid-cols-2 gap-4 overflow-hidden min-h-0">
+                        <div id="stock-split-grid" class="flex-1 grid grid-cols-2 gap-4 overflow-hidden min-h-0">
 
                             <!-- ── PANEL BODEGA ── -->
                             <div class="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-white">
@@ -229,9 +228,99 @@
                             </div>
 
                         </div>
+
+                        <!-- Panel de Pedido de Compra (visible cuando toggle está activo) -->
+                        <div id="panel-purchase-orders" class="hidden flex-1 flex flex-col min-h-0">
+
+                            <!-- Estado vacío -->
+                            <div id="purchase-orders-empty" class="flex flex-col items-center justify-center flex-1 text-center py-16">
+                                <span class="material-symbols-outlined text-5xl text-slate-300 block mb-3">pending_actions</span>
+                                <p class="font-bold text-slate-500">Sin pedido enviado</p>
+                                <p class="text-sm text-slate-400 mt-1">La cocina aún no ha enviado ningún pedido. El pedido aparece aquí cuando la cocina lo revisa y lo confirma.</p>
+                            </div>
+
+                            <!-- Cabecera del pedido activo -->
+                            <div id="purchase-order-header" class="hidden shrink-0 flex flex-wrap justify-between items-start gap-4 mb-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-bold text-slate-800 text-base">📋 Pedido de Compra</h4>
+                                        <span id="po-status-badge" class="px-2 py-0.5 text-[10px] font-bold rounded tracking-wider"></span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5" id="po-meta"></p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="btn-print-order"
+                                        class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+                                        <span class="material-symbols-outlined text-[16px]">print</span> Imprimir PDF
+                                    </button>
+                                    <button id="btn-confirm-order"
+                                        class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50">
+                                        <span class="material-symbols-outlined text-[16px]">check_circle</span> Confirmar Pedido
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tabla de insumos del pedido -->
+                            <div id="purchase-order-table-wrap" class="hidden flex-1 overflow-y-auto border border-slate-200 rounded-xl min-h-0">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="px-3 py-2">Origen</th>
+                                            <th class="px-3 py-2">Insumo</th>
+                                            <th class="px-3 py-2">Proveedor</th>
+                                            <th class="px-3 py-2 text-right">Pedido</th>
+                                            <th class="px-3 py-2 text-right">Recibido</th>
+                                            <th class="px-3 py-2 text-right">Faltante</th>
+                                            <th class="px-3 py-2 text-right">Precio Unit.</th>
+                                            <th class="px-3 py-2 text-center">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="po-items-body" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Formulario agregar insumo (solo visible en DRAFT) -->
+                            <form id="form-add-po-item" class="hidden shrink-0 mt-3 bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap gap-2 items-end">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cód. Insumo</label>
+                                    <input type="text" id="po-add-item-code" placeholder="Ej. TOMATE"
+                                        class="w-28 px-2 py-1.5 text-sm border border-slate-300 rounded uppercase font-mono outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cód. Proveedor</label>
+                                    <input type="text" id="po-add-supplier-code" placeholder="PRV-01 (opc.)"
+                                        class="w-28 px-2 py-1.5 text-sm border border-slate-300 rounded uppercase font-mono outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cantidad</label>
+                                    <input type="number" step="0.01" min="0.01" id="po-add-qty" placeholder="0.00"
+                                        class="w-24 px-2 py-1.5 text-sm border border-slate-300 rounded text-right font-mono outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Precio Unit.</label>
+                                    <input type="number" step="0.01" min="0" id="po-add-price" placeholder="0.00"
+                                        class="w-24 px-2 py-1.5 text-sm border border-slate-300 rounded text-right font-mono outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <button type="submit"
+                                    class="px-4 py-1.5 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                                    + Agregar
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
 
                     <div id="view-kardex" class="absolute inset-0 flex flex-col p-6 hidden">
+
+                        <!-- Historial de Pedidos de Compra -->
+                        <div id="panel-order-history" class="mb-4 hidden">
+                            <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base text-indigo-600">receipt_long</span>
+                                Pedidos de Compra Enviados
+                            </h4>
+                            <div id="list-order-history" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                        </div>
+
                         <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                             <h3 class="font-bold text-slate-800 text-lg">Historial de Movimientos (Kardex)</h3>
                             <div class="flex items-center gap-3">
@@ -357,6 +446,49 @@
             </div>
         </div>
 
+        <!-- MODAL: RECEPCIÓN DE MERCANCÍA (SYNC) -->
+        <div id="modal-sync"
+            class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+            <div
+                class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform scale-95 transition-transform duration-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-indigo-600 text-xl">inventory</span>
+                        Recepción de Mercancía
+                    </h3>
+                    <button id="btn-close-sync-modal" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="p-6 flex flex-col gap-4">
+                    <p class="text-sm text-slate-600">Selecciona el archivo JSON de compra y asócialo al pedido que corresponda para registrar lo recibido.</p>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">PEDIDO DE COMPRA (opcional)</label>
+                        <select id="sync-order-selector"
+                            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Sin asociar — solo actualizar stock</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">ARCHIVO DE COMPRA (.json)</label>
+                        <input type="file" id="sync-file-input" accept=".json"
+                            class="w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    </div>
+                    <div class="mt-2 flex justify-end gap-2">
+                        <button type="button" id="btn-cancel-sync"
+                            class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="button" id="btn-execute-sync"
+                            class="px-4 py-2 text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">save</span>
+                            Registrar Recepción
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -417,4 +549,39 @@
             </button>
         </td>
     </tr>
+</template>
+
+<!-- Fila de insumo en el pedido de compra activo -->
+<template id="tpl-po-item-row">
+    <tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-3 py-2 col-origin"></td>
+        <td class="px-3 py-2 font-medium text-slate-800 col-item-name"></td>
+        <td class="px-3 py-2 text-xs text-slate-500 col-supplier"></td>
+        <td class="px-3 py-2 text-right font-mono font-bold text-indigo-700 col-qty-suggested"></td>
+        <td class="px-3 py-2 text-right font-mono text-emerald-700 col-qty-delivered"></td>
+        <td class="px-3 py-2 text-right font-mono col-difference"></td>
+        <td class="px-3 py-2 text-right font-mono text-slate-600 col-unit-price"></td>
+        <td class="px-3 py-2 text-center">
+            <button class="btn-remove-po-item text-slate-300 hover:text-red-500 transition-colors">
+                <span class="material-symbols-outlined text-[18px]">remove_circle</span>
+            </button>
+        </td>
+    </tr>
+</template>
+
+<!-- Tarjeta de historial de pedido (Kardex tab) -->
+<template id="tpl-order-history-card">
+    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+        <div>
+            <div class="flex items-center gap-2 mb-0.5">
+                <span class="font-bold text-slate-800 text-sm col-date"></span>
+                <span class="col-status-badge px-2 py-0.5 text-[10px] font-bold rounded tracking-wider"></span>
+            </div>
+            <div class="text-xs text-slate-400 col-notes"></div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-xs text-slate-500"><span class="col-items-count font-bold"></span> insumo(s)</div>
+            <div class="font-bold text-slate-700 col-total"></div>
+        </div>
+    </div>
 </template>

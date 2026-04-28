@@ -1,10 +1,29 @@
 // frontends/admin/js/views/inventario/view.js
 import { state, uiConfig } from './state.js';
 
+const _formatCurrency = (val) => {
+    const n = parseFloat(val) || 0;
+    return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const STATUS_MAP = {
+    DRAFT:     { text: 'BORRADOR',  cls: 'bg-yellow-100 text-yellow-800' },
+    SENT:      { text: 'ENVIADO',   cls: 'bg-blue-100 text-blue-800' },
+    PARTIAL:   { text: 'PARCIAL',   cls: 'bg-orange-100 text-orange-800' },
+    RECEIVED:  { text: 'RECIBIDO',  cls: 'bg-emerald-100 text-emerald-800' },
+    CANCELLED: { text: 'CANCELADO', cls: 'bg-red-100 text-red-800' }
+};
+
+const ORIGIN_LABEL = { KITCHEN: '🍳 Cocina', ADMIN: '🏢 Admin', MANUAL: '✏️ Manual' };
+const ORIGIN_BADGE = {
+    KITCHEN: 'bg-orange-100 text-orange-800',
+    ADMIN:   'bg-indigo-100 text-indigo-800',
+    MANUAL:  'bg-slate-100 text-slate-800'
+};
+
 export const cacheDOM = (container) => {
     state.dom.root = container;
 
-    // Helper resiliente: Busca primero en el Document global, si no, busca en el Container local
     const getTpl = (id) => {
         const tpl = document.querySelector(id) || container.querySelector(id);
         if (!tpl) console.warn(`[ViewManager] No se encontró el template: ${id}`);
@@ -25,54 +44,78 @@ export const cacheDOM = (container) => {
 
     state.dom.tbodyStockBodega = container.querySelector('#table-stock-bodega-body');
     state.dom.tbodyStockCocina = container.querySelector('#table-stock-cocina-body');
-
-    // Tablas y Contenedores
-    state.dom.tbodyKardex = container.querySelector('#table-kardex-body');
-    state.dom.toggleSuggested = container.querySelector('#toggle-suggested');
-    state.dom.listSuppliers = container.querySelector('#list-suppliers');
-    state.dom.lockOverlay = container.querySelector('#supplier-lock-overlay');
+    state.dom.tbodyKardex      = container.querySelector('#table-kardex-body');
+    state.dom.toggleSuggested  = container.querySelector('#toggle-suggested');
+    state.dom.listSuppliers    = container.querySelector('#list-suppliers');
+    state.dom.lockOverlay      = container.querySelector('#supplier-lock-overlay');
     state.dom.productsLockOverlay = container.querySelector('#products-lock-overlay');
-    state.dom.tablePricesBody = container.querySelector('#table-supplier-prices-body');
+    state.dom.tablePricesBody  = container.querySelector('#table-supplier-prices-body');
 
-    // Formularios e Inputs
     state.dom.formSupplierProfile = container.querySelector('#form-inv-supplier');
-    state.dom.formSupplierPrice = container.querySelector('#form-supplier-price');
-    state.dom.inputLinkCode = container.querySelector('#link-item-code');
-    state.dom.inputLinkName = container.querySelector('#link-item-name');
-    state.dom.inputLinkUnit = container.querySelector('#link-item-unit');
+    state.dom.formSupplierPrice   = container.querySelector('#form-supplier-price');
+    state.dom.inputLinkCode  = container.querySelector('#link-item-code');
+    state.dom.inputLinkName  = container.querySelector('#link-item-name');
+    state.dom.inputLinkUnit  = container.querySelector('#link-item-unit');
     state.dom.inputLinkPrice = container.querySelector('#link-item-price');
 
-    // Nuevos Filtros, Modales y Botón de Sync
     state.dom.kardexLocationFilter = container.querySelector('#kardex-location-filter');
-    state.dom.kardexItemFilter = container.querySelector('#kardex-item-filter');
+    state.dom.kardexItemFilter     = container.querySelector('#kardex-item-filter');
 
-    state.dom.modalTransfer = container.querySelector('#modal-transfer');
-    state.dom.formTransfer = container.querySelector('#form-transfer');
-    state.dom.transItemCode = container.querySelector('#trans-item-code');
-    state.dom.transItemName = container.querySelector('#trans-item-name');
-    state.dom.transSourceLoc = container.querySelector('#trans-source-loc');
-    state.dom.transTargetLoc = container.querySelector('#trans-target-loc');
-    state.dom.transItemUnit = container.querySelector('#trans-item-unit');
+    // Modales de traspaso y ajuste
+    state.dom.modalTransfer   = container.querySelector('#modal-transfer');
+    state.dom.formTransfer    = container.querySelector('#form-transfer');
+    state.dom.transItemCode   = container.querySelector('#trans-item-code');
+    state.dom.transItemName   = container.querySelector('#trans-item-name');
+    state.dom.transSourceLoc  = container.querySelector('#trans-source-loc');
+    state.dom.transTargetLoc  = container.querySelector('#trans-target-loc');
+    state.dom.transItemUnit   = container.querySelector('#trans-item-unit');
     state.dom.btnTransferClosers = container.querySelectorAll('.btn-close-transfer');
 
-    state.dom.modalAdjustment = container.querySelector('#modal-adjustment');
-    state.dom.formAdjustment = container.querySelector('#form-adjustment');
-    state.dom.adjItemCode = container.querySelector('#adj-item-code');
-    state.dom.adjLocationCode = container.querySelector('#adj-location-code');
-    state.dom.adjItemName = container.querySelector('#adj-item-name');
-    state.dom.adjCurrentStock = container.querySelector('#adj-current-stock');
-    state.dom.adjItemUnit = container.querySelector('#adj-item-unit');
+    state.dom.modalAdjustment    = container.querySelector('#modal-adjustment');
+    state.dom.formAdjustment     = container.querySelector('#form-adjustment');
+    state.dom.adjItemCode        = container.querySelector('#adj-item-code');
+    state.dom.adjLocationCode    = container.querySelector('#adj-location-code');
+    state.dom.adjItemName        = container.querySelector('#adj-item-name');
+    state.dom.adjCurrentStock    = container.querySelector('#adj-current-stock');
+    state.dom.adjItemUnit        = container.querySelector('#adj-item-unit');
     state.dom.adjItemUnitDisplay = container.querySelector('#adj-item-unit-display');
     state.dom.btnAdjustmentClosers = container.querySelectorAll('.btn-close-adjustment');
 
-    state.dom.btnSyncPurchases = container.querySelector('#btn-sync-purchases');
-    state.dom.tplStockRow = getTpl('#tpl-row-stock');
+    // Modal de sincronización
+    state.dom.modalSync        = container.querySelector('#modal-sync');
+    state.dom.syncOrderSelector = container.querySelector('#sync-order-selector');
+    state.dom.syncFileInput    = container.querySelector('#sync-file-input');
+    state.dom.btnExecuteSync   = container.querySelector('#btn-execute-sync');
+    state.dom.btnCloseSyncModal  = container.querySelector('#btn-close-sync-modal');
+    state.dom.btnCancelSync    = container.querySelector('#btn-cancel-sync');
 
-    // 🟢 TEMPLATES OBLIGATORIOS (Búsqueda Resiliente)
-    state.dom.tplStock = getTpl('#tpl-row-stock');
-    state.dom.tplKardex = getTpl('#tpl-row-kardex');
-    state.dom.tplSupplierCard = getTpl('#tpl-supplier-card');
-    state.dom.tplSupplierPrice = getTpl('#tpl-row-supplier-price');
+    // Botón de sync (ahora un <button> simple)
+    state.dom.btnSyncPurchases = container.querySelector('#btn-sync-purchases');
+
+    // Paneles del pedido de compra activo
+    state.dom.stockSplitGrid        = container.querySelector('#stock-split-grid');
+    state.dom.purchaseOrdersPanel   = container.querySelector('#panel-purchase-orders');
+    state.dom.purchaseOrdersEmpty   = container.querySelector('#purchase-orders-empty');
+    state.dom.purchaseOrderHeader   = container.querySelector('#purchase-order-header');
+    state.dom.purchaseOrderTableWrap = container.querySelector('#purchase-order-table-wrap');
+    state.dom.poStatusBadge         = container.querySelector('#po-status-badge');
+    state.dom.poMeta                = container.querySelector('#po-meta');
+    state.dom.poItemsBody           = container.querySelector('#po-items-body');
+    state.dom.formAddPoItem         = container.querySelector('#form-add-po-item');
+    state.dom.btnPrintOrder         = container.querySelector('#btn-print-order');
+    state.dom.btnConfirmOrder       = container.querySelector('#btn-confirm-order');
+
+    // Panel historial (tab kardex)
+    state.dom.panelOrderHistory = container.querySelector('#panel-order-history');
+    state.dom.listOrderHistory  = container.querySelector('#list-order-history');
+
+    // Templates
+    state.dom.tplStock          = getTpl('#tpl-row-stock');
+    state.dom.tplKardex         = getTpl('#tpl-row-kardex');
+    state.dom.tplSupplierCard   = getTpl('#tpl-supplier-card');
+    state.dom.tplSupplierPrice  = getTpl('#tpl-row-supplier-price');
+    state.dom.tplPoItemRow      = getTpl('#tpl-po-item-row');
+    state.dom.tplOrderHistoryCard = getTpl('#tpl-order-history-card');
 };
 
 export const render = {
@@ -80,15 +123,7 @@ export const render = {
         Object.keys(state.dom.tabs).forEach(key => {
             const isMatch = key === activeTabKey;
             state.dom.tabs[key].className = isMatch ? uiConfig.tabs.active : uiConfig.tabs.inactive;
-            state.dom.views[key].classList.toggle('hidden', !isMatch);
-
-            if (isMatch && key === 'suppliers') {
-                state.dom.views[key].style.display = 'flex';
-            } else if (isMatch) {
-                state.dom.views[key].style.display = 'flex';
-            } else {
-                state.dom.views[key].style.display = 'none';
-            }
+            state.dom.views[key].style.display = isMatch ? 'flex' : 'none';
         });
     },
 
@@ -102,7 +137,6 @@ export const render = {
             clone.querySelector('.col-name').textContent = sup.name;
             clone.querySelector('.col-code').textContent = sup.code;
 
-            // 🟢 NUEVO: Leer el arreglo de precios y actualizar el contador visual
             const productsCount = sup.prices ? sup.prices.length : 0;
             const colProducts = clone.querySelector('.col-products');
             if (colProducts) colProducts.textContent = `${productsCount} productos vinculados`;
@@ -119,23 +153,21 @@ export const render = {
     },
 
     supplierDetail: () => {
-        // Candado Maestro
         if (!state.ui.selectedSupplierCode) {
             state.dom.lockOverlay.classList.remove('hidden');
             state.dom.lockOverlay.classList.add('flex');
-            state.dom.tablePricesBody.innerHTML = ''; // Limpiar tabla
+            state.dom.tablePricesBody.innerHTML = '';
             return;
         }
 
         state.dom.lockOverlay.classList.add('hidden');
         state.dom.lockOverlay.classList.remove('flex');
 
-        // Candado Secundario (Nuevo sin guardar)
         if (state.ui.selectedSupplierCode === 'NEW') {
             state.dom.productsLockOverlay.classList.remove('hidden');
             state.dom.productsLockOverlay.classList.add('flex');
             state.dom.formSupplierProfile.reset();
-            state.dom.tablePricesBody.innerHTML = ''; // Limpiar tabla
+            state.dom.tablePricesBody.innerHTML = '';
             return;
         }
 
@@ -145,19 +177,15 @@ export const render = {
         const sup = state.data.suppliers.find(s => s.code === state.ui.selectedSupplierCode);
         if (!sup) return;
 
-        // Hidratación del perfil
         state.dom.formSupplierProfile.querySelector('#sup-code').value = sup.code;
         state.dom.formSupplierProfile.querySelector('#sup-name').value = sup.name;
         const contactInput = state.dom.formSupplierProfile.querySelector('#sup-contact');
         if (contactInput) contactInput.value = sup.contactName || sup.contact_name || '';
 
-        // 🟢 NUEVO: Pintar la tabla con los insumos vinculados
         state.dom.tablePricesBody.innerHTML = '';
         const prices = sup.prices || [];
 
         if (prices.length === 0) {
-            // Mensaje vacío elegante si no hay insumos
-            state.dom.tablePricesBody.textContent = '';
             const tr = document.createElement('tr');
             const td = document.createElement('td');
             td.colSpan = 4;
@@ -166,7 +194,6 @@ export const render = {
             tr.appendChild(td);
             state.dom.tablePricesBody.appendChild(tr);
         } else {
-            // Llenar filas
             prices.forEach(p => {
                 const clone = state.dom.tplSupplierPrice.content.cloneNode(true);
                 clone.querySelector('.col-code').textContent = p.itemCode || p.item_code;
@@ -176,7 +203,6 @@ export const render = {
             });
         }
     },
-    // Reemplaza render.stock() por:
 
     _renderStockTable: (tbody, items, isBodega) => {
         tbody.innerHTML = '';
@@ -214,14 +240,12 @@ export const render = {
                 btnAjustar.setAttribute('data-name', item.name || item.item_name);
                 btnAjustar.setAttribute('data-unit', item.unit || item.unit_measure || 'U');
                 btnAjustar.setAttribute('data-stock', item.stock);
-                // Solo Bodega tiene traspaso; en Cocina el botón Traspasar no aplica
                 btnAjustar.setAttribute('data-location', isBodega ? 'LOC-BODEGA' : 'LOC-COCINA');
             }
 
             const btnTraspasar = clone.querySelector('.btn-traspasar');
             if (btnTraspasar) {
                 if (!isBodega) {
-                    // Ocultar el botón de traspaso en la tabla de Cocina
                     btnTraspasar.style.display = 'none';
                 } else {
                     btnTraspasar.setAttribute('data-code', item.code || item.item_code);
@@ -245,39 +269,123 @@ export const render = {
         render._renderStockTable(state.dom.tbodyStockCocina, state.data.stockCocina, false);
     },
 
+    // Admin shows the most recent SENT or PARTIAL order (kitchen already approved it).
+    purchaseSuggestions: () => {
+        const activeOrder = state.data.purchaseSuggestions.find(o => ['SENT', 'PARTIAL'].includes(o.status));
+
+        if (!activeOrder) {
+            state.ui.activeOrderId = null;
+            state.dom.purchaseOrdersEmpty.classList.remove('hidden');
+            state.dom.purchaseOrderHeader.classList.add('hidden');
+            state.dom.purchaseOrderTableWrap.classList.add('hidden');
+            state.dom.formAddPoItem.classList.add('hidden');
+            return;
+        }
+
+        state.ui.activeOrderId = activeOrder.orderId;
+        state.dom.purchaseOrdersEmpty.classList.add('hidden');
+        state.dom.purchaseOrderHeader.classList.remove('hidden');
+        state.dom.purchaseOrderTableWrap.classList.remove('hidden');
+        state.dom.formAddPoItem.classList.remove('hidden');
+
+        // Hide "Confirmar" — kitchen sends the order, admin only receives
+        state.dom.btnConfirmOrder.classList.add('hidden');
+
+        // Status badge
+        const statusConf = STATUS_MAP[activeOrder.status] || { text: activeOrder.status, cls: 'bg-slate-100 text-slate-800' };
+        state.dom.poStatusBadge.textContent = statusConf.text;
+        state.dom.poStatusBadge.className = `px-2 py-0.5 text-[10px] font-bold rounded tracking-wider ${statusConf.cls}`;
+
+        // Meta line
+        const generatedAt = activeOrder.generatedAt
+            ? new Date(activeOrder.generatedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+            : 'Sin fecha';
+        state.dom.poMeta.textContent =
+            `Enviado: ${generatedAt} · Total: ${_formatCurrency(activeOrder.totalAmount)} · ${(activeOrder.items || []).length} insumo(s)`;
+
+        // Items table
+        state.dom.poItemsBody.innerHTML = '';
+        (activeOrder.items || []).forEach(item => {
+            const clone = state.dom.tplPoItemRow.content.cloneNode(true);
+
+            const origin = item.origin || 'MANUAL';
+            const diff = parseFloat(item.difference ?? (item.qtySuggested - (item.qtyDelivered || 0)));
+
+            clone.querySelector('.col-origin').innerHTML =
+                `<span class="px-2 py-0.5 text-[10px] font-bold rounded ${ORIGIN_BADGE[origin] || 'bg-slate-100 text-slate-800'}">${ORIGIN_LABEL[origin] || origin}</span>`;
+            clone.querySelector('.col-item-name').textContent = item.itemName;
+            clone.querySelector('.col-supplier').textContent  = item.supplierName || '—';
+            clone.querySelector('.col-qty-suggested').textContent = item.qtySuggested;
+            clone.querySelector('.col-qty-delivered').textContent = item.qtyDelivered ?? 0;
+
+            const diffEl = clone.querySelector('.col-difference');
+            diffEl.textContent = diff.toFixed(3);
+            if (diff > 0) diffEl.classList.add('text-red-600', 'font-bold');
+
+            clone.querySelector('.col-unit-price').textContent = _formatCurrency(item.unitPrice);
+
+            // Admin can remove items from SENT/PARTIAL orders (e.g. correction)
+            const btnRemove = clone.querySelector('.btn-remove-po-item');
+            btnRemove.setAttribute('data-line-id', item.lineId);
+            btnRemove.setAttribute('data-order-id', activeOrder.orderId);
+
+            state.dom.poItemsBody.appendChild(clone);
+        });
+    },
+
+    // Shows completed orders (RECEIVED / CANCELLED) in the Historial tab.
+    orderHistory: () => {
+        const completed = state.data.purchaseSuggestions.filter(o => ['RECEIVED', 'CANCELLED'].includes(o.status));
+
+        if (completed.length === 0) {
+            state.dom.panelOrderHistory.classList.add('hidden');
+            return;
+        }
+
+        state.dom.panelOrderHistory.classList.remove('hidden');
+        state.dom.listOrderHistory.innerHTML = '';
+
+        completed.forEach(order => {
+            const clone = state.dom.tplOrderHistoryCard.content.cloneNode(true);
+
+            const date = new Date(order.generatedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+            clone.querySelector('.col-date').textContent = date;
+
+            const statusConf = STATUS_MAP[order.status] || { text: order.status, cls: 'bg-slate-100 text-slate-800' };
+            const badge = clone.querySelector('.col-status-badge');
+            badge.textContent = statusConf.text;
+            badge.className = `col-status-badge px-2 py-0.5 text-[10px] font-bold rounded tracking-wider ${statusConf.cls}`;
+
+            clone.querySelector('.col-notes').textContent       = order.notes || '';
+            clone.querySelector('.col-items-count').textContent = (order.items || []).length;
+            clone.querySelector('.col-total').textContent       = _formatCurrency(order.totalAmount);
+
+            state.dom.listOrderHistory.appendChild(clone);
+        });
+    },
+
     kardex: () => {
         state.dom.tbodyKardex.innerHTML = '';
 
         state.data.kardex.forEach(mov => {
             const clone = state.dom.tplKardex.content.cloneNode(true);
 
-            // ── Tipo de transacción ───────────────────────────
-            // API devuelve: transactionType ('TRANSFER', 'IN_PURCHASE', 'IN', 'OUT', 'ADJ')
             const mType = mov.transactionType || mov.type || mov.transaction_type;
             const conf = uiConfig.transactionType[mType] || uiConfig.transactionType.DEFAULT;
 
-            // ── Fecha ─────────────────────────────────────────
-            // API devuelve: date (ISO string)
             clone.querySelector('.col-date').textContent = new Date(
                 mov.date || mov.created_at
             ).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
 
-            // ── Badge tipo ────────────────────────────────────
             const badge = clone.querySelector('.col-type-badge');
             badge.className = `px-2 py-1 text-[10px] font-bold rounded col-type-badge tracking-wider ${conf.badge}`;
             badge.textContent = conf.label;
 
-            // ── Ubicaciones ───────────────────────────────────
-            // API devuelve: fromLocation / toLocation
             clone.querySelector('.col-origin').textContent = mov.fromLocation || mov.origin || mov.from_location_code || '-';
-            clone.querySelector('.col-dest').textContent = mov.toLocation || mov.dest || mov.to_location_code || '-';
-
-            // ── Nombre del insumo ─────────────────────────────
-            // API devuelve: itemName / itemCode
+            clone.querySelector('.col-dest').textContent   = mov.toLocation   || mov.dest   || mov.to_location_code   || '-';
             clone.querySelector('.col-ingredient').textContent =
                 mov.itemName || mov.ingredient || mov.item_name || mov.item_code || 'Desconocido';
 
-            // ── Cantidad con signo visual ─────────────────────
             const qtyEl = clone.querySelector('.col-qty');
             const qtyNum = parseFloat(mov.quantity || 0);
 
@@ -287,13 +395,11 @@ export const render = {
 
             qtyEl.textContent = `${sign}${Math.abs(qtyNum)}`;
 
-            if (mType === 'IN' || mType === 'IN_PURCHASE') qtyEl.classList.add('text-emerald-600');
-            else if (mType === 'OUT' || mType === 'ADJ') qtyEl.classList.add('text-orange-600');
-            else if (mType === 'TRANSFER') qtyEl.classList.add('text-purple-600');
-            else qtyEl.classList.add('text-slate-600');
+            if (mType === 'IN' || mType === 'IN_PURCHASE')          qtyEl.classList.add('text-emerald-600');
+            else if (mType === 'OUT' || mType === 'ADJ')            qtyEl.classList.add('text-orange-600');
+            else if (mType === 'TRANSFER')                          qtyEl.classList.add('text-purple-600');
+            else                                                    qtyEl.classList.add('text-slate-600');
 
-            // ── Referencia ────────────────────────────────────
-            // API devuelve: referenceId
             clone.querySelector('.col-ref').textContent =
                 mov.referenceId || mov.reference || mov.reference_id || '-';
 
@@ -301,8 +407,6 @@ export const render = {
         });
     },
 
-
-    // Modal Manager
     modals: {
         transfer: {
             open: (code, name, unit) => {
@@ -312,7 +416,6 @@ export const render = {
                 state.dom.transItemUnit.textContent = unit;
                 state.dom.formTransfer.reset();
 
-                // Deshabilitar la opción Origen en Destino
                 Array.from(state.dom.transTargetLoc.options).forEach(opt => {
                     opt.disabled = (opt.value === 'LOC-BODEGA');
                 });
@@ -327,17 +430,13 @@ export const render = {
         },
         adjustment: {
             open: (code, name, unit, currentStock, locationCode) => {
-                // Guardar la ubicación en el estado para que bindForm('form-adjustment')
-                // pueda leerla desde state.ui.stockLocation al hacer el submit
                 state.ui.stockLocation = locationCode || 'LOC-BODEGA';
-
                 state.dom.adjItemCode.value = code;
                 state.dom.adjLocationCode.value = state.ui.stockLocation;
                 state.dom.adjItemName.textContent = name;
                 state.dom.adjCurrentStock.textContent = currentStock;
                 state.dom.adjItemUnit.textContent = unit;
                 state.dom.adjItemUnitDisplay.textContent = unit;
-
                 state.dom.formAdjustment.reset();
 
                 state.dom.modalAdjustment.classList.remove('opacity-0', 'pointer-events-none');
@@ -346,6 +445,29 @@ export const render = {
             close: () => {
                 state.dom.modalAdjustment.classList.add('opacity-0', 'pointer-events-none');
                 state.dom.modalAdjustment.firstElementChild.classList.add('scale-95');
+            }
+        },
+        sync: {
+            open: () => {
+                // Populate dropdown with SENT/PARTIAL orders
+                state.dom.syncOrderSelector.innerHTML = '<option value="">Sin asociar — solo actualizar stock</option>';
+                const syncable = state.data.purchaseSuggestions.filter(o => ['SENT', 'PARTIAL'].includes(o.status));
+                syncable.forEach(o => {
+                    const opt = document.createElement('option');
+                    opt.value = o.orderId;
+                    const date = new Date(o.generatedAt).toLocaleDateString('es-MX', { dateStyle: 'short' });
+                    const statusConf = STATUS_MAP[o.status] || { text: o.status };
+                    opt.textContent = `${date} — ${(o.items || []).length} insumos · ${statusConf.text}`;
+                    state.dom.syncOrderSelector.appendChild(opt);
+                });
+
+                state.dom.syncFileInput.value = '';
+                state.dom.modalSync.classList.remove('opacity-0', 'pointer-events-none');
+                state.dom.modalSync.firstElementChild.classList.remove('scale-95');
+            },
+            close: () => {
+                state.dom.modalSync.classList.add('opacity-0', 'pointer-events-none');
+                state.dom.modalSync.firstElementChild.classList.add('scale-95');
             }
         }
     }

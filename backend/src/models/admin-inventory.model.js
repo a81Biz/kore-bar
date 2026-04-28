@@ -33,8 +33,15 @@ export const upsertSupplierPrice = async (c, supplierCode, itemCode, itemName, i
 
 // ── COMPRAS ───────────────────────────────────────────────────
 
-export const syncPurchases = async (c, payload) =>
-    await executeStoredProcedure(c, 'sp_sync_purchases', { p_payload: payload }, { p_payload: 'JSONB' });
+export const syncPurchases = async (c, payload, orderId = null) => {
+    const params = { p_payload: payload };
+    const types  = { p_payload: 'JSONB' };
+    if (orderId) {
+        params.p_order_id = orderId;
+        types.p_order_id  = 'UUID';
+    }
+    return await executeStoredProcedure(c, 'sp_sync_purchases', params, types);
+};
 
 // ── STOCK / INVENTARIO ────────────────────────────────────────
 
@@ -151,8 +158,8 @@ export const adjustStock = async (c, locationCode, itemCode, physicalStock, note
     });
 
 // ── GET /inventory/purchase-suggestions ──────────────────────
-// Devuelve purchase_orders DRAFT o SENT del día actual,
-// agrupadas por proveedor con sus líneas de detalle en JSONB.
+// Devuelve purchase_orders con sus líneas de detalle en JSONB.
+// El proveedor de cabecera viene de po.supplier_id; el de cada línea de poi.supplier_id.
 export const getPurchaseSuggestions = async (c) =>
     await executeQuery(c, `
         SELECT
@@ -160,38 +167,88 @@ export const getPurchaseSuggestions = async (c) =>
             po.status,
             po.total_amount     AS "totalAmount",
             po.generated_at     AS "generatedAt",
-            s.code              AS "supplierCode",
-            s.name              AS "supplierName",
+            po.notes,
+            ps.code             AS "supplierCode",
+            ps.name             AS "supplierName",
             COALESCE(
                 jsonb_agg(
                     jsonb_build_object(
-                        'itemCode',     ii.code,
-                        'itemName',     ii.name,
-                        'qtySuggested', poi.qty_suggested,
-                        'unitPrice',    poi.unit_price,
-                        'leadTimeDays', poi.lead_time_days,
-                        'lineTotal',    ROUND(poi.qty_suggested * poi.unit_price, 2)
-                    ) ORDER BY ii.name
+                        'lineId',        poi.id,
+                        'itemCode',      ii.code,
+                        'itemName',      ii.name,
+                        'supplierCode',  ls.code,
+                        'supplierName',  ls.name,
+                        'origin',        poi.origin,
+                        'qtySuggested',  poi.qty_suggested,
+                        'qtyDelivered',  poi.qty_delivered,
+                        'unitPrice',     poi.unit_price,
+                        'leadTimeDays',  poi.lead_time_days,
+                        'lineTotal',     ROUND(poi.qty_suggested * poi.unit_price, 2),
+                        'difference',    ROUND(poi.qty_suggested - poi.qty_delivered, 4)
+                    ) ORDER BY poi.origin, ii.name
                 ) FILTER (WHERE poi.id IS NOT NULL),
                 '[]'::jsonb
             )                   AS items
         FROM  purchase_orders po
-        JOIN  suppliers s             ON s.id = po.supplier_id
+        LEFT JOIN suppliers ps        ON ps.id  = po.supplier_id
         LEFT JOIN purchase_order_items poi ON poi.order_id = po.id
-        LEFT JOIN inventory_items ii  ON ii.id = poi.item_id
-        WHERE po.status IN ('DRAFT', 'SENT')
-          AND DATE(po.generated_at) = CURRENT_DATE
-        GROUP BY po.id, po.status, po.total_amount, po.generated_at,
-                 s.code, s.name
-        ORDER BY po.total_amount DESC
+        LEFT JOIN inventory_items ii  ON ii.id  = poi.item_id
+        LEFT JOIN suppliers ls        ON ls.id  = poi.supplier_id
+        WHERE po.status IN ('DRAFT', 'SENT', 'PARTIAL', 'RECEIVED')
+        GROUP BY po.id, po.status, po.total_amount, po.generated_at, po.notes, ps.code, ps.name
+        ORDER BY po.generated_at DESC
+        LIMIT 100
     `);
 
 
 // ── POST /inventory/purchase-suggestions/generate ────────────
-// Ejecuta el SP que detecta items con stock <= minimum_stock
-// y crea purchase_orders DRAFT agrupadas por proveedor óptimo.
 export const runGeneratePurchaseSuggestions = async (c) =>
     await executeQuery(c, `CALL sp_generate_purchase_suggestions()`);
+
+// ── POST /inventory/purchase-orders/:id/items ─────────────────
+export const addPurchaseOrderItem = async (c, orderId, itemCode, supplierCode, origin, qtySuggested, unitPrice) => {
+    const rows = await executeQuery(c, `
+        INSERT INTO purchase_order_items (
+            order_id, item_id, supplier_id, origin, qty_suggested, unit_price
+        )
+        SELECT $1,
+               (SELECT id FROM inventory_items WHERE code = $2),
+               (SELECT id FROM suppliers       WHERE code = $3),
+               $4, $5, $6
+        ON CONFLICT (order_id, item_id) DO UPDATE SET
+            qty_suggested = EXCLUDED.qty_suggested,
+            unit_price    = EXCLUDED.unit_price,
+            supplier_id   = EXCLUDED.supplier_id
+        RETURNING id
+    `, [orderId, itemCode, supplierCode || null, origin || 'ADMIN', qtySuggested, unitPrice || 0]);
+
+    await executeQuery(c, `
+        UPDATE purchase_orders
+        SET total_amount = COALESCE(
+                (SELECT SUM(qty_suggested * unit_price)
+                 FROM purchase_order_items WHERE order_id = $1), 0),
+            updated_at = NOW()
+        WHERE id = $1
+    `, [orderId]);
+
+    return rows;
+};
+
+// ── DELETE /inventory/purchase-orders/:id/items/:lineId ───────
+export const removePurchaseOrderItem = async (c, lineId, orderId) => {
+    await executeQuery(c, `
+        DELETE FROM purchase_order_items WHERE id = $1 AND order_id = $2
+    `, [lineId, orderId]);
+
+    await executeQuery(c, `
+        UPDATE purchase_orders
+        SET total_amount = COALESCE(
+                (SELECT SUM(qty_suggested * unit_price)
+                 FROM purchase_order_items WHERE order_id = $1), 0),
+            updated_at = NOW()
+        WHERE id = $1
+    `, [orderId]);
+};
 
 
 // ── PATCH /inventory/purchase-orders/:id/send ────────────────

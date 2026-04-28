@@ -99,7 +99,7 @@ describe('Módulo Caja', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ categoryCode: testCategoryCode, name: 'Cat Caja' })
         });
-        await app.request('/api/admin/menu/dishes', {
+        const dishRes = await app.request('/api/admin/menu/dishes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -107,6 +107,7 @@ describe('Módulo Caja', () => {
                 name: 'Platillo Caja', price: 500, isActive: true
             })
         });
+        if (!dishRes.ok) throw new Error(`Setup falló al crear el platillo: ${dishRes.status}`);
 
         // 7. Ciclo de orden: abrir → comanda → cerrar (→ AWAITING_PAYMENT)
         await app.request(`/api/waiters/tables/${testTableCode}/open`, {
@@ -115,7 +116,7 @@ describe('Módulo Caja', () => {
             body: JSON.stringify({ employeeNumber: testEmployeeNumber, diners: 2 })
         });
 
-        await app.request(`/api/waiters/tables/${testTableCode}/orders`, {
+        const orderRes = await app.request(`/api/waiters/tables/${testTableCode}/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -123,6 +124,7 @@ describe('Módulo Caja', () => {
                 items: [{ dishCode: testDishCode, quantity: 2 }]
             })
         });
+        if (!orderRes.ok) throw new Error(`Setup falló al enviar la comanda: ${orderRes.status}`);
 
         await app.request(`/api/waiters/tables/${testTableCode}/close`, {
             method: 'POST',
@@ -179,6 +181,27 @@ describe('Módulo Caja', () => {
         expect(res.status).toBe(401);
     });
 
+    it('CAJA-04 La mesa está en AWAITING_PAYMENT antes del pago', async () => {
+        const rows = await executeQuery(null, `
+            SELECT oh.status FROM order_headers oh
+            JOIN restaurant_tables t ON t.id = oh.table_id
+            WHERE t.code = $1
+            ORDER BY oh.created_at DESC LIMIT 1
+        `, [testTableCode]);
+        expect(rows[0]?.status).toBe('AWAITING_PAYMENT');
+    });
+
+    it('CAJA-05 La orden tiene 2 ítems (cantidad × platillo)', async () => {
+        const rows = await executeQuery(null, `
+            SELECT SUM(oi.quantity)::int AS total
+            FROM order_items oi
+            JOIN order_headers oh ON oh.id = oi.order_id
+            JOIN restaurant_tables t ON t.id = oh.table_id
+            WHERE t.code = $1
+        `, [testTableCode]);
+        expect(rows[0]?.total).toBe(2);
+    });
+
     it('CAJA-06 Devuelve el tablero de mesas en AWAITING_PAYMENT', async () => {
         const res = await app.request('/api/admin/cashier/board', { method: 'GET' });
         const json = await res.json();
@@ -187,6 +210,7 @@ describe('Módulo Caja', () => {
         expect(json.success).toBe(true);
         const tables = json.data?.tables || json.data?.body?.tables || json.data;
         expect(Array.isArray(tables)).toBe(true);
+        expect(tables.some(t => t.tableCode === testTableCode)).toBe(true);
     });
 
     it('CAJA-07 Procesa el pago de una mesa y devuelve folio TKT-', async () => {
@@ -206,6 +230,21 @@ describe('Módulo Caja', () => {
         const body = json.data?.body || json.data || {};
         expect(body.folio).toMatch(/^TKT-/);
         createdFolio = body.folio;
+    });
+
+    it('CAJA-08 Rechaza pago en mesa que no está en AWAITING_PAYMENT', async () => {
+        const res = await app.request(`/api/admin/cashier/tables/${testTableCode}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cashierCode: testEmployeeNumber,
+                payments: [{ method: 'CASH', amount: 1000 }],
+                tip: 0
+            })
+        });
+        expect(res.status).toBeGreaterThanOrEqual(400);
+        const json = await res.json();
+        expect(json.success).toBe(false);
     });
 
     it('CAJA-10 Devuelve el ticket por folio existente', async () => {

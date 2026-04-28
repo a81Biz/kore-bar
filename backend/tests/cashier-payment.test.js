@@ -44,10 +44,11 @@ describe('Módulo Caja — Flujo de Pago', () => {
         });
 
         // 4. Platillo
-        await app.request('/api/admin/menu/dishes', {
+        const dishRes = await app.request('/api/admin/menu/dishes', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dishCode: TEST_DISH, categoryCode: TEST_CAT, name: 'Taco Pay', price: 100, isActive: true })
         });
+        if (!dishRes.ok) throw new Error(`Setup falló al crear el platillo: ${dishRes.status}`);
 
         // 5. PIN del cajero y permiso de caja en área
         await app.request(`/api/admin/employees/${TEST_CASHIER}/reset-pin`, {
@@ -80,10 +81,11 @@ describe('Módulo Caja — Flujo de Pago', () => {
         orderCode = openData?.data?.body?.orderCode;
 
         // 8. Enviar comanda
-        await app.request(`/api/waiters/tables/${TEST_TABLE}/orders`, {
+        const orderSubmitRes = await app.request(`/api/waiters/tables/${TEST_TABLE}/orders`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ employeeNumber: TEST_CASHIER, items: [{ dishCode: TEST_DISH, quantity: 1 }] })
         });
+        if (!orderSubmitRes.ok) throw new Error(`Setup falló al enviar la comanda: ${orderSubmitRes.status}`);
 
         // 9. Obtener itemId desde BD (es el único executeQuery que no es INSERT)
         const items = await executeQuery(null, `
@@ -93,6 +95,7 @@ describe('Módulo Caja — Flujo de Pago', () => {
             ORDER BY oi.id DESC LIMIT 1
         `, [orderCode]);
         itemId = items[0]?.id;
+        if (!itemId) throw new Error('Setup falló: no se creó ningún item en la orden');
 
         // 10. Cocina avanza el ítem PENDING_KITCHEN → PREPARING → READY
         await app.request(`/api/kitchen/items/${itemId}/status`, {

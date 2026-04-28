@@ -138,7 +138,14 @@ $$;
 -- Ejemplo:
 --   INS-SAL:      quantityPurchased=1,  conversionFactor=12  → 12 KG en Bodega
 --   INS-COCA-COLA: quantityPurchased=5, conversionFactor=24  → 120 PZ en Bodega
-CREATE OR REPLACE PROCEDURE public.sp_sync_purchases(p_payload JSONB)
+-- p_order_id opcional: si se proporciona, cruza la entrega contra el pedido
+-- y actualiza qty_delivered + status (PARTIAL / RECEIVED).
+-- Elimina la versión anterior de un solo argumento para evitar ambigüedad de overload.
+DROP PROCEDURE IF EXISTS public.sp_sync_purchases(jsonb);
+CREATE OR REPLACE PROCEDURE public.sp_sync_purchases(
+    p_payload  JSONB,
+    p_order_id UUID DEFAULT NULL
+)
 LANGUAGE plpgsql AS $$
 DECLARE
     v_supplier_id      UUID;
@@ -152,7 +159,12 @@ DECLARE
     v_destination_code VARCHAR(50);
     v_conv_factor      DECIMAL(18, 6);
     v_qty_purchased    DECIMAL(18, 4);
-    v_qty_recipe       DECIMAL(18, 4);   -- cantidad final en recipeUnit
+    v_qty_recipe       DECIMAL(18, 4);
+    -- Para actualización del pedido
+    v_total_items      INT;
+    v_received_items   INT;
+    v_any_received     BOOLEAN;
+    v_new_status       VARCHAR(20);
 BEGIN
     v_supplier_code    := p_payload->'supplier'->>'code';
     v_supplier_name    := p_payload->'supplier'->>'name';
@@ -184,14 +196,12 @@ BEGIN
 
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_payload->'items')
     LOOP
-        -- ── Calcular cantidad en recipeUnit ──────────────────
+        -- Calcular cantidad en recipeUnit
         v_qty_purchased := COALESCE((v_item.value->>'quantityPurchased')::DECIMAL, 0);
         v_conv_factor   := COALESCE((v_item.value->>'conversionFactor')::DECIMAL, 1);
         v_qty_recipe    := v_qty_purchased * v_conv_factor;
-        -- Ejemplo: 1 costal × 12 KG/costal = 12 KG
-        --          5 cajas × 24 PZ/caja    = 120 PZ
 
-        -- ── Upsert del insumo ────────────────────────────────
+        -- Upsert del insumo
         INSERT INTO inventory_items (
             code, name, unit_measure, recipe_unit, conversion_factor, minimum_stock
         ) VALUES (
@@ -215,29 +225,55 @@ BEGIN
             FROM inventory_items WHERE code = v_item.value->>'itemCode';
         END IF;
 
-        -- ── Precio proveedor ─────────────────────────────────
+        -- Precio proveedor
         INSERT INTO supplier_prices (supplier_id, item_id, price)
         VALUES (v_supplier_id, v_new_item_id, (v_item.value->>'unitCost')::DECIMAL)
         ON CONFLICT (supplier_id, item_id) DO UPDATE
             SET price = EXCLUDED.price, updated_at = CURRENT_TIMESTAMP;
 
-        -- ── Kardex: registra en recipeUnit ───────────────────
+        -- Kardex
         INSERT INTO inventory_kardex (
             item_id, transaction_type, quantity, reference_id, to_location_id
         ) VALUES (
-            v_new_item_id,
-            'IN_PURCHASE',
-            v_qty_recipe,                          -- 12 KG, no 1 costal
-            COALESCE(v_doc_reference, 'SYNC-AUTO'),
-            v_loc_bodega_id
+            v_new_item_id, 'IN_PURCHASE', v_qty_recipe,
+            COALESCE(v_doc_reference, 'SYNC-AUTO'), v_loc_bodega_id
         );
 
-        -- ── Stock en Bodega: acumula en recipeUnit ───────────
+        -- Stock en Bodega
         INSERT INTO inventory_stock_locations (item_id, location_id, stock)
         VALUES (v_new_item_id, v_loc_bodega_id, v_qty_recipe)
         ON CONFLICT (item_id, location_id)
         DO UPDATE SET stock = inventory_stock_locations.stock + EXCLUDED.stock;
+
+        -- Cruzar con pedido de compra si se vinculó uno
+        IF p_order_id IS NOT NULL THEN
+            UPDATE purchase_order_items
+            SET qty_delivered = qty_delivered + v_qty_recipe
+            WHERE order_id = p_order_id AND item_id = v_new_item_id;
+        END IF;
     END LOOP;
+
+    -- Actualizar estado del pedido según nivel de recepción
+    IF p_order_id IS NOT NULL THEN
+        SELECT
+            COUNT(*),
+            COUNT(*) FILTER (WHERE qty_delivered >= qty_suggested),
+            BOOL_OR(qty_delivered > 0)
+        INTO v_total_items, v_received_items, v_any_received
+        FROM purchase_order_items WHERE order_id = p_order_id;
+
+        IF v_received_items = v_total_items AND v_total_items > 0 THEN
+            v_new_status := 'RECEIVED';
+        ELSIF v_any_received THEN
+            v_new_status := 'PARTIAL';
+        END IF;
+
+        IF v_new_status IS NOT NULL THEN
+            UPDATE purchase_orders
+            SET status = v_new_status, updated_at = NOW()
+            WHERE id = p_order_id AND status NOT IN ('RECEIVED', 'CANCELLED');
+        END IF;
+    END IF;
 END;
 $$;
 

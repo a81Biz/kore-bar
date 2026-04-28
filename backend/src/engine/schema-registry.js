@@ -99,6 +99,8 @@ import webhookPurchase from './schemas/inventory/webhook-purchase.schema.json'  
 import generatePurchaseSuggestions from './schemas/inventory/generate-purchase-suggestions.schema.json' assert { type: 'json' };
 import getPurchaseSuggestions from './schemas/inventory/get-purchase-suggestions.schema.json' assert { type: 'json' };
 import sendPurchaseOrder from './schemas/inventory/send-purchase-order.schema.json' assert { type: 'json' };
+import addPurchaseOrderItem from './schemas/inventory/add-purchase-order-item.schema.json' assert { type: 'json' };
+import removePurchaseOrderItem from './schemas/inventory/remove-purchase-order-item.schema.json' assert { type: 'json' };
 
 // ── KITCHEN / KDS ─────────────────────────────────────────────
 import kitchenBoard from './schemas/kitchen/kds/kitchen-board.schema.json'        assert { type: 'json' };
@@ -182,6 +184,7 @@ export const schemasBySubDir = {
         getInventory, getKardex, getSuppliers,
         supplierPrice, syncPurchases, webhookPurchase,
         generatePurchaseSuggestions, getPurchaseSuggestions, sendPurchaseOrder,
+        addPurchaseOrderItem, removePurchaseOrderItem,
         fetchSalesReport, fetchSalesSummary, fetchTopDishes,
         fetchSalesByCategory, fetchSalesByWaiter, fetchDashboardKpis
     ],

@@ -83,6 +83,8 @@ import {
     getPurchaseSuggestions,
     generatePurchaseSuggestions,
     sendPurchaseOrder,
+    addPurchaseOrderItem,
+    removePurchaseOrderItem,
 
 } from '../helpers/admin-inventory.helper.js';
 
@@ -303,6 +305,8 @@ export const ActionRegistry = {
     getPurchaseSuggestions,
     generatePurchaseSuggestions,
     sendPurchaseOrder,
+    addPurchaseOrderItem,
+    removePurchaseOrderItem,
 
     // Inasistencias
     getAbsences,

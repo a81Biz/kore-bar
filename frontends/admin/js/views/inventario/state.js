@@ -6,14 +6,16 @@ export const state = {
         suppliers: [],
         stockBodega: [],
         stockCocina: [],
-        kardex: []
+        kardex: [],
+        purchaseSuggestions: []
     },
     ui: {
         showOnlySuggested: false,
         selectedSupplierCode: null,
         kardexLocation: '',
         kardexSearchQuery: '',
-        stockLocation: 'LOC-BODEGA'
+        stockLocation: 'LOC-BODEGA',
+        activeOrderId: null
     }
 };
 

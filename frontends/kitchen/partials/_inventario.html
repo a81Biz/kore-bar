@@ -4,7 +4,15 @@
             class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
             <div class="flex items-center gap-4">
                 <span class="text-2xl">📦</span>
-                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Cierre de Turno: Toma Física</h1>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Inventario de Cocina</h1>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                <button class="kitchen-inv-tab px-4 py-1.5 text-sm font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-all" data-ktab="toma">
+                    📋 Toma Física
+                </button>
+                <button class="kitchen-inv-tab px-4 py-1.5 text-sm font-bold rounded-md text-slate-600 hover:text-slate-800 transition-all" data-ktab="pedido">
+                    🛒 Pedido de Compra
+                </button>
             </div>
             <button data-nav="kds"
                 class="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
@@ -12,7 +20,8 @@
             </button>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6">
+        <!-- Pestaña: Toma Física -->
+        <div id="ktab-toma" class="flex-1 overflow-y-auto p-6">
             <div
                 class="max-w-5xl mx-auto w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[750px]">
                 <div
@@ -51,6 +60,35 @@
                 </div>
             </div>
         </div>
+
+        <!-- Pestaña: Pedido de Compra -->
+        <div id="ktab-pedido" class="hidden flex-1 overflow-y-auto p-6">
+            <div class="max-w-5xl mx-auto w-full space-y-4">
+
+                <!-- Barra de acción -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Pedido de Compra a Proveedores</h3>
+                        <p class="text-sm text-slate-500 mt-0.5">El sistema detecta insumos en nivel crítico y selecciona el proveedor óptimo por precio y tiempo de entrega. Revisa y confirma cada pedido antes de enviarlo.</p>
+                    </div>
+                    <button id="btn-generate-order"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-bold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50">
+                        <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                        Generar Pedido
+                    </button>
+                </div>
+
+                <!-- Área de órdenes -->
+                <div id="kitchen-orders-container" class="space-y-4">
+                    <div id="kitchen-orders-empty" class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+                        <span class="material-symbols-outlined text-5xl text-slate-300 block mb-3">shopping_cart</span>
+                        <p class="font-bold text-slate-500 text-base">Sin pedidos generados hoy</p>
+                        <p class="text-sm text-slate-400 mt-1">Presiona "Generar Pedido" para que el sistema calcule automáticamente qué insumos pedir y con qué proveedor.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 </template>
 
@@ -79,4 +117,73 @@
             <span class="text-xs text-slate-500 col-unit w-8 text-left font-bold"></span>
         </td>
     </tr>
+</template>
+
+<template id="tpl-kitchen-order-card">
+    <div class="kitchen-order-card bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+
+        <!-- Cabecera dinámica (clases ajustadas por JS según status) -->
+        <div class="col-header px-5 py-4 border-b flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="col-icon material-symbols-outlined text-xl">receipt_long</span>
+                    <span class="col-title font-black text-base"></span>
+                    <span class="col-status-badge px-2 py-0.5 text-[10px] font-bold rounded tracking-wider"></span>
+                </div>
+                <p class="col-meta text-xs">
+                    Generado: <span class="font-bold col-date"></span>
+                    &nbsp;·&nbsp; Total estimado: <span class="font-bold col-total"></span>
+                </p>
+            </div>
+            <button class="btn-send-kitchen-order hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-colors">
+                <span class="material-symbols-outlined text-[18px]">send</span>
+                Enviar al Admin
+            </button>
+        </div>
+
+        <!-- Tabla de insumos -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-4 py-2.5">Origen</th>
+                        <th class="px-4 py-2.5">Insumo</th>
+                        <th class="px-4 py-2.5">Proveedor</th>
+                        <th class="px-4 py-2.5 text-right">Cantidad</th>
+                        <th class="px-4 py-2.5 text-right">Precio Unit.</th>
+                        <th class="col-remove-header hidden px-4 py-2.5 text-center">Quitar</th>
+                    </tr>
+                </thead>
+                <tbody class="col-items divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="col-footer p-3 text-xs text-slate-500 border-t border-slate-100 bg-slate-50"></div>
+
+        <!-- Formulario para agregar insumo manualmente (solo DRAFT) -->
+        <form class="form-add-kitchen-item hidden border-t border-dashed border-slate-300 p-3 bg-slate-50 flex flex-wrap gap-2 items-end">
+            <p class="w-full text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">+ Agregar insumo manualmente</p>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">CÓD. INSUMO</label>
+                <input type="text" class="input-item-code w-28 px-2 py-1.5 text-sm border border-slate-300 rounded uppercase font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ej. TOMATE" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">CÓD. PROVEEDOR</label>
+                <input type="text" class="input-supplier-code w-28 px-2 py-1.5 text-sm border border-slate-300 rounded uppercase font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="PRV-01 (opc.)">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">CANTIDAD</label>
+                <input type="number" step="0.01" min="0.01" class="input-qty w-24 px-2 py-1.5 text-sm border border-slate-300 rounded text-right font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0.00" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">PRECIO UNIT.</label>
+                <input type="number" step="0.01" min="0" class="input-price w-24 px-2 py-1.5 text-sm border border-slate-300 rounded text-right font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0.00">
+            </div>
+            <button type="submit" class="px-4 py-2 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                Agregar
+            </button>
+        </form>
+
+    </div>
 </template>
