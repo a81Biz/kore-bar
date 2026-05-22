@@ -1,0 +1,26 @@
+{
+    "id": "remove_purchase_order_item",
+    "name": "Eliminar Línea de Pedido de Compra",
+    "description": "Elimina una línea (purchase_order_items.id) de un pedido DRAFT. Actualiza el total.",
+    "api": {
+        "method": "DELETE",
+        "path": "/purchase-orders/:id/items/:lineId",
+        "tags": ["Inventario / Pedidos"]
+    },
+    "startAt": "remove_item",
+    "nodes": {
+        "remove_item": {
+            "type": "action",
+            "handler": "removePurchaseOrderItem",
+            "next": "end_success",
+            "onError": "end"
+        },
+        "end_success": {
+            "type": "end",
+            "response": {
+                "status": 200,
+                "body": { "message": "{{state.message}}" }
+            }
+        }
+    }
+}

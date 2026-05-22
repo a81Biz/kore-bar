@@ -96,7 +96,29 @@ export async function putData(endpoint, data = {}, params = {}) {
     }
 }
 
-// 🟢 NUEVO: Necesario para tu baja lógica (DELETE /employees/:id)
+export async function patchData(endpoint, data = {}, params = {}) {
+    try {
+        const url = buildUrl(endpoint, params);
+
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+
+        const jsonResponse = await response.json();
+
+        if (!response.ok) {
+            throw new Error(jsonResponse.error || jsonResponse.message || `HTTP Error ${response.status}`);
+        }
+
+        return jsonResponse;
+    } catch (error) {
+        console.error(`[HTTP Client] Error executing PATCH against ${endpoint}:`, error);
+        throw error;
+    }
+}
+
 export async function deleteData(endpoint, params = {}) {
     try {
         const url = buildUrl(endpoint, params);

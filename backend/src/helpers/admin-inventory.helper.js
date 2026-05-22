@@ -86,13 +86,49 @@ export const syncPurchasesHandler = async (state, c) => {
     if (!payload.supplier || !payload.items || payload.items.length === 0) {
         throw new AppError('El payload no contiene información válida de compras', 400);
     }
+    const orderId = payload.orderId || null;
     try {
-        await inventoryModel.syncPurchases(c, payload);
+        await inventoryModel.syncPurchases(c, payload, orderId);
         state.message = 'Ingesta y sincronización masiva procesada exitosamente';
+        if (orderId) state.message += ` Pedido ${orderId} actualizado.`;
     } catch (error) {
         if (error.isOperational) throw error;
         console.error('Raw DB Error in syncPurchasesToKardex:', error);
         throw new AppError(`Error en ingesta de datos: ${error.message}`, 500);
+    }
+};
+
+// ── POST /inventory/purchase-orders/:id/items ─────────────────
+export const addPurchaseOrderItem = async (state, c) => {
+    const orderId = state.params?.id;
+    if (!orderId) throw new AppError('El ID del pedido es requerido', 400);
+    const { itemCode, supplierCode, qtySuggested, unitPrice, origin } = state.payload;
+    if (!itemCode || !qtySuggested) throw new AppError('itemCode y qtySuggested son requeridos', 400);
+    try {
+        await inventoryModel.addPurchaseOrderItem(
+            c, orderId, itemCode, supplierCode, origin || 'ADMIN', qtySuggested, unitPrice
+        );
+        state.message = `Insumo ${itemCode} agregado al pedido`;
+    } catch (error) {
+        if (error.isOperational) throw error;
+        if (error.message?.includes('null value') || error.message?.includes('violates not-null')) {
+            throw new AppError(`Insumo no encontrado: ${itemCode}`, 400);
+        }
+        throw new AppError(`Error agregando insumo al pedido: ${error.message}`, 500);
+    }
+};
+
+// ── DELETE /inventory/purchase-orders/:id/items/:lineId ───────
+export const removePurchaseOrderItem = async (state, c) => {
+    const orderId = state.params?.id;
+    const lineId  = state.params?.lineId;
+    if (!orderId || !lineId) throw new AppError('ID de pedido y línea son requeridos', 400);
+    try {
+        await inventoryModel.removePurchaseOrderItem(c, lineId, orderId);
+        state.message = 'Línea de pedido eliminada';
+    } catch (error) {
+        if (error.isOperational) throw error;
+        throw new AppError(`Error eliminando línea: ${error.message}`, 500);
     }
 };
 

@@ -12,6 +12,7 @@ DROP FUNCTION IF EXISTS sp_create_menu_category(VARCHAR, VARCHAR, TEXT);
 DROP FUNCTION IF EXISTS sp_update_menu_category(VARCHAR, VARCHAR, TEXT, BOOLEAN);
 DROP FUNCTION IF EXISTS sp_delete_menu_category_smart(VARCHAR);
 DROP FUNCTION IF EXISTS sp_create_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR);
+DROP PROCEDURE IF EXISTS public.sp_create_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR);
 DROP FUNCTION IF EXISTS sp_update_menu_dish(VARCHAR, VARCHAR, VARCHAR, TEXT, DECIMAL, VARCHAR, BOOLEAN, BOOLEAN);
 DROP FUNCTION IF EXISTS sp_delete_menu_dish_smart(VARCHAR);
 DROP FUNCTION IF EXISTS sp_create_ingredient(VARCHAR, VARCHAR, VARCHAR);
@@ -77,7 +78,8 @@ CREATE OR REPLACE PROCEDURE sp_create_menu_dish(
     p_name           VARCHAR,
     p_description    TEXT,
     p_price          DECIMAL,
-    p_image_url      VARCHAR
+    p_image_url      VARCHAR,
+    p_can_pickup     BOOLEAN DEFAULT FALSE
 )
 LANGUAGE plpgsql AS $$
 DECLARE v_cat_id UUID;
@@ -86,8 +88,8 @@ BEGIN
     IF v_cat_id IS NULL THEN
         RAISE EXCEPTION 'Categoría % no existe', p_category_code USING ERRCODE = 'P0002';
     END IF;
-    INSERT INTO menu_dishes (code, category_id, name, description, price, image_url)
-    VALUES (p_code, v_cat_id, p_name, p_description, p_price, p_image_url);
+    INSERT INTO menu_dishes (code, category_id, name, description, price, image_url, can_pickup)
+    VALUES (p_code, v_cat_id, p_name, p_description, p_price, p_image_url, COALESCE(p_can_pickup, FALSE));
 END;
 $$;
 

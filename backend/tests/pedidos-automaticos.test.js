@@ -258,6 +258,73 @@ describe('Módulo Inventario — Pedidos Automáticos a Proveedores', () => {
 
 
     // ═══════════════════════════════════════════════════════════
+    // POST /inventory/purchase-orders/:id/items  (agregar insumo)
+    // DELETE /inventory/purchase-orders/:id/items/:lineId (quitar)
+    // ═══════════════════════════════════════════════════════════
+
+    it('PED-16 Agregar un insumo manualmente a una orden DRAFT devuelve 201', async () => {
+        const ordersRes = await app.request('/api/inventory/purchase-suggestions', { method: 'GET' });
+        const ordersJson = await ordersRes.json();
+        const order = ordersJson.data.orders.find(o => o.supplierCode === TEST_SUPPLIER_CODE && o.status === 'DRAFT');
+        expect(order).toBeDefined();
+
+        const addRes = await app.request(`/api/inventory/purchase-orders/${order.orderId}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                itemCode: TEST_ITEM_CODE,
+                supplierCode: TEST_SUPPLIER_CODE,
+                qtySuggested: 3,
+                unitPrice: 15,
+                origin: 'KITCHEN'
+            })
+        });
+        expect(addRes.status).toBe(201);
+        const addJson = await addRes.json();
+        expect(addJson.success).toBe(true);
+    });
+
+    it('PED-17 Quitar un insumo de una orden DRAFT actualiza la lista', async () => {
+        const ordersRes = await app.request('/api/inventory/purchase-suggestions', { method: 'GET' });
+        const ordersJson = await ordersRes.json();
+        const order = ordersJson.data.orders.find(o => o.supplierCode === TEST_SUPPLIER_CODE && o.status === 'DRAFT');
+        expect(order).toBeDefined();
+        expect(order.items.length).toBeGreaterThan(0);
+
+        const lineId = order.items[0].lineId;
+        const removeRes = await app.request(
+            `/api/inventory/purchase-orders/${order.orderId}/items/${lineId}`,
+            { method: 'DELETE' }
+        );
+        expect(removeRes.status).toBe(200);
+        const removeJson = await removeRes.json();
+        expect(removeJson.success).toBe(true);
+
+        // Verificar que la línea ya no existe
+        const afterRes = await app.request('/api/inventory/purchase-suggestions', { method: 'GET' });
+        const afterJson = await afterRes.json();
+        const afterOrder = afterJson.data.orders.find(o => o.orderId === order.orderId);
+        expect(afterOrder?.items?.find(i => i.lineId === lineId)).toBeUndefined();
+    });
+
+    it('PED-18 Rechaza agregar insumo con origin inválido (400)', async () => {
+        const ordersRes = await app.request('/api/inventory/purchase-suggestions', { method: 'GET' });
+        const ordersJson = await ordersRes.json();
+        const order = ordersJson.data.orders.find(o => o.supplierCode === TEST_SUPPLIER_CODE && o.status === 'DRAFT');
+        expect(order).toBeDefined();
+
+        const res = await app.request(`/api/inventory/purchase-orders/${order.orderId}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itemCode: TEST_ITEM_CODE, qtySuggested: 1, origin: 'INVALIDO' })
+        });
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.success).toBe(false);
+    });
+
+
+    // ═══════════════════════════════════════════════════════════
     // PATCH /inventory/purchase-orders/:id/send
     // ═══════════════════════════════════════════════════════════
 

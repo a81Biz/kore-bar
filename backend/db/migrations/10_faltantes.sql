@@ -15,30 +15,36 @@
 -- A) PEDIDOS AUTOMÁTICOS A PROVEEDORES
 -- ════════════════════════════════════════════════════════════
 
--- Cabecera del pedido sugerido (agrupado por proveedor)
+-- Pedido unificado de compras (un documento por evento, no uno por proveedor).
+-- supplier_id nullable: el pedido agrupa items de múltiples proveedores.
+-- Cada línea lleva su propio supplier_id, origin y registro de recepción.
 CREATE TABLE IF NOT EXISTS purchase_orders (
     id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    supplier_id   UUID         NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+    supplier_id   UUID         REFERENCES suppliers(id) ON DELETE RESTRICT,
     status        VARCHAR(20)  NOT NULL DEFAULT 'DRAFT'
-                                    CHECK (status IN ('DRAFT', 'SENT', 'RECEIVED', 'CANCELLED')),
+                                    CHECK (status IN ('DRAFT', 'SENT', 'PARTIAL', 'RECEIVED', 'CANCELLED')),
     total_amount  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     notes         TEXT,
     generated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- Líneas del pedido: qué item, cuánto pedir, a qué precio
+-- Líneas del pedido con proveedor por línea, origen y seguimiento de recepción
 CREATE TABLE IF NOT EXISTS purchase_order_items (
     id                UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id          UUID         NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
     item_id           UUID         NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    supplier_id       UUID         REFERENCES suppliers(id) ON DELETE SET NULL,
+    origin            VARCHAR(20)  NOT NULL DEFAULT 'MANUAL'
+                                       CHECK (origin IN ('KITCHEN', 'ADMIN', 'MANUAL')),
     qty_suggested     DECIMAL(12,4) NOT NULL CHECK (qty_suggested > 0),
-    unit_price        DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    qty_delivered     DECIMAL(12,4) NOT NULL DEFAULT 0 CHECK (qty_delivered >= 0),
+    unit_price        DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (unit_price >= 0),
     lead_time_days    INT          NOT NULL DEFAULT 1,
     UNIQUE(order_id, item_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_po_supplier   ON purchase_orders(supplier_id, status);
+CREATE INDEX IF NOT EXISTS idx_po_status     ON purchase_orders(status, generated_at);
 CREATE INDEX IF NOT EXISTS idx_poi_order_id  ON purchase_order_items(order_id);
 
 CREATE TRIGGER update_purchase_orders_modtime
@@ -46,12 +52,12 @@ CREATE TRIGGER update_purchase_orders_modtime
     FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 COMMENT ON TABLE purchase_orders IS
-    'Pedidos a proveedores generados automáticamente por sp_generate_purchase_suggestions. '
-    'Status DRAFT = sólo sugerencia; SENT = pedido enviado al proveedor.';
+    'Pedido unificado de compras. DRAFT=borrador editable; SENT=confirmado/PDF impreso; '
+    'PARTIAL=recepción parcial; RECEIVED=recibido completo; CANCELLED=cancelado.';
 
 COMMENT ON TABLE purchase_order_items IS
-    'Líneas de un purchase_order. qty_suggested = (reorder_point - stock_actual) '
-    'redondeado al mínimo de compra. unit_price = precio vigente en supplier_prices.';
+    'Línea de pedido. origin indica quién la generó: KITCHEN (automático), '
+    'ADMIN (manual desde panel), MANUAL (libre). qty_delivered se actualiza al sincronizar compras.';
 
 
 -- ════════════════════════════════════════════════════════════

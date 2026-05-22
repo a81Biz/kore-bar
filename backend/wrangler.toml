@@ -4,6 +4,8 @@
 # Variables de entorno sensibles se configuran como secrets:
 #   wrangler secret put DATABASE_URL
 #   wrangler secret put JWT_SECRET
+#   wrangler secret put SUPABASE_URL
+#   wrangler secret put SUPABASE_ANON_KEY
 # ============================================================
 
 name = "kore-bar-api"

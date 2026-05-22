@@ -23,12 +23,12 @@ export const cacheDOM = (container) => {
     state.dom.kpiAvgTicket    = container.querySelector('#kpi-avg-ticket');
     state.dom.kpiTips         = container.querySelector('#kpi-tips');
 
-    // Defaults: último mes
+    // Defaults: últimos 3 meses
     const today     = new Date();
-    const monthAgo  = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    const rangeStart = new Date(today);
+    rangeStart.setMonth(rangeStart.getMonth() - 3);
 
-    state.dom.startDate.value = _formatDate(monthAgo);
+    state.dom.startDate.value = _formatDate(rangeStart);
     state.dom.endDate.value   = _formatDate(today);
     state.dom.endDate.max     = _formatDate(today);
 };
@@ -38,6 +38,8 @@ export const cacheDOM = (container) => {
 // ==========================================================================
 
 const _formatDate = (date) => date.toISOString().split('T')[0];
+
+const _formatDateOnly = (val) => val ? String(val).substring(0, 10) : '—';
 
 const _formatCurrency = (val) => {
     const num = parseFloat(val) || 0;
@@ -55,6 +57,7 @@ const _formatCell = (value, format) => {
     if (value === null || value === undefined) return '—';
     if (format === 'currency') return _formatCurrency(value);
     if (format === 'datetime') return _formatDatetime(value);
+    if (format === 'date') return _formatDateOnly(value);
     return String(value);
 };
 
@@ -171,7 +174,7 @@ export const render = {
             config = {
                 type: 'line',
                 data: {
-                    labels: state.datos.summary.map(r => r.sale_date),
+                    labels: state.datos.summary.map(r => _formatDateOnly(r.sale_date)),
                     datasets: [{
                         label: 'Ingreso',
                         data: state.datos.summary.map(r => parseFloat(r.total_revenue)),

@@ -103,6 +103,12 @@ export const ENDPOINTS = {
         },
         patch: {
             sendPurchaseOrder: '/inventory/purchase-orders/:id/send'
+        },
+        postItem: {
+            addPurchaseOrderItem: '/inventory/purchase-orders/:id/items'
+        },
+        deleteItem: {
+            removePurchaseOrderItem: '/inventory/purchase-orders/:id/items/:lineId'
         }
     },
 

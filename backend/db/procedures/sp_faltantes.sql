@@ -36,6 +36,8 @@
 -- 2. RESULTADO: purchase_orders con status DRAFT
 --    → Admin revisa en panel → Confirma → PATCH /purchase-orders/:id/send → SENT
 
+-- Genera un purchase_order DRAFT por proveedor para el día.
+-- Idempotente: reutiliza el DRAFT del mismo proveedor si ya existe.
 CREATE OR REPLACE PROCEDURE sp_generate_purchase_suggestions()
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -43,13 +45,9 @@ DECLARE
     v_best_supplier   RECORD;
     v_order_id        UUID;
     v_qty_suggested   DECIMAL(12,4);
-    v_line_total      DECIMAL(12,2);
-    v_orders_created  INT := 0;
     v_lines_created   INT := 0;
     v_loc_bodega_id   UUID;
-    v_stock_bodega    DECIMAL(12,4);
 BEGIN
-    -- Resolvemos la ubicación bodega una sola vez
     SELECT id INTO v_loc_bodega_id
     FROM inventory_locations WHERE code = 'LOC-BODEGA';
 
@@ -57,58 +55,44 @@ BEGIN
         RAISE EXCEPTION 'Ubicación LOC-BODEGA no encontrada. Ejecutar seeds primero.';
     END IF;
 
-    -- ── Iterar sobre items con stock bajo ───────────────────
+    -- Iterar items con stock crítico
     FOR v_item IN
         SELECT
             ii.id            AS item_id,
             ii.code          AS item_code,
-            ii.name          AS item_name,
             ii.minimum_stock,
             COALESCE(sl.stock, 0) AS stock_bodega
         FROM inventory_items ii
         LEFT JOIN inventory_stock_locations sl
-               ON sl.item_id = ii.id
-              AND sl.location_id = v_loc_bodega_id
+               ON sl.item_id = ii.id AND sl.location_id = v_loc_bodega_id
         WHERE ii.is_active = true
           AND COALESCE(sl.stock, 0) <= ii.minimum_stock
-          AND ii.minimum_stock > 0  -- ignorar items sin mínimo configurado
+          AND ii.minimum_stock > 0
         ORDER BY ii.name
     LOOP
-        -- ── Seleccionar proveedor óptimo para este item ─────
-        --    Criterio: precio más bajo. Desempate: menor lead_time.
-        SELECT
-            sp.supplier_id,
-            sp.price,
-            sp.lead_time_days,
-            s.code AS supplier_code
+        -- Proveedor óptimo: menor precio, desempate por menor lead_time
+        SELECT sp.supplier_id, sp.price, sp.lead_time_days
         INTO v_best_supplier
         FROM supplier_prices sp
         JOIN suppliers s ON s.id = sp.supplier_id
-        WHERE sp.item_id = v_item.item_id
-          AND s.is_active = true
+        WHERE sp.item_id = v_item.item_id AND s.is_active = true
         ORDER BY sp.price ASC, sp.lead_time_days ASC
         LIMIT 1;
 
-        -- Si no hay proveedor vinculado, saltar el item
-        IF v_best_supplier IS NULL THEN
-            RAISE NOTICE 'Sin proveedor para item %: se omite de la sugerencia.', v_item.item_code;
+        -- Sin proveedor vinculado: saltar este item
+        IF v_best_supplier.supplier_id IS NULL THEN
             CONTINUE;
         END IF;
 
-        -- ── Calcular cantidad sugerida ───────────────────────
-        --    Target: reposición al doble del mínimo (stock de seguridad 2x)
         v_qty_suggested := GREATEST(
-            (v_item.minimum_stock * 2) - v_item.stock_bodega,
-            1
+            (v_item.minimum_stock * 2) - v_item.stock_bodega, 1
         );
-        v_line_total := v_qty_suggested * v_best_supplier.price;
 
-        -- ── Reutilizar o crear purchase_order del proveedor ──
-        --    Un solo DRAFT por proveedor por día (idempotente).
+        -- Reutilizar o crear el pedido DRAFT de este proveedor para hoy
         SELECT id INTO v_order_id
         FROM purchase_orders
         WHERE supplier_id = v_best_supplier.supplier_id
-          AND status      = 'DRAFT'
+          AND status = 'DRAFT'
           AND DATE(generated_at) = CURRENT_DATE
         LIMIT 1;
 
@@ -116,46 +100,47 @@ BEGIN
             INSERT INTO purchase_orders (supplier_id, status, total_amount)
             VALUES (v_best_supplier.supplier_id, 'DRAFT', 0)
             RETURNING id INTO v_order_id;
-
-            v_orders_created := v_orders_created + 1;
         END IF;
 
-        -- ── Insertar línea (idempotente: actualiza si ya existe) ──
+        -- Upsert de la línea
         INSERT INTO purchase_order_items (
-            order_id, item_id, qty_suggested, unit_price, lead_time_days
+            order_id, item_id, supplier_id, origin,
+            qty_suggested, qty_delivered, unit_price, lead_time_days
         ) VALUES (
             v_order_id,
             v_item.item_id,
+            v_best_supplier.supplier_id,
+            'KITCHEN',
             v_qty_suggested,
-            v_best_supplier.price,
-            v_best_supplier.lead_time_days
+            0,
+            COALESCE(v_best_supplier.price, 0),
+            COALESCE(v_best_supplier.lead_time_days, 1)
         )
-        ON CONFLICT (order_id, item_id)
-        DO UPDATE SET
+        ON CONFLICT (order_id, item_id) DO UPDATE SET
+            supplier_id    = EXCLUDED.supplier_id,
             qty_suggested  = EXCLUDED.qty_suggested,
             unit_price     = EXCLUDED.unit_price,
-            lead_time_days = EXCLUDED.lead_time_days;
+            lead_time_days = EXCLUDED.lead_time_days,
+            origin         = EXCLUDED.origin;
 
-        -- ── Actualizar total de la orden cabecera ────────────
+        -- Recalcular total del pedido
         UPDATE purchase_orders
-        SET total_amount = (
-            SELECT COALESCE(SUM(qty_suggested * unit_price), 0)
-            FROM purchase_order_items WHERE order_id = v_order_id
-        ),
-        updated_at = NOW()
+        SET total_amount = COALESCE(
+                (SELECT SUM(qty_suggested * unit_price)
+                 FROM purchase_order_items WHERE order_id = v_order_id), 0),
+            updated_at = NOW()
         WHERE id = v_order_id;
 
         v_lines_created := v_lines_created + 1;
     END LOOP;
 
-    RAISE NOTICE 'Sugerencias generadas: % órdenes, % líneas.', v_orders_created, v_lines_created;
+    RAISE NOTICE '% líneas de pedido generadas/actualizadas.', v_lines_created;
 END;
 $$;
 
 COMMENT ON PROCEDURE sp_generate_purchase_suggestions IS
-    'Genera purchase_orders DRAFT automáticamente para items con stock <= minimum_stock. '
-    'Algoritmo de selección: precio mínimo primero, lead_time como desempate. '
-    'Idempotente: re-ejecutar el mismo día actualiza en lugar de duplicar.';
+    'Genera o actualiza purchase_orders DRAFT, uno por proveedor óptimo por día. '
+    'Cada línea lleva origin=KITCHEN. Idempotente: reutiliza el DRAFT del proveedor si ya existe.';
 
 
 -- ════════════════════════════════════════════════════════════

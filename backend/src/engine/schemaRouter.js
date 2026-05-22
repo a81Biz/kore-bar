@@ -151,6 +151,9 @@ export const buildRoutes = (router, subDir = '') => {
                                         }
                                     }
                                 }
+                                if (propDef.enum && !propDef.enum.includes(val)) {
+                                    return c.json({ success: false, error: `El campo '${key}' debe ser uno de: ${propDef.enum.join(', ')}.` }, 400);
+                                }
 
                                 sanitizedBody[key] = val;
 

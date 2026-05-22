@@ -28,6 +28,10 @@
                 "notes": {
                     "type": "string"
                 },
+                "orderId": {
+                    "type": "string",
+                    "description": "UUID del purchase_order al que vincular esta entrega. Opcional."
+                },
                 "supplier": {
                     "type": "object",
                     "required": [
