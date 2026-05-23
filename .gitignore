@@ -28,3 +28,8 @@ docs/jira/exportar_jira.py
 .wrangler/
 
 .claude/
+CLAUDE.md
+
+# Graphify output y temporales
+graphify-out/
+.graphify_*
