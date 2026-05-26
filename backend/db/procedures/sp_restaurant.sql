@@ -168,3 +168,34 @@ BEGIN
     DELETE FROM restaurant_assignments WHERE id = p_id;
 END;
 $$;
+
+-- ── LLAMADAS AL MESERO ────────────────────────────────────────
+
+CREATE OR REPLACE PROCEDURE sp_register_waiter_call(
+    p_table_code VARCHAR,
+    p_reason     VARCHAR
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_table_id UUID;
+BEGIN
+    SELECT id INTO v_table_id FROM restaurant_tables WHERE code = p_table_code;
+    IF v_table_id IS NULL THEN
+        RAISE EXCEPTION 'Mesa no encontrada: %', p_table_code USING ERRCODE = '23502';
+    END IF;
+    INSERT INTO waiter_calls (table_id, reason, status)
+    VALUES (v_table_id, p_reason, 'PENDING');
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_attend_waiter_call(p_call_id UUID)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE waiter_calls
+    SET status = 'ATTENDED', updated_at = NOW()
+    WHERE id = p_call_id AND status = 'PENDING';
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Llamada no encontrada o ya atendida' USING ERRCODE = 'P0002';
+    END IF;
+END;
+$$;

@@ -1,4 +1,4 @@
-import { executeQuery } from '../db/connection.js';
+import { executeQuery, executeStoredProcedure } from '../db/connection.js';
 
 export const PublicMenuModel = {
     getMenu: async (c) => {
@@ -32,19 +32,13 @@ export const PublicMenuModel = {
     },
 
     registerCall: async (c, tableCode, reason) => {
-        const sql = `
-            INSERT INTO waiter_calls (table_id, reason, status)
-            VALUES (
-                (SELECT id FROM restaurant_tables WHERE code = $1),
-                $2,
-                'PENDING'
-            ) RETURNING id
-        `;
         try {
-            const res = await executeQuery(c, sql, [tableCode, reason]);
-            return res[0];
+            await executeStoredProcedure(c, 'sp_register_waiter_call', {
+                p_table_code: tableCode,
+                p_reason:     reason
+            });
         } catch (error) {
-            if (error.code === '23502') {
+            if (error.code === '23502' || error.message?.includes('Mesa no encontrada')) {
                 throw new Error('Mesa no encontrada o inválida.');
             }
             throw error;
@@ -69,16 +63,8 @@ export const PublicMenuModel = {
     },
 
     attendCall: async (c, callId) => {
-        const sql = `
-            UPDATE waiter_calls
-            SET status = 'ATTENDED', updated_at = NOW()
-            WHERE id = $1 AND status = 'PENDING'
-            RETURNING id
-        `;
-        const res = await executeQuery(c, sql, [callId]);
-        if (!res || res.length === 0) {
-            throw new Error('Llamada no encontrada o ya atendida');
-        }
-        return res[0];
+        await executeStoredProcedure(c, 'sp_attend_waiter_call', {
+            p_call_id: callId
+        }, { p_call_id: 'UUID' });
     }
 };
