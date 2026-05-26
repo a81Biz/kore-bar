@@ -47,7 +47,7 @@ VALUES (
     '$2a$10$QukCFIRWsa7bY4zs2lKUkOZTlw4Np2C8FK2imh5eSKd05nRmupX1G',
     (SELECT id FROM roles WHERE code = 'SYS_MANAGER'),
     true
-) ON CONFLICT (username) DO NOTHING;
+) ON CONFLICT (employee_number) DO NOTHING;
 
 
 -- ════════════════════════════════════════════════════════════
