@@ -29,6 +29,11 @@ AS $$
 DECLARE
     result JSONB;
 BEGIN
+    -- CALL statements cannot be subqueries; execute them directly.
+    IF lower(trim(query_string)) LIKE 'call %' THEN
+        EXECUTE query_string;
+        RETURN '[]'::jsonb;
+    END IF;
     EXECUTE format(
         'SELECT COALESCE(jsonb_agg(row_to_json(t)), ''[]''::jsonb) FROM (%s) t',
         query_string
