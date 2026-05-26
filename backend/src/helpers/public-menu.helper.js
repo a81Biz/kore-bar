@@ -2,7 +2,7 @@ import { PublicMenuModel } from '../models/public-menu.model.js';
 
 export const getPublicMenu = async (state, c) => {
     try {
-        state.data = await PublicMenuModel.getMenu();
+        state.data = await PublicMenuModel.getMenu(c);
     } catch (error) {
         console.error('[Helper] getPublicMenu Error:', error);
         throw error;
@@ -14,7 +14,7 @@ export const registerWaiterCall = async (state, c) => {
         const tableCode = c.req.param('tableCode');
         const reason = state.payload.reason || 'ASSISTANCE';
 
-        await PublicMenuModel.registerCall(tableCode, reason);
+        await PublicMenuModel.registerCall(c, tableCode, reason);
 
         state.data = { message: `Alerta registrada en mesa ${tableCode}`, reason };
     } catch (error) {
@@ -28,11 +28,9 @@ export const registerWaiterCall = async (state, c) => {
     }
 };
 
-// ── GET /waiters/calls ────────────────────────────────────────
-// Devuelve llamadas PENDING de las últimas 2 horas.
 export const getPendingCalls = async (state, c) => {
     try {
-        const calls = await PublicMenuModel.getPendingCalls();
+        const calls = await PublicMenuModel.getPendingCalls(c);
         state.data = { calls };
     } catch (error) {
         console.error('[Helper] getPendingCalls Error:', error);
@@ -40,12 +38,10 @@ export const getPendingCalls = async (state, c) => {
     }
 };
 
-// ── PUT /waiters/calls/:callId/attend ─────────────────────────
-// Marca una llamada como atendida.
 export const attendWaiterCall = async (state, c) => {
     try {
         const { callId } = state.params;
-        await PublicMenuModel.attendCall(callId);
+        await PublicMenuModel.attendCall(c, callId);
         state.message = 'Llamada atendida exitosamente';
     } catch (error) {
         if (error.message.includes('no encontrada')) {

@@ -1,10 +1,9 @@
 import { executeQuery } from '../db/connection.js';
 
 export const PublicMenuModel = {
-    // CU-PUB-01: Obtener categorías activas y sus platillos activos anidados
-    getMenu: async () => {
+    getMenu: async (c) => {
         const sql = `
-            SELECT 
+            SELECT
                 c.code          AS "categoryCode",
                 c.name          AS "categoryName",
                 c.description   AS "categoryDesc",
@@ -20,7 +19,7 @@ export const PublicMenuModel = {
                             'hasRecipe',   d.has_recipe,
                             'isActive',    d.is_active
                         )
-                    ) FILTER (WHERE d.code IS NOT NULL), 
+                    ) FILTER (WHERE d.code IS NOT NULL),
                     '[]'
                 ) AS "dishes"
             FROM menu_categories c
@@ -29,21 +28,20 @@ export const PublicMenuModel = {
             GROUP BY c.id, c.code, c.name, c.description, c.route_to_kds
             ORDER BY c.name ASC
         `;
-        const result = await executeQuery(null, sql);
-        return result;
+        return await executeQuery(c, sql);
     },
 
-    registerCall: async (tableCode, reason) => {
+    registerCall: async (c, tableCode, reason) => {
         const sql = `
-        INSERT INTO waiter_calls (table_id, reason, status)
-        VALUES (
-            (SELECT id FROM restaurant_tables WHERE code = $1),
-            $2,
-            'PENDING'
-        ) RETURNING id;
-    `;
+            INSERT INTO waiter_calls (table_id, reason, status)
+            VALUES (
+                (SELECT id FROM restaurant_tables WHERE code = $1),
+                $2,
+                'PENDING'
+            ) RETURNING id
+        `;
         try {
-            const res = await executeQuery(null, sql, [tableCode, reason]);
+            const res = await executeQuery(c, sql, [tableCode, reason]);
             return res[0];
         } catch (error) {
             if (error.code === '23502') {
@@ -53,33 +51,31 @@ export const PublicMenuModel = {
         }
     },
 
-    // CU-PUB-03: Obtener llamadas pendientes (para polling fallback)
-    getPendingCalls: async () => {
+    getPendingCalls: async (c) => {
         const sql = `
-        SELECT
-            wc.id,
-            rt.code       AS "tableCode",
-            wc.reason,
-            wc.status,
-            wc.created_at AS "createdAt"
-        FROM waiter_calls wc
-        JOIN restaurant_tables rt ON rt.id = wc.table_id
-        WHERE wc.status = 'PENDING'
-          AND wc.created_at > NOW() - INTERVAL '8 hours'
-        ORDER BY wc.created_at ASC
-    `;
-        return await executeQuery(null, sql);
+            SELECT
+                wc.id,
+                rt.code       AS "tableCode",
+                wc.reason,
+                wc.status,
+                wc.created_at AS "createdAt"
+            FROM waiter_calls wc
+            JOIN restaurant_tables rt ON rt.id = wc.table_id
+            WHERE wc.status = 'PENDING'
+              AND wc.created_at > NOW() - INTERVAL '8 hours'
+            ORDER BY wc.created_at ASC
+        `;
+        return await executeQuery(c, sql);
     },
 
-    // CU-PUB-04: Marcar llamada como atendida
-    attendCall: async (callId) => {
+    attendCall: async (c, callId) => {
         const sql = `
             UPDATE waiter_calls
             SET status = 'ATTENDED', updated_at = NOW()
             WHERE id = $1 AND status = 'PENDING'
             RETURNING id
         `;
-        const res = await executeQuery(null, sql, [callId]);
+        const res = await executeQuery(c, sql, [callId]);
         if (!res || res.length === 0) {
             throw new Error('Llamada no encontrada o ya atendida');
         }
