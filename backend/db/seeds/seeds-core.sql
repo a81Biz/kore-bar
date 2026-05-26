@@ -59,6 +59,21 @@ INSERT INTO shift_catalog (code, name, start_time, end_time) VALUES
     ('VESPERTINO', 'Turno Vespertino', '16:00', '00:00')
 ON CONFLICT (code) DO NOTHING;
 
+-- ── CUENTA ADMIN BOOTSTRAP ───────────────────────────────────
+-- Sin esta cuenta no hay forma de entrar al sistema en un deploy nuevo.
+-- El PIN se establece en texto plano; ejecutar migrate-hash-pins.js o
+-- llamar a reset-pin desde el panel para activar el hash bcrypt.
+INSERT INTO employees (employee_number, first_name, last_name, hire_date, position_id, is_active, pin_code)
+VALUES ('ADMIN001', 'Admin', 'Sistema', CURRENT_DATE,
+        (SELECT id FROM positions WHERE code = '10-01'), true, '123456')
+ON CONFLICT (employee_number) DO NOTHING;
+
+INSERT INTO system_users (employee_number, username, password_hash, role_id)
+VALUES ('ADMIN001', 'admin',
+        '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+        (SELECT id FROM roles WHERE code = 'SYS_ADMIN'))
+ON CONFLICT (username) DO NOTHING;
+
 -- ── UBICACIONES DE INVENTARIO ────────────────────────────────
 INSERT INTO inventory_locations (code, name, type) VALUES
     ('LOC-BODEGA', 'Bodega Principal',         'BODEGA'),
