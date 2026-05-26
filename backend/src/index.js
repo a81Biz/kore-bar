@@ -60,40 +60,78 @@ app.get('/api/debug/realtime', async (c) => {
 
     const headers = { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` };
 
-    // ── Test 1: API REST de Supabase ──────────────────────────────────────────
+    // ── Test 1: Alcanzabilidad de Supabase ────────────────────────────────────
+    // El endpoint raíz /rest/v1/ devuelve 401 con el anon key — eso es NORMAL.
+    // Solo comprobamos que el servidor responda (cualquier HTTP = alcanzable).
     try {
         const res = await fetch(`${supabaseUrl}/rest/v1/`, { headers });
-        report.supabase.reachable        = true;
-        report.supabase.credentialsValid = res.status !== 401 && res.status !== 403;
-        report.supabase.httpStatus       = res.status;
+        report.supabase.reachable   = true;
+        report.supabase.httpStatus  = res.status;
     } catch (e) {
         report.supabase.error = e.message;
     }
 
     // ── Test 2: RLS — anon puede SELECT en cada tabla de Realtime ────────────
+    // HTTP 200 = credenciales válidas + política RLS permite SELECT.
+    // HTTP 401 = anon key inválido.
+    // HTTP 403 = credenciales válidas pero RLS bloquea (WebSocket conecta pero sin eventos).
     const tables = ['waiter_calls', 'order_items', 'order_headers'];
+    let anyOk = false;
     for (const table of tables) {
         try {
             const res = await fetch(`${supabaseUrl}/rest/v1/${table}?limit=0`, { headers });
-            report.rlsCheck[table] = res.ok
-                ? `✅ accesible (HTTP ${res.status})`
-                : `❌ bloqueado (HTTP ${res.status}) — revisar política RLS para rol anon`;
+            if (res.status === 200) {
+                anyOk = true;
+                report.rlsCheck[table] = `✅ accesible (HTTP 200)`;
+            } else if (res.status === 401) {
+                report.rlsCheck[table] = `❌ anon key rechazado (HTTP 401) — clave incorrecta`;
+            } else if (res.status === 403) {
+                report.rlsCheck[table] = `🟡 bloqueado por RLS (HTTP 403) — WebSocket conectará pero sin eventos. Añadir política SELECT para rol anon.`;
+            } else {
+                report.rlsCheck[table] = `⚠️ HTTP ${res.status}`;
+            }
         } catch (e) {
-            report.rlsCheck[table] = `❌ error: ${e.message}`;
+            report.rlsCheck[table] = `❌ error de red: ${e.message}`;
         }
+    }
+    report.supabase.credentialsValid = anyOk;
+
+    // ── Test 3: Publicación Supabase Realtime vía API de Realtime ────────────
+    // Un GET al endpoint de info del canal nos dice si Realtime responde.
+    try {
+        const rtRes = await fetch(
+            `${supabaseUrl}/realtime/v1/api/broadcast`,
+            { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' }
+        );
+        report.realtime = {
+            reachable: rtRes.status !== 0,
+            httpStatus: rtRes.status,
+            note: rtRes.status === 400 || rtRes.status === 200
+                ? '✅ Servidor Realtime responde'
+                : `⚠️ HTTP ${rtRes.status}`
+        };
+    } catch (e) {
+        report.realtime = { reachable: false, error: e.message };
     }
 
     // ── Veredicto final ───────────────────────────────────────────────────────
-    const allRlsOk = tables.every(t => report.rlsCheck[t].startsWith('✅'));
-    if (!report.supabase.credentialsValid) {
-        report.verdict = '🔴 CREDENCIALES INVÁLIDAS — el anon key no es aceptado por Supabase';
-    } else if (!allRlsOk) {
-        report.verdict = '🟡 CREDENCIALES OK pero RLS bloquea la lectura — el WebSocket conectará pero NO recibirá eventos. Añade política SELECT para rol anon en las tablas marcadas ❌';
+    const allRlsOk   = tables.every(t => report.rlsCheck[t].startsWith('✅'));
+    const someBlocked = tables.some(t => report.rlsCheck[t].startsWith('🟡'));
+    const creds401   = tables.every(t => report.rlsCheck[t].includes('401'));
+
+    if (!report.supabase.reachable) {
+        report.verdict = '🔴 Supabase NO alcanzable — revisar SUPABASE_URL';
+    } else if (creds401) {
+        report.verdict = '🔴 ANON KEY INVÁLIDO — copiar la clave correcta desde Supabase → Settings → API';
+    } else if (someBlocked && !allRlsOk) {
+        report.verdict = '🟡 CREDENCIALES OK — RLS bloquea alguna tabla. El WebSocket conecta pero no llegan eventos en esas tablas. Ver rlsCheck para detalles.';
+    } else if (allRlsOk) {
+        report.verdict = '🟢 TODO OK — credenciales válidas, tablas accesibles. Si el frontend sigue en polling, la causa es que la publicación supabase_realtime aún no incluye las tablas: ejecutar migration 14 contra Supabase o activarlo desde el dashboard (Database → Replication).';
     } else {
-        report.verdict = '🟢 TODO OK — las credenciales son válidas y las tablas son accesibles. Si el frontend sigue en polling, verifica que la publicación supabase_realtime incluya las tablas (migration 14).';
+        report.verdict = '⚠️ Resultado mixto — revisar rlsCheck';
     }
 
-    return c.json(report, report.supabase.credentialsValid ? 200 : 503);
+    return c.json(report, allRlsOk ? 200 : 503);
 });
 
 // Montar todos los módulos automáticamente desde el registry
