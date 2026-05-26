@@ -27,7 +27,7 @@ export const PublicMenuModel = {
             LEFT JOIN menu_dishes d ON c.id = d.category_id AND d.is_active = true
             WHERE c.is_active = true
             GROUP BY c.id, c.code, c.name, c.description, c.route_to_kds
-            ORDER BY c.name ASC;
+            ORDER BY c.name ASC
         `;
         const result = await executeQuery(null, sql);
         return result;

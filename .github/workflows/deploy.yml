@@ -163,6 +163,16 @@ jobs:
           cp -a frontends/core/. build_portal/core/
           cp -a frontends/shared/. build_portal/shared/
 
+      # ── 1b. Compilar Tailwind CSS ────────────────────────────
+      - name: Build Tailwind CSS
+        run: |
+          npm ci
+          npx tailwindcss -i input.css -o style.css --minify
+          for dir in admin menu waiters kitchen cashier invoice; do
+            cp style.css frontends/$dir/style.css
+          done
+          cp style.css build_portal/style.css
+
       # ── 2. Deploy PORTAL MAESTRO (El Dashboard Raíz) ────────────
       - name: Deploy Portal Maestro (Core)
         env:

@@ -104,7 +104,7 @@ export const executeQuery = async (c, query, params = []) => {
     let paramIdx = 1;
     finalQuery = finalQuery.replace(/\?/g, () => `$${paramIdx++}`);
     finalQuery = interpolateQuery(finalQuery, params);
-    finalQuery = finalQuery.replace(/\s+/g, ' ').trim();
+    finalQuery = finalQuery.replace(/\s+/g, ' ').trim().replace(/;$/, '');
 
     // 2. Enviamos el SQL crudo a nuestra función Proxy
     const { data, error } = await _supabaseClient.rpc('kore_exec_sql', {
