@@ -15,6 +15,21 @@ app.get('/', (c) => { return c.text('Kore Bar API running') });
 app.get('/api/docs/openapi.json', (c) => c.json(generateOpenAPISpec()));
 app.get('/api/docs', swaggerUI({ url: '/api/docs/openapi.json' }));
 
+// Expone las variables de Supabase al frontend para inicializar el cliente realtime.
+// En Cloudflare Workers las lee de c.env (bindings); en Node/Docker de process.env.
+app.get('/api/env', (c) => {
+    const supabaseUrl     = c.env?.SUPABASE_URL     ?? process.env?.SUPABASE_URL;
+    const supabaseAnonKey = c.env?.SUPABASE_ANON_KEY ?? process.env?.SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return c.json({ error: 'Variables no configuradas' }, 500);
+    }
+    return c.json(
+        { SUPABASE_URL: supabaseUrl, SUPABASE_ANON_KEY: supabaseAnonKey },
+        200,
+        { 'Cache-Control': 'public, max-age=300' }
+    );
+});
+
 // Montar todos los módulos automáticamente desde el registry
 for (const [subDir, prefix] of Object.entries(RouteRegistry)) {
   const router = new Hono();

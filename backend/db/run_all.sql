@@ -7,7 +7,11 @@
 --   migrations/  → DDL (tablas, constraints, triggers)
 --   procedures/  → Lógica de negocio (re-ejecutable en cualquier momento)
 --   views/       → Vistas de consulta (re-ejecutable)
---   seeds/       → Datos iniciales (idempotente con ON CONFLICT DO NOTHING)
+--   seeds-core/  → Solo datos estructurales (roles, áreas, puestos, ubicaciones)
+--                  SIN demo data, SIN TRUNCATE — seguro en producción.
+--
+-- Para poblar con datos de demo en local:
+--   psql ... -f backend/db/seeds/seeds.sql
 -- ============================================================
 
 \echo '── [1/4] Migrations ──────────────────────────────────────'
@@ -43,7 +47,7 @@
 \ir views/vw_dashboard_kpis.sql
 \ir views/vw_sales_report.sql
 
-\echo '── [4/4] Seeds ───────────────────────────────────────────'
-\ir seeds/seeds.sql
+\echo '── [4/4] Seeds (core estructural) ───────────────────'
+\ir seeds/seeds-core.sql
 
 \echo '── Done ──────────────────────────────────────────────────'
