@@ -143,16 +143,15 @@ export const updateEmployee = async (state, c) => {
 
         // 2. Fusionar datos (MAPEANDO alias de BD a camelCase del modelo)
         const payload = {
-            employeeNumber: existing.employeeNumber,
             firstName: existing.firstName,
             lastName: existing.lastName,
-            areaId: existing.areaCode, // Mapeo de alias SQL a ID de modelo
-            jobTitleId: existing.jobCode, // Mapeo de alias SQL a ID de modelo
+            areaId: existing.areaCode,
+            jobTitleId: existing.jobCode,
             hireDate: existing.hireDate,
             isActive: existing.isActive ?? true,
             pinCode: existing.pinCode,
             ...patch, // El patch sobreescribe lo anterior
-            employeeNumber // Asegurar que sea el de la ruta
+            employeeNumber // La ruta siempre gana — no puede cambiarse por patch
         };
 
         // 3. Hashear PIN si se incluyó en el patch
