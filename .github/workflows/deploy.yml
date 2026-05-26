@@ -113,10 +113,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Run migrations via psql
+      - name: Run migrations + seeds-core
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: psql "$SUPABASE_DB_URL" -f backend/db/run_all.sql
+
+      - name: Seed demo data (idempotente — ON CONFLICT DO NOTHING)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -f backend/db/seeds/seeds-demo.sql
 
   # ────────────────────────────────────────────────────────────
   # JOB 4: Deploy a Cloudflare
