@@ -62,13 +62,14 @@ const CALL_REASONS = {
 
 // ── Lógica de conexión ────────────────────────────────────────
 const _logic = {
+    // Retorna true si Supabase Realtime conectó (SUBSCRIBED), false si hay que usar polling.
     connect: async (employeeNumber, onReady) => {
-        if (_state.isConnected) return;
+        if (_state.isConnected) return true;
 
         try {
             const { SUPABASE_URL, SUPABASE_ANON_KEY } = await waitForEnv();
             if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-                throw new Error("Variables de Supabase no definidas en KORE_ENV");
+                throw new Error('Credenciales Supabase no disponibles en KORE_ENV');
             }
             _state.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -89,37 +90,46 @@ const _logic = {
                 .subscribe();
 
             // ── Canal 2: Llamadas de cliente (INSERT) ─────────
-            _state.channelCalls = _state.client
-                .channel(`waiter-calls-${employeeNumber}`)
-                .on(
-                    'postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'waiter_calls' },
-                    (payload) => {
-                        const call = payload.new;
-                        const reason = CALL_REASONS[call.reason] || call.reason;
-                        _showToast(
-                            `<span>🔔</span><span><strong>Mesa solicita atención:</strong> ${reason}</span>`,
-                            '#d97706'  // amber
-                        );
-                        PubSub.publish('WAITER_CALL_RECEIVED', call);
-                    }
-                )
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        _state.isConnected = true;
-                        console.log(`[WaiterNotifications] Conectado a Realtime (${employeeNumber}).`);
-                    }
-                });
+            // Este canal determina el estado de conexión — esperamos SUBSCRIBED con timeout.
+            return await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.warn('[WaiterNotifications] Timeout de conexión Supabase — activando polling fallback');
+                    resolve(false);
+                }, 10000);
+
+                _state.channelCalls = _state.client
+                    .channel(`waiter-calls-${employeeNumber}`)
+                    .on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'waiter_calls' },
+                        (payload) => {
+                            const call = payload.new;
+                            const reason = CALL_REASONS[call.reason] || call.reason;
+                            _showToast(
+                                `<span>🔔</span><span><strong>Mesa solicita atención:</strong> ${reason}</span>`,
+                                '#d97706'
+                            );
+                            PubSub.publish('WAITER_CALL_RECEIVED', call);
+                        }
+                    )
+                    .subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            clearTimeout(timeout);
+                            _state.isConnected = true;
+                            PubSub.publish('REALTIME_CONNECTED');
+                            console.log(`[WaiterNotifications] Realtime conectado (${employeeNumber})`);
+                            resolve(true);
+                        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                            clearTimeout(timeout);
+                            console.warn(`[WaiterNotifications] Canal no disponible (${status}) — activando polling fallback`);
+                            resolve(false);
+                        }
+                    });
+            });
 
         } catch (err) {
             console.warn('[WaiterNotifications] Supabase no disponible — usando polling fallback:', err.message);
-            // Fallback: igual que en cocina, polling cada N segundos
-            if (!_state.pollingInterval) {
-                _state.pollingInterval = setInterval(() => {
-                    // Nota: El dashboard ya hace polling de tables(30s) y calls(8s).
-                    // Aquí se simula la estructura para acoplarse si existiese endpoint de platillos.
-                }, 5000);
-            }
+            return false;
         }
     },
 

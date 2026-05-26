@@ -42,11 +42,22 @@ const startRealtime = async () => {
             .channel('kds-order-items')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' },
                 () => fetchBoardData())
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('[KDS] Supabase Realtime conectado');
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.warn('[KDS] Error en canal Realtime, activando polling fallback:', status);
+                    if (!state.pollingInterval) {
+                        state.pollingInterval = setInterval(fetchBoardData, 5000);
+                    }
+                }
+            });
     } catch (e) {
         // Supabase no configurado — polling de 5s como fallback
         console.warn('[KDS] Supabase no disponible, usando polling:', e.message);
-        state.pollingInterval = setInterval(fetchBoardData, 5000);
+        if (!state.pollingInterval) {
+            state.pollingInterval = setInterval(fetchBoardData, 5000);
+        }
     }
 };
 

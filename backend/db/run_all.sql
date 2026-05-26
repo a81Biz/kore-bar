@@ -29,6 +29,7 @@
 \ir migrations/11_payroll.sql
 \ir migrations/12_auth_pin_hash.sql
 \ir migrations/13_daily_consumption_view.sql
+\ir migrations/14_supabase_realtime.sql
 
 
 \echo '── [2/4] Procedures ──────────────────────────────────────'

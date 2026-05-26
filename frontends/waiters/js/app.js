@@ -81,8 +81,8 @@ function initApp() {
         const root = viewManager.mount(KORE_CONFIG.DOM.WAITERS.TEMPLATES.DASHBOARD);
         mountDashboard(root, state.session);
 
-        await WaiterNotifications.connect(employee.employeeNumber, () => { });
-        startGlobalPolling();  // ← inicia polling global tras login
+        const realtimeOk = await WaiterNotifications.connect(employee.employeeNumber, () => { });
+        if (!realtimeOk) startGlobalPolling();  // Fallback: solo si Realtime no conectó
     });
 
     PubSub.subscribe('TABLE_SELECTED', (data) => {

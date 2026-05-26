@@ -158,10 +158,10 @@ async function startRealtime() {
             )
         ]);
 
-        const { supabaseUrl, supabaseAnonKey } = env || {};
-        if (!supabaseUrl || !supabaseAnonKey) throw new Error('sin credenciales Supabase');
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = env || {};
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('sin credenciales Supabase');
 
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         _realtimeChannel = supabase
             .channel('cashier-board')
@@ -186,7 +186,10 @@ async function startRealtime() {
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('[Cashier] Realtime conectado — polling desactivado');
+                    console.log('[Cashier] Realtime conectado');
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.warn('[Cashier] Error en canal Realtime, activando polling conservador');
+                    startFallbackPolling();
                 }
             });
 

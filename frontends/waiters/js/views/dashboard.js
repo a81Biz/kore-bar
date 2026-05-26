@@ -233,14 +233,24 @@ export async function mount(container, authData) {
     const onRealtimeCall = () => fetchCalls();
     _callSub = PubSub.subscribe('WAITER_CALL_RECEIVED', onRealtimeCall);
 
+    // Cuando Supabase Realtime conecta, deja de hacer polling de llamadas
+    // (el canal waiter-calls-{emp} las recibe en tiempo real vía INSERT).
+    // El polling de mesas (30s) sigue activo — Realtime no cubre layout.
+    const _unsubRealtime = PubSub.subscribe('REALTIME_CONNECTED', () => {
+        if (pollCallsTimer) {
+            clearInterval(pollCallsTimer);
+            pollCallsTimer = null;
+        }
+    });
+
     // ── Cleanup ───────────────────────────────────────────────
     const cleanup = () => {
         clearInterval(clockInterval);
         stopPolling();
         document.removeEventListener('visibilitychange', onVisibility);
-        // FIX: Cancelar suscripción PubSub — evita listeners zombie
         if (typeof _callSub === 'function') _callSub();
         else PubSub.unsubscribe?.('WAITER_CALL_RECEIVED', onRealtimeCall);
+        if (typeof _unsubRealtime === 'function') _unsubRealtime();
     };
 
     btnLogout?.addEventListener('click', () => {
