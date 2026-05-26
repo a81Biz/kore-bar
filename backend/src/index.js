@@ -96,39 +96,54 @@ app.get('/api/debug/realtime', async (c) => {
     }
     report.supabase.credentialsValid = anyOk;
 
-    // ── Test 3: Publicación Supabase Realtime vía API de Realtime ────────────
-    // Un GET al endpoint de info del canal nos dice si Realtime responde.
+    // ── Test 3: Estado de la publicación supabase_realtime ───────────────────
+    // Llama a kore_realtime_status() vía Supabase RPC — devuelve si cada tabla
+    // está registrada en la publicación (prerequisito para recibir eventos).
     try {
-        const rtRes = await fetch(
-            `${supabaseUrl}/realtime/v1/api/broadcast`,
-            { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' }
-        );
-        report.realtime = {
-            reachable: rtRes.status !== 0,
-            httpStatus: rtRes.status,
-            note: rtRes.status === 400 || rtRes.status === 200
-                ? '✅ Servidor Realtime responde'
-                : `⚠️ HTTP ${rtRes.status}`
-        };
+        const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/kore_realtime_status`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        if (rpcRes.ok) {
+            const pub = await rpcRes.json();
+            const allInPub = pub.publication_exists &&
+                Object.values(pub.tables || {}).every(Boolean);
+            report.publication = {
+                ...pub,
+                verdict: !pub.publication_exists
+                    ? '❌ Publicación supabase_realtime no existe en la BD'
+                    : allInPub
+                        ? '✅ Las 3 tablas están en la publicación — Realtime recibirá eventos'
+                        : '❌ Alguna tabla NO está en la publicación — los eventos no llegarán al frontend'
+            };
+        } else {
+            report.publication = {
+                error: `kore_realtime_status() HTTP ${rpcRes.status} — ejecutar migration 14 en Supabase`
+            };
+        }
     } catch (e) {
-        report.realtime = { reachable: false, error: e.message };
+        report.publication = { error: e.message };
     }
 
     // ── Veredicto final ───────────────────────────────────────────────────────
-    const allRlsOk   = tables.every(t => report.rlsCheck[t].startsWith('✅'));
+    const allRlsOk    = tables.every(t => report.rlsCheck[t].startsWith('✅'));
     const someBlocked = tables.some(t => report.rlsCheck[t].startsWith('🟡'));
-    const creds401   = tables.every(t => report.rlsCheck[t].includes('401'));
+    const creds401    = tables.every(t => report.rlsCheck[t].includes('401'));
+    const pubOk       = report.publication?.verdict?.startsWith('✅');
 
     if (!report.supabase.reachable) {
         report.verdict = '🔴 Supabase NO alcanzable — revisar SUPABASE_URL';
     } else if (creds401) {
         report.verdict = '🔴 ANON KEY INVÁLIDO — copiar la clave correcta desde Supabase → Settings → API';
     } else if (someBlocked && !allRlsOk) {
-        report.verdict = '🟡 CREDENCIALES OK — RLS bloquea alguna tabla. El WebSocket conecta pero no llegan eventos en esas tablas. Ver rlsCheck para detalles.';
-    } else if (allRlsOk) {
-        report.verdict = '🟢 TODO OK — credenciales válidas, tablas accesibles. Si el frontend sigue en polling, la causa es que la publicación supabase_realtime aún no incluye las tablas: ejecutar migration 14 contra Supabase o activarlo desde el dashboard (Database → Replication).';
+        report.verdict = '🟡 CREDENCIALES OK — RLS bloquea alguna tabla. El WebSocket conecta pero no llegan eventos en esas tablas. Ver rlsCheck.';
+    } else if (allRlsOk && !pubOk) {
+        report.verdict = '🟡 CREDENCIALES Y RLS OK — pero las tablas NO están en la publicación supabase_realtime. El WebSocket no recibirá eventos de DB. Hacer push a main para que el CI corra migration 14, o ejecutarla manualmente: psql "$SUPABASE_DB_URL" -f backend/db/migrations/14_supabase_realtime.sql';
+    } else if (allRlsOk && pubOk) {
+        report.verdict = '🟢 TODO OK — Realtime debería funcionar. Si el frontend sigue en polling, revisar la consola del navegador para ver el error del canal WebSocket.';
     } else {
-        report.verdict = '⚠️ Resultado mixto — revisar rlsCheck';
+        report.verdict = '⚠️ Resultado mixto — revisar rlsCheck y publication';
     }
 
     return c.json(report, allRlsOk ? 200 : 503);
