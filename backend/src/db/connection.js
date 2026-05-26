@@ -8,12 +8,9 @@ let _pool = null;
 let _supabaseClient = null;
 
 // Detectar Cloudflare Workers vs Node (Docker)
-const isCloudflareWorker = () => {
-    const hasWorkerGlobals = typeof caches !== 'undefined' && typeof WebSocketPair !== 'undefined';
-    const hasBrowserGlobals = typeof window !== 'undefined' || typeof document !== 'undefined';
-    const isRealNode = typeof process !== 'undefined' && process.versions && process.versions.node;
-    return hasWorkerGlobals && !hasBrowserGlobals && !isRealNode;
-};
+// WebSocketPair es exclusivo del runtime de Cloudflare Workers — no existe en Node.js
+// aunque nodejs_compat esté activo (lo cual sí define process.versions.node).
+const isCloudflareWorker = () => typeof WebSocketPair !== 'undefined';
 
 const getDbUrl = (c) => {
     if (c && c.env && c.env.DATABASE_URL) return c.env.DATABASE_URL;
