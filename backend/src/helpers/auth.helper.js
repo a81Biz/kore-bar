@@ -166,7 +166,7 @@ export const validatePinHandler = async (state, c) => {
     const sourceMap = { waiter: 'WAITERS', cashier: 'CASHIER', kitchen: 'KITCHEN' };
     const source = sourceMap[context];
     if (source) {
-        recordAttendance(c, user.employeeNumber, source).catch(err =>
+        await recordAttendance(c, user.employeeNumber, source).catch(err =>
             console.warn(`[Attendance] No se pudo registrar check-in ${source}:`, err.message)
         );
     }

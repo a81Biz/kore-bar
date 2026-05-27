@@ -1,10 +1,13 @@
 // frontends/waiters/js/app.js — REEMPLAZAR completo:
 
+import { loadEnv } from '/core/js/kore.env.js';
 import { PubSub } from '/shared/js/pubsub.js';
 import { viewManager } from '/shared/js/viewManager.js';
 import { KORE_CONFIG } from '/core/js/kore.config.js';
 import { fetchData } from '/shared/js/http.client.js';
 import { ENDPOINTS } from '/shared/js/endpoints.js';
+
+await loadEnv();
 
 import { mount as mountLogin } from './views/login.js';
 import { mount as mountDashboard } from './views/dashboard.js';
