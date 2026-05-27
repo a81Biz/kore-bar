@@ -10,7 +10,8 @@ services:
       - NODE_ENV=development
       - DATABASE_URL=postgres://admin:admin@db:5432/kore_local_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -51,6 +52,18 @@ services:
     env_file:
       - .dev.vars                   # SUPABASE_URL y SUPABASE_ANON_KEY
 
+  seed-demo:
+    image: postgres:15-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PGPASSWORD=admin
+    volumes:
+      - ./backend/db/seeds:/seeds:ro
+    command: psql -h db -U admin -d kore_local_db -f /seeds/seeds-demo.sql
+    restart: "no"
+
   db:
     image: postgres:15-alpine
     environment:
@@ -63,6 +76,11 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./backend/db:/docker-entrypoint-initdb.d
       - ./backend/db/run_all.sql:/docker-entrypoint-initdb.d/run_all.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d kore_local_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:
