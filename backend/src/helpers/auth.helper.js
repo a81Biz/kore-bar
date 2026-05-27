@@ -17,6 +17,7 @@
 import bcrypt from 'bcryptjs';
 import { sign } from 'hono/jwt';
 import { getUserForLogin, getUserForPin } from '../models/auth.model.js';
+import { recordAttendance } from '../models/admin-turnos.model.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kore_dev_secret_change_in_prod';
 
@@ -160,4 +161,13 @@ export const validatePinHandler = async (state, c) => {
         canAccessCashier: user.canAccessCashier ?? false
     };
     state.message = `PIN válido — ${user.firstName}`;
+
+    // 6. Check-in automático según terminal de origen (no-crítico)
+    const sourceMap = { waiter: 'WAITERS', cashier: 'CASHIER', kitchen: 'KITCHEN' };
+    const source = sourceMap[context];
+    if (source) {
+        recordAttendance(c, user.employeeNumber, source).catch(err =>
+            console.warn(`[Attendance] No se pudo registrar check-in ${source}:`, err.message)
+        );
+    }
 };

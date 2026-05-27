@@ -161,14 +161,14 @@ export const getFloorStock = async (c) =>
 // consulta quiénes tienen zonas y mesas asignadas
 export const getWaiters = async (c) =>
     await executeQuery(c, `
-        SELECT DISTINCT
+        SELECT DISTINCT ON (e.employee_number)
             e.employee_number
             , e.first_name || ' ' || e.last_name AS nombre
             , ra.shift
-            , rz.name AS zona 
-        FROM restaurant_assignments ra 
-        JOIN employees e 
-            ON e.employee_number = ra.employee_number 
-        JOIN restaurant_zones rz 
-            ON rz.id = ra.zone_id 
+            , rz.name AS zona
+        FROM restaurant_assignments ra
+        JOIN employees e
+            ON e.employee_number = ra.employee_number
+        JOIN restaurant_zones rz
+            ON rz.id = ra.zone_id
         ORDER BY e.employee_number DESC`);
