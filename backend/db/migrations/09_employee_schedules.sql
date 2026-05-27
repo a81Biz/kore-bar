@@ -117,9 +117,9 @@ SELECT
     ar.check_in_at,
     ar.source,
     CASE
-        WHEN ar.id IS NOT NULL               THEN 'PRESENTE'
-        WHEN es.schedule_date < CURRENT_DATE THEN 'AUSENTE'
-        ELSE                                      'ESPERADO'
+        WHEN ar.id IS NOT NULL                                                             THEN 'PRESENTE'
+        WHEN es.schedule_date < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Mexico_City')::DATE THEN 'AUSENTE'
+        ELSE                                                                                      'ESPERADO'
     END                                          AS attendance_status
 FROM employee_schedules es
 JOIN employees     e  ON e.employee_number  = es.employee_number

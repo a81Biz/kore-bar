@@ -7,6 +7,9 @@
 -- atómicas → usan prefijo fn_ (FUNCTION), no sp_ (PROCEDURE).
 -- ============================================================
 
+-- Elimina la firma de 2 parámetros si existía de una versión anterior
+DROP FUNCTION IF EXISTS fn_get_user_for_pin(VARCHAR, VARCHAR);
+
 -- ── VALIDAR CREDENCIALES (admin web: employee_number + password) ──
 -- Devuelve los datos de sesión si las credenciales son correctas.
 -- El hash bcrypt vive en system_users.password_hash.
@@ -52,23 +55,20 @@ $$ LANGUAGE plpgsql;
 
 -- ── VALIDAR PIN (POS: meseros / caja / cocina) ────────────────────
 -- Devuelve los datos de sesión si el PIN es correcto.
--- El pin_code se guarda en employees como VARCHAR (puede ser hash
--- o texto simple según la configuración del negocio).
--- La función devuelve is_pin_valid para que el helper decida.
+-- Devuelve el hash del PIN almacenado en employees.pin_code.
+-- La comparación se hace en Node con bcrypt.compare() — nunca en SQL.
 
 CREATE OR REPLACE FUNCTION fn_get_user_for_pin(
-    p_employee_number VARCHAR,
-    p_pin_code        VARCHAR
+    p_employee_number VARCHAR
 )
 RETURNS TABLE(
-    "employeeNumber"  VARCHAR,
-    "firstName"       VARCHAR,
-    "lastName"        VARCHAR,
-    "isPinValid"      BOOLEAN,
-    "roleCode"        VARCHAR,
-    "roleName"        VARCHAR,
-    "areaCode"        VARCHAR,
-    "areaName"        VARCHAR,
+    "employeeNumber"   VARCHAR,
+    "firstName"        VARCHAR,
+    "lastName"         VARCHAR,
+    "pinHash"          VARCHAR,
+    "isActive"         BOOLEAN,
+    "roleCode"         VARCHAR,
+    "areaCode"         VARCHAR,
     "canAccessCashier" BOOLEAN
 ) AS $$
 BEGIN
@@ -77,11 +77,10 @@ BEGIN
         e.employee_number       AS "employeeNumber",
         e.first_name            AS "firstName",
         e.last_name             AS "lastName",
-        (e.pin_code = p_pin_code) AS "isPinValid",
+        e.pin_code              AS "pinHash",
+        e.is_active             AS "isActive",
         r.code                  AS "roleCode",
-        r.name                  AS "roleName",
         a.code                  AS "areaCode",
-        a.name                  AS "areaName",
         a.can_access_cashier    AS "canAccessCashier"
     FROM employees e
     JOIN positions pos   ON pos.id = e.position_id
@@ -89,7 +88,6 @@ BEGIN
     LEFT JOIN system_users su ON su.employee_number = e.employee_number
     LEFT JOIN roles r    ON r.id = su.role_id
     WHERE e.employee_number = p_employee_number
-      AND e.is_active = true
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;

@@ -414,7 +414,7 @@ BEGIN
     SELECT id INTO v_vip_id     FROM restaurant_zones WHERE code = 'ZONA-VIP';
     SELECT id INTO v_barra_id   FROM restaurant_zones WHERE code = 'ZONA-BARRA';
 
-    FOR v_date IN SELECT generate_series('2026-05-01'::date, '2026-05-25'::date, '1 day'::interval)::date
+    FOR v_date IN SELECT generate_series('2026-05-01'::date, CURRENT_DATE + 5, '1 day'::interval)::date
     LOOP
         INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date) VALUES
             ('MES-001', v_terraza_id, 'MATUTINO', v_date),
@@ -422,7 +422,7 @@ BEGIN
             ('MES-003', v_vip_id,     'MATUTINO', v_date)
         ON CONFLICT (employee_number, assignment_date) DO NOTHING;
 
-        -- Sofía solo trabaja hasta el día 24 (hoy 25 no tiene asignación)
+        -- Sofía solo trabajó hasta el día 24
         IF v_date < '2026-05-25'::date THEN
             INSERT INTO restaurant_assignments (employee_number, zone_id, shift, assignment_date) VALUES
                 ('MES-004', v_barra_id, 'MATUTINO', v_date)
@@ -433,13 +433,13 @@ END $$;
 
 
 -- ════════════════════════════════════════════════════════════
--- 13. HORARIOS DE STAFF NO-PISO (employee_schedules) — Mayo 1–25
+-- 13. HORARIOS DE STAFF NO-PISO (employee_schedules)
 -- ════════════════════════════════════════════════════════════
 DO $$
 DECLARE
     v_date DATE;
 BEGIN
-    FOR v_date IN SELECT generate_series('2026-05-01'::date, '2026-05-25'::date, '1 day'::interval)::date
+    FOR v_date IN SELECT generate_series('2026-05-01'::date, CURRENT_DATE + 5, '1 day'::interval)::date
     LOOP
         INSERT INTO employee_schedules (employee_number, shift_code, schedule_date) VALUES
             ('GER-001', 'MATUTINO',   v_date),

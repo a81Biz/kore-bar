@@ -71,7 +71,7 @@ CREATE OR REPLACE PROCEDURE sp_record_attendance(
 LANGUAGE plpgsql AS $$
 BEGIN
     INSERT INTO attendance_records (employee_number, source, work_date)
-    VALUES (p_employee_number, p_source, CURRENT_DATE)
+    VALUES (p_employee_number, p_source, (CURRENT_TIMESTAMP AT TIME ZONE 'America/Mexico_City')::DATE)
     ON CONFLICT (employee_number, work_date) DO NOTHING;
 END;
 $$;
@@ -119,9 +119,9 @@ SELECT
     ar.check_in_at,
     ar.source,
     CASE
-        WHEN ar.id IS NOT NULL                    THEN 'PRESENTE'
-        WHEN ra.assignment_date < CURRENT_DATE    THEN 'AUSENTE'
-        ELSE                                           'ESPERADO'
+        WHEN ar.id IS NOT NULL                                                           THEN 'PRESENTE'
+        WHEN ra.assignment_date < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Mexico_City')::DATE THEN 'AUSENTE'
+        ELSE                                                                                  'ESPERADO'
     END                                      AS attendance_status
 FROM  restaurant_assignments ra
 JOIN  employees e

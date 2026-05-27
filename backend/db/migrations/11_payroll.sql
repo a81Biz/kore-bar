@@ -90,12 +90,13 @@ CREATE OR REPLACE PROCEDURE sp_record_admin_checkin(
 LANGUAGE plpgsql AS $$
 DECLARE
     v_has_assignment BOOLEAN := FALSE;
+    v_today          DATE    := (CURRENT_TIMESTAMP AT TIME ZONE 'America/Mexico_City')::DATE;
 BEGIN
     -- Verificar asignación en restaurant_assignments (meseros de Piso)
     SELECT EXISTS (
         SELECT 1 FROM restaurant_assignments
         WHERE employee_number = p_employee_number
-          AND assignment_date = CURRENT_DATE
+          AND assignment_date = v_today
     ) INTO v_has_assignment;
 
     -- Si no está en Piso, verificar en employee_schedules (staff)
@@ -103,7 +104,7 @@ BEGIN
         SELECT EXISTS (
             SELECT 1 FROM employee_schedules
             WHERE employee_number = p_employee_number
-              AND schedule_date = CURRENT_DATE
+              AND schedule_date = v_today
         ) INTO v_has_assignment;
     END IF;
 
@@ -114,7 +115,7 @@ BEGIN
 
     -- Insertar check-in con source ADMIN (idempotente)
     INSERT INTO attendance_records (employee_number, source, work_date)
-    VALUES (p_employee_number, 'ADMIN', CURRENT_DATE)
+    VALUES (p_employee_number, 'ADMIN', v_today)
     ON CONFLICT (employee_number, work_date) DO NOTHING;
 END;
 $$;
